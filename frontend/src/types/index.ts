@@ -10,10 +10,35 @@ export interface User {
   bio: string | null;
   is_active: boolean;
   is_superuser: boolean;
+  is_approved: boolean;
+  approved_at: string | null;
   auth_provider: AuthProvider;
   organization_id: number | null;
   created_at: string;
   updated_at: string | null;
+}
+
+// System Settings types
+export interface SystemSettings {
+  id: number;
+  require_registration_approval: boolean;
+  registration_approval_mode: 'block' | 'limited';
+  min_password_length: number;
+  require_uppercase: boolean;
+  require_lowercase: boolean;
+  require_numbers: boolean;
+  require_special_chars: boolean;
+  session_timeout_minutes: number;
+  google_oauth_enabled: boolean;
+  microsoft_oauth_enabled: boolean;
+  organization_id: number | null;
+  updated_at: string | null;
+}
+
+export interface BulkUploadResult {
+  created: number;
+  skipped: number;
+  errors: string[];
 }
 
 export interface UserBrief {

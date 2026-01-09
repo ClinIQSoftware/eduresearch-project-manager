@@ -2,8 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  getProject, updateProject, getProjectFiles, uploadFile, downloadFile,
-  deleteFile, removeProjectMember, getAdminUsers, addProjectMember
+  getProject, updateProject, deleteProject, getProjectFiles, uploadFile, downloadFile,
+  deleteFile, removeProjectMember, getAdminUsers, addProjectMember,
+  updateMemberRole, leaveProject
 } from '../services/api';
 import type { ProjectDetail, ProjectFile, ProjectClassification, ProjectStatus, User } from '../types';
 
@@ -36,8 +37,16 @@ export default function ProjectDetailPage() {
   const [showAddMember, setShowAddMember] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<string>('participant');
 
-  const isLead = project?.lead_id === user?.id || user?.is_superuser;
+  // Determine if current user is a lead (check ProjectMember role)
+  const currentUserMember = project?.members.find(m => m.user_id === user?.id);
+  const isLead = currentUserMember?.role === 'lead' || user?.is_superuser;
+  const isMember = !!currentUserMember;
+
+  // Count leads for validation
+  const leadCount = project?.members.filter(m => m.role === 'lead').length || 0;
+  const canLeave = isMember && (currentUserMember?.role !== 'lead' || leadCount > 1);
 
   useEffect(() => {
     if (id) {
@@ -86,6 +95,16 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function handleDeleteProject() {
+    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) return;
+    try {
+      await deleteProject(Number(id));
+      navigate('/projects');
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to delete project');
+    }
+  }
+
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -127,13 +146,52 @@ export default function ProjectDetailPage() {
     }
   }
 
-  async function handleRemoveMember(userId: number) {
-    if (!confirm('Remove this member?')) return;
+  async function handleRemoveMember(userId: number, userName: string) {
+    const member = project?.members.find(m => m.user_id === userId);
+    if (member?.role === 'lead' && leadCount <= 1) {
+      alert('Cannot remove the last project lead. Promote another member to lead first.');
+      return;
+    }
+    if (!confirm(`Remove ${userName} from the project?`)) return;
     try {
       await removeProjectMember(Number(id), userId);
       fetchProject();
-    } catch (error) {
-      console.error('Error removing member:', error);
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to remove member');
+    }
+  }
+
+  async function handleRoleChange(userId: number, newRole: string, userName: string) {
+    const member = project?.members.find(m => m.user_id === userId);
+
+    // Check if demoting from lead when they're the only lead
+    if (member?.role === 'lead' && newRole === 'participant' && leadCount <= 1) {
+      alert('Cannot demote the last project lead. Promote another member to lead first.');
+      return;
+    }
+
+    const action = newRole === 'lead' ? 'promote to Lead' : 'demote to Participant';
+    if (!confirm(`${action} ${userName}?`)) return;
+
+    try {
+      await updateMemberRole(Number(id), userId, newRole);
+      fetchProject();
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to update role');
+    }
+  }
+
+  async function handleLeaveProject() {
+    if (!canLeave) {
+      alert('You cannot leave as you are the only project lead. Promote another member to lead first.');
+      return;
+    }
+    if (!confirm('Are you sure you want to leave this project?')) return;
+    try {
+      await leaveProject(Number(id));
+      navigate('/projects');
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to leave project');
     }
   }
 
@@ -151,9 +209,10 @@ export default function ProjectDetailPage() {
   async function handleAddMember() {
     if (!selectedUserId) return;
     try {
-      await addProjectMember(Number(id), Number(selectedUserId));
+      await addProjectMember(Number(id), Number(selectedUserId), selectedRole);
       setShowAddMember(false);
       setSelectedUserId('');
+      setSelectedRole('participant');
       fetchProject();
     } catch (error: any) {
       alert(error.response?.data?.detail || 'Failed to add member');
@@ -175,14 +234,38 @@ export default function ProjectDetailPage() {
         <button onClick={() => navigate('/projects')} className="text-blue-600 hover:underline">
           Back to Projects
         </button>
-        {isLead && (
-          <button
-            onClick={() => setEditing(!editing)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            {editing ? 'Cancel' : 'Edit Project'}
-          </button>
-        )}
+        <div className="flex gap-2">
+          {isMember && (
+            <button
+              onClick={handleLeaveProject}
+              disabled={!canLeave}
+              className={`px-4 py-2 rounded-lg border ${
+                canLeave
+                  ? 'border-orange-600 text-orange-600 hover:bg-orange-50'
+                  : 'border-gray-300 text-gray-400 cursor-not-allowed'
+              }`}
+              title={!canLeave ? 'You are the only lead. Promote another member first.' : ''}
+            >
+              Leave Project
+            </button>
+          )}
+          {isLead && (
+            <>
+              <button
+                onClick={() => setEditing(!editing)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                {editing ? 'Cancel' : 'Edit Project'}
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+              >
+                Delete Project
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Project Info */}
@@ -269,8 +352,13 @@ export default function ProjectDetailPage() {
                 <p className="font-medium">{statusLabels[project.status]}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Lead</p>
-                <p className="font-medium">{project.lead?.name || 'N/A'}</p>
+                <p className="text-sm text-gray-500">Leads</p>
+                <p className="font-medium">
+                  {project.members
+                    .filter(m => m.role === 'lead')
+                    .map(m => m.user.name)
+                    .join(', ') || 'N/A'}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Start Date</p>
@@ -297,27 +385,68 @@ export default function ProjectDetailPage() {
           )}
         </div>
         <div className="divide-y">
-          {project.members.map((member) => (
-            <div key={member.id} className="py-3 flex justify-between items-center">
-              <div>
-                <p className="font-medium">{member.user.name}</p>
-                <p className="text-sm text-gray-500">{member.user.email}</p>
+          {project.members.map((member) => {
+            const isOnlyLead = member.role === 'lead' && leadCount <= 1;
+            return (
+              <div key={member.id} className="py-3 flex justify-between items-center">
+                <div>
+                  <p className="font-medium">
+                    {member.user.name}
+                    {member.user_id === user?.id && <span className="text-gray-500 text-sm ml-2">(You)</span>}
+                  </p>
+                  <p className="text-sm text-gray-500">{member.user.email}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm px-2 py-1 rounded ${
+                    member.role === 'lead' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {member.role === 'lead' ? 'Lead' : 'Participant'}
+                  </span>
+
+                  {isLead && (
+                    <div className="flex gap-2">
+                      {/* Promote/Demote Button */}
+                      {member.role === 'lead' ? (
+                        <button
+                          onClick={() => handleRoleChange(member.user_id, 'participant', member.user.name)}
+                          disabled={isOnlyLead}
+                          className={`text-sm ${
+                            isOnlyLead
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-orange-600 hover:text-orange-800'
+                          }`}
+                          title={isOnlyLead ? 'Cannot demote the only lead' : 'Demote to participant'}
+                        >
+                          Demote
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleRoleChange(member.user_id, 'lead', member.user.name)}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          Make Lead
+                        </button>
+                      )}
+
+                      {/* Remove Button */}
+                      <button
+                        onClick={() => handleRemoveMember(member.user_id, member.user.name)}
+                        disabled={isOnlyLead}
+                        className={`text-sm ${
+                          isOnlyLead
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-red-600 hover:text-red-800'
+                        }`}
+                        title={isOnlyLead ? 'Cannot remove the only lead' : 'Remove from project'}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className={`text-sm px-2 py-1 rounded ${member.role === 'lead' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                  {member.role === 'lead' ? 'Lead' : 'Participant'}
-                </span>
-                {isLead && member.user_id !== project.lead_id && (
-                  <button
-                    onClick={() => handleRemoveMember(member.user_id)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -381,19 +510,39 @@ export default function ProjectDetailPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Add Member</h2>
-            <select
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 mb-4"
-            >
-              <option value="">Select a user</option>
-              {availableUsers.map((u) => (
-                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
-              ))}
-            </select>
-            <div className="flex justify-end gap-2">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">User</label>
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="">Select a user</option>
+                  {availableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Role</label>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="participant">Participant</option>
+                  <option value="lead">Lead (Co-Lead)</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
               <button
-                onClick={() => setShowAddMember(false)}
+                onClick={() => {
+                  setShowAddMember(false);
+                  setSelectedUserId('');
+                  setSelectedRole('participant');
+                }}
                 className="px-4 py-2 border rounded-lg hover:bg-gray-50"
               >
                 Cancel
@@ -403,7 +552,7 @@ export default function ProjectDetailPage() {
                 disabled={!selectedUserId}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                Add
+                Add Member
               </button>
             </div>
           </div>

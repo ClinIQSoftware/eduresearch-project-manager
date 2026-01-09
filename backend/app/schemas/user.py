@@ -43,6 +43,8 @@ class UserResponse(UserBase):
     id: int
     is_active: bool
     is_superuser: bool
+    is_approved: bool = True
+    approved_at: Optional[datetime] = None
     auth_provider: AuthProvider
     organization_id: Optional[int] = None
     created_at: datetime
@@ -50,6 +52,11 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
+
+
+class PendingUserResponse(UserResponse):
+    """User response with approval context."""
+    pass
 
 
 class UserBrief(BaseModel):

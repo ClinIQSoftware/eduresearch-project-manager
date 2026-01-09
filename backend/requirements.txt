@@ -26,3 +26,6 @@ gunicorn==21.2.0
 
 # Session middleware dependency
 itsdangerous==2.1.2
+
+# Excel file handling
+openpyxl==3.1.2

@@ -1,9 +1,68 @@
 import { useEffect, useState } from 'react';
-import { getAdminUsers, createUser, updateUser, deactivateUser } from '../services/api';
-import type { User } from '../types';
+import {
+  getAdminUsers, createUser, updateUser, deactivateUser,
+  getSystemSettings, updateSystemSettings, getPendingUsers,
+  approveUser, rejectUser, bulkUploadUsers, downloadUserTemplate
+} from '../services/api';
+import type { User, SystemSettings, BulkUploadResult } from '../types';
+
+type TabType = 'users' | 'security' | 'import';
 
 export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState<TabType>('users');
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'users'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Users
+          </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'security'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Security Settings
+          </button>
+          <button
+            onClick={() => setActiveTab('import')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'import'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            User Import
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'users' && <UsersTab />}
+      {activeTab === 'security' && <SecurityTab />}
+      {activeTab === 'import' && <ImportTab />}
+    </div>
+  );
+}
+
+// ==================== USERS TAB ====================
+function UsersTab() {
   const [users, setUsers] = useState<User[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -15,13 +74,17 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchUsers();
+    fetchData();
   }, []);
 
-  async function fetchUsers() {
+  async function fetchData() {
     try {
-      const response = await getAdminUsers();
-      setUsers(response.data);
+      const [usersRes, pendingRes] = await Promise.all([
+        getAdminUsers(),
+        getPendingUsers()
+      ]);
+      setUsers(usersRes.data);
+      setPendingUsers(pendingRes.data);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -41,7 +104,7 @@ export default function AdminDashboard() {
       });
       setShowForm(false);
       setFormData({ email: '', password: '', name: '', department: '' });
-      fetchUsers();
+      fetchData();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to create user');
     }
@@ -54,7 +117,7 @@ export default function AdminDashboard() {
       } else {
         await updateUser(userId, { is_active: true });
       }
-      fetchUsers();
+      fetchData();
     } catch (error) {
       console.error('Error updating user:', error);
     }
@@ -64,9 +127,28 @@ export default function AdminDashboard() {
     if (!confirm(currentStatus ? 'Remove superuser status?' : 'Grant superuser status?')) return;
     try {
       await updateUser(userId, { is_superuser: !currentStatus });
-      fetchUsers();
+      fetchData();
     } catch (error) {
       console.error('Error updating user:', error);
+    }
+  }
+
+  async function handleApprove(userId: number) {
+    try {
+      await approveUser(userId);
+      fetchData();
+    } catch (error) {
+      console.error('Error approving user:', error);
+    }
+  }
+
+  async function handleReject(userId: number) {
+    if (!confirm('Reject and delete this pending user?')) return;
+    try {
+      await rejectUser(userId);
+      fetchData();
+    } catch (error) {
+      console.error('Error rejecting user:', error);
     }
   }
 
@@ -74,18 +156,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          + Add User
-        </button>
-      </div>
-
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white p-4 rounded-lg shadow">
           <p className="text-sm text-gray-500">Total Users</p>
           <p className="text-2xl font-bold">{users.length}</p>
@@ -95,6 +167,10 @@ export default function AdminDashboard() {
           <p className="text-2xl font-bold text-green-600">
             {users.filter(u => u.is_active).length}
           </p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <p className="text-sm text-gray-500">Pending Approval</p>
+          <p className="text-2xl font-bold text-yellow-600">{pendingUsers.length}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <p className="text-sm text-gray-500">Superusers</p>
@@ -108,6 +184,47 @@ export default function AdminDashboard() {
             {users.filter(u => u.auth_provider !== 'local').length}
           </p>
         </div>
+      </div>
+
+      {/* Pending Users Section */}
+      {pendingUsers.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-yellow-800 mb-3">Pending Approval ({pendingUsers.length})</h2>
+          <div className="space-y-2">
+            {pendingUsers.map((u) => (
+              <div key={u.id} className="bg-white p-3 rounded-lg flex justify-between items-center">
+                <div>
+                  <p className="font-medium">{u.name}</p>
+                  <p className="text-sm text-gray-500">{u.email}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleApprove(u.id)}
+                    className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleReject(u.id)}
+                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add User Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
+          + Add User
+        </button>
       </div>
 
       {/* Users Table */}
@@ -244,6 +361,341 @@ export default function AdminDashboard() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== SECURITY TAB ====================
+function SecurityTab() {
+  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  async function fetchSettings() {
+    try {
+      const response = await getSystemSettings();
+      setSettings(response.data);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!settings) return;
+    setSaving(true);
+    setMessage('');
+    try {
+      await updateSystemSettings(settings);
+      setMessage('Settings saved successfully');
+    } catch (error: any) {
+      setMessage(error.response?.data?.detail || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <div className="text-center py-8">Loading...</div>;
+  if (!settings) return <div className="text-center py-8 text-red-600">Failed to load settings</div>;
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      {message && (
+        <div className={`p-3 rounded-lg ${message.includes('success') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+          {message}
+        </div>
+      )}
+
+      {/* Registration Approval */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">Registration Approval</h2>
+        <div className="space-y-4">
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={settings.require_registration_approval}
+              onChange={(e) => setSettings({ ...settings, require_registration_approval: e.target.checked })}
+              className="w-4 h-4"
+            />
+            <span>Require approval for new user registrations</span>
+          </label>
+
+          {settings.require_registration_approval && (
+            <div className="ml-7">
+              <label className="block text-sm font-medium mb-2">Approval Mode</label>
+              <select
+                value={settings.registration_approval_mode}
+                onChange={(e) => setSettings({ ...settings, registration_approval_mode: e.target.value as 'block' | 'limited' })}
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="block">Block login until approved</option>
+                <option value="limited">Allow limited access until approved</option>
+              </select>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Password Policy */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">Password Policy</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Minimum Password Length</label>
+            <input
+              type="number"
+              value={settings.min_password_length}
+              onChange={(e) => setSettings({ ...settings, min_password_length: parseInt(e.target.value) || 8 })}
+              className="w-full border rounded-lg px-3 py-2"
+              min={6}
+              max={32}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={settings.require_uppercase}
+                onChange={(e) => setSettings({ ...settings, require_uppercase: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span>Require uppercase</span>
+            </label>
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={settings.require_lowercase}
+                onChange={(e) => setSettings({ ...settings, require_lowercase: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span>Require lowercase</span>
+            </label>
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={settings.require_numbers}
+                onChange={(e) => setSettings({ ...settings, require_numbers: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span>Require numbers</span>
+            </label>
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={settings.require_special_chars}
+                onChange={(e) => setSettings({ ...settings, require_special_chars: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span>Require special characters</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Session Settings */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">Session Settings</h2>
+        <div>
+          <label className="block text-sm font-medium mb-2">Session Timeout (minutes)</label>
+          <input
+            type="number"
+            value={settings.session_timeout_minutes}
+            onChange={(e) => setSettings({ ...settings, session_timeout_minutes: parseInt(e.target.value) || 30 })}
+            className="w-full border rounded-lg px-3 py-2"
+            min={5}
+            max={1440}
+          />
+        </div>
+      </div>
+
+      {/* OAuth Settings */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">OAuth Providers</h2>
+        <div className="space-y-4">
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={settings.google_oauth_enabled}
+              onChange={(e) => setSettings({ ...settings, google_oauth_enabled: e.target.checked })}
+              className="w-4 h-4"
+            />
+            <span>Enable Google OAuth</span>
+          </label>
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={settings.microsoft_oauth_enabled}
+              onChange={(e) => setSettings({ ...settings, microsoft_oauth_enabled: e.target.checked })}
+              className="w-4 h-4"
+            />
+            <span>Enable Microsoft OAuth</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== IMPORT TAB ====================
+function ImportTab() {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState<BulkUploadResult | null>(null);
+  const [error, setError] = useState('');
+
+  async function handleDownloadTemplate() {
+    try {
+      const response = await downloadUserTemplate();
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'user_import_template.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading template:', error);
+    }
+  }
+
+  async function handleUpload() {
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    setResult(null);
+
+    try {
+      const response = await bulkUploadUsers(file);
+      setResult(response.data);
+      setFile(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to upload file');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      {/* Instructions */}
+      <div className="bg-blue-50 p-4 rounded-lg">
+        <h2 className="text-lg font-semibold text-blue-800 mb-2">Bulk User Import</h2>
+        <p className="text-blue-700 text-sm">
+          Upload an Excel file (.xlsx) to create multiple users at once. Users will be created with temporary passwords
+          that they can reset on first login.
+        </p>
+      </div>
+
+      {/* Template Download */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h3 className="font-semibold mb-2">Step 1: Download Template</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Download the Excel template and fill in user details. Required fields: email, name.
+          Optional fields: department, phone, bio, organization_id, is_superuser.
+        </p>
+        <button
+          onClick={handleDownloadTemplate}
+          className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+        >
+          Download Template
+        </button>
+      </div>
+
+      {/* File Upload */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h3 className="font-semibold mb-2">Step 2: Upload Filled File</h3>
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="hidden"
+            id="file-upload"
+          />
+          <label htmlFor="file-upload" className="cursor-pointer">
+            {file ? (
+              <div className="text-green-600">
+                <p className="font-medium">{file.name}</p>
+                <p className="text-sm">Click to change file</p>
+              </div>
+            ) : (
+              <div className="text-gray-500">
+                <p className="font-medium">Click to select Excel file</p>
+                <p className="text-sm">.xlsx or .xls files only</p>
+              </div>
+            )}
+          </label>
+        </div>
+
+        {file && (
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={handleUpload}
+              disabled={uploading}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {uploading ? 'Uploading...' : 'Upload & Create Users'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
+      )}
+
+      {/* Results */}
+      {result && (
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="font-semibold mb-4">Import Results</h3>
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <p className="text-2xl font-bold text-green-600">{result.created}</p>
+              <p className="text-sm text-green-700">Users Created</p>
+            </div>
+            <div className="text-center p-4 bg-yellow-50 rounded-lg">
+              <p className="text-2xl font-bold text-yellow-600">{result.skipped}</p>
+              <p className="text-sm text-yellow-700">Skipped (Duplicates)</p>
+            </div>
+            <div className="text-center p-4 bg-red-50 rounded-lg">
+              <p className="text-2xl font-bold text-red-600">{result.errors.length}</p>
+              <p className="text-sm text-red-700">Errors</p>
+            </div>
+          </div>
+
+          {result.errors.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-medium text-red-600 mb-2">Errors:</h4>
+              <ul className="text-sm text-red-600 list-disc list-inside space-y-1">
+                {result.errors.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>

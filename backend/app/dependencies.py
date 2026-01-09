@@ -118,11 +118,29 @@ def get_project_or_404(project_id: int, db: Session = Depends(get_db)) -> Projec
 
 
 def is_project_lead(db: Session, user_id: int, project_id: int) -> bool:
-    """Check if user is the lead of the project."""
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        return False
-    return project.lead_id == user_id
+    """Check if user is a lead of the project (via ProjectMember role)."""
+    member = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == user_id,
+        ProjectMember.role == MemberRole.lead
+    ).first()
+    return member is not None
+
+
+def count_project_leads(db: Session, project_id: int) -> int:
+    """Count the number of leads for a project."""
+    return db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.role == MemberRole.lead
+    ).count()
+
+
+def get_project_leads(db: Session, project_id: int) -> list:
+    """Get all leads for a project."""
+    return db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.role == MemberRole.lead
+    ).all()
 
 
 def is_project_member(db: Session, user_id: int, project_id: int) -> bool:

@@ -3,7 +3,8 @@ import type {
   User, Organization, Project, ProjectWithLead, ProjectDetail,
   JoinRequestWithUser, ProjectFile, ProjectWithLeadReport,
   LeadWithProjects, UserWithProjects, Task, TimeEntry, AnalyticsSummary,
-  ProjectClassification, ProjectStatus, RequestStatus
+  ProjectClassification, ProjectStatus, RequestStatus,
+  SystemSettings, BulkUploadResult
 } from '../types';
 
 // Use environment variable for API URL, fallback to /api for local dev with proxy
@@ -159,6 +160,42 @@ export const updateUser = (userId: number, data: {
 
 export const deactivateUser = (userId: number) =>
   api.delete(`/admin/users/${userId}`);
+
+// System Settings
+export const getSystemSettings = () =>
+  api.get<SystemSettings>('/admin/system-settings');
+
+export const updateSystemSettings = (data: Partial<SystemSettings>) =>
+  api.put<SystemSettings>('/admin/system-settings', data);
+
+// User Approval
+export const getPendingUsers = () =>
+  api.get<User[]>('/admin/pending-users');
+
+export const approveUser = (userId: number) =>
+  api.post<User>(`/admin/approve-user/${userId}`);
+
+export const rejectUser = (userId: number) =>
+  api.post(`/admin/reject-user/${userId}`);
+
+// Bulk User Upload
+export const bulkUploadUsers = (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post<BulkUploadResult>('/admin/users/bulk-upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const downloadUserTemplate = () =>
+  api.get('/admin/users/upload-template', { responseType: 'blob' });
+
+// Project Member Role Management
+export const updateMemberRole = (projectId: number, userId: number, role: string) =>
+  api.put(`/projects/${projectId}/members/${userId}/role`, null, { params: { role } });
+
+export const leaveProject = (projectId: number) =>
+  api.post(`/projects/${projectId}/leave`);
 
 // Legacy - Tasks (keeping for backwards compatibility)
 export const getTasks = (params?: { status?: string; priority?: string; project_id?: number }) =>

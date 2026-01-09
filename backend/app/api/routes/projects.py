@@ -11,7 +11,7 @@ from app.schemas.project import (
     ProjectDetail, ProjectMemberInfo, AddProjectMemberRequest
 )
 from app.dependencies import (
-    get_current_user, is_project_lead, is_project_member
+    get_current_user, is_project_lead, is_project_member, count_project_leads
 )
 from app.services.email import email_service
 
@@ -110,8 +110,8 @@ async def update_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Check lead access
-    if not current_user.is_superuser and project.lead_id != current_user.id:
+    # Check lead access (any lead can update)
+    if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
         raise HTTPException(status_code=403, detail="Only project lead can update")
 
     update_data = project_data.model_dump(exclude_unset=True)
@@ -164,7 +164,8 @@ def delete_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if not current_user.is_superuser and project.lead_id != current_user.id:
+    # Any lead can delete the project
+    if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
         raise HTTPException(status_code=403, detail="Only project lead can delete")
 
     db.delete(project)
@@ -202,8 +203,8 @@ def add_project_member(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Only lead can add members
-    if not current_user.is_superuser and project.lead_id != current_user.id:
+    # Any lead can add members
+    if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
         raise HTTPException(status_code=403, detail="Only project lead can add members")
 
     # Check if user exists
@@ -245,13 +246,9 @@ def remove_project_member(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Only lead can remove members
-    if not current_user.is_superuser and project.lead_id != current_user.id:
+    # Any lead can remove members
+    if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
         raise HTTPException(status_code=403, detail="Only project lead can remove members")
-
-    # Cannot remove the lead
-    if user_id == project.lead_id:
-        raise HTTPException(status_code=400, detail="Cannot remove project lead")
 
     member = db.query(ProjectMember).filter(
         ProjectMember.project_id == project_id,
@@ -261,7 +258,92 @@ def remove_project_member(
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
+    # If removing a lead, ensure at least one lead remains
+    if member.role == MemberRole.lead:
+        lead_count = count_project_leads(db, project_id)
+        if lead_count <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot remove the last project lead. Assign another lead first."
+            )
+
     db.delete(member)
     db.commit()
 
     return {"message": "Member removed successfully"}
+
+
+@router.put("/{project_id}/members/{user_id}/role")
+def update_member_role(
+    project_id: int,
+    user_id: int,
+    role: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change a member's role (lead only). Ensure at least one lead remains."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Any lead can change roles
+    if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
+        raise HTTPException(status_code=403, detail="Only project lead can change member roles")
+
+    member = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == user_id
+    ).first()
+
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    new_role = MemberRole.lead if role == "lead" else MemberRole.participant
+
+    # If demoting from lead, ensure at least one lead remains
+    if member.role == MemberRole.lead and new_role == MemberRole.participant:
+        lead_count = count_project_leads(db, project_id)
+        if lead_count <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot demote the last project lead. Assign another lead first."
+            )
+
+    member.role = new_role
+    db.commit()
+
+    return {"message": f"Member role updated to {role}"}
+
+
+@router.post("/{project_id}/leave")
+def leave_project(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Leave a project. Leads can only leave if other leads exist."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    member = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == current_user.id
+    ).first()
+
+    if not member:
+        raise HTTPException(status_code=400, detail="You are not a member of this project")
+
+    # If user is a lead, ensure at least one lead remains
+    if member.role == MemberRole.lead:
+        lead_count = count_project_leads(db, project_id)
+        if lead_count <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="You are the only project lead. Assign another lead before leaving."
+            )
+
+    db.delete(member)
+    db.commit()
+
+    return {"message": "You have left the project"}

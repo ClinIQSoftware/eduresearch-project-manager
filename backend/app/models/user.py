@@ -26,6 +26,11 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
 
+    # Approval fields for registration approval workflow
+    is_approved = Column(Boolean, default=True)  # False for pending users when approval required
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    approved_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
     auth_provider = Column(Enum(AuthProvider), default=AuthProvider.local)
     oauth_id = Column(String(255), nullable=True)  # OAuth provider user ID
 
@@ -41,3 +46,4 @@ class User(Base):
     project_memberships = relationship("ProjectMember", back_populates="user", cascade="all, delete-orphan")
     join_requests = relationship("JoinRequest", back_populates="user", cascade="all, delete-orphan")
     uploaded_files = relationship("ProjectFile", back_populates="uploaded_by", cascade="all, delete-orphan")
+    approved_by = relationship("User", remote_side=[id], foreign_keys=[approved_by_id])

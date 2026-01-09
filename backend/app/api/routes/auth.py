@@ -15,6 +15,15 @@ from app.services.auth import (
 )
 from app.dependencies import get_current_user
 from app.models.user import User, AuthProvider
+from app.models.system_settings import SystemSettings
+
+
+def get_system_settings(db: Session) -> SystemSettings:
+    """Get global system settings."""
+    settings_obj = db.query(SystemSettings).filter(
+        SystemSettings.organization_id == None
+    ).first()
+    return settings_obj
 
 router = APIRouter()
 
@@ -51,6 +60,10 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered"
         )
 
+    # Check if registration approval is required
+    sys_settings = get_system_settings(db)
+    require_approval = sys_settings.require_registration_approval if sys_settings else False
+
     user = create_user(
         db=db,
         email=user_data.email,
@@ -59,7 +72,8 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         department=user_data.department,
         phone=user_data.phone,
         bio=user_data.bio,
-        organization_id=user_data.organization_id
+        organization_id=user_data.organization_id,
+        is_approved=not require_approval  # Pending if approval required
     )
     return user
 
@@ -74,6 +88,18 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Check if user is approved
+    if not user.is_approved:
+        sys_settings = get_system_settings(db)
+        approval_mode = sys_settings.registration_approval_mode if sys_settings else "block"
+
+        if approval_mode == "block":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is pending approval. Please wait for an administrator to approve your registration."
+            )
+        # If "limited" mode, allow login but frontend should handle restricted access
 
     access_token = create_access_token(
         data={"sub": str(user.id)},

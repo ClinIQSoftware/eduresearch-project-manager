@@ -5,6 +5,7 @@ from app.models.project_member import ProjectMember, MemberRole
 from app.models.join_request import JoinRequest, RequestStatus
 from app.models.project_file import ProjectFile
 from app.models.email_settings import EmailSettings
+from app.models.system_settings import SystemSettings
 from app.models.task import Task, TaskStatus, TaskPriority
 from app.models.time_entry import TimeEntry
 
@@ -16,6 +17,7 @@ __all__ = [
     "JoinRequest", "RequestStatus",
     "ProjectFile",
     "EmailSettings",
+    "SystemSettings",
     "Task", "TaskStatus", "TaskPriority",
     "TimeEntry",
 ]

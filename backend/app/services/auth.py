@@ -64,7 +64,8 @@ def create_user(
     phone: Optional[str] = None,
     bio: Optional[str] = None,
     organization_id: Optional[int] = None,
-    is_superuser: bool = False
+    is_superuser: bool = False,
+    is_approved: bool = True
 ) -> User:
     hashed_password = get_password_hash(password)
     user = User(
@@ -75,7 +76,8 @@ def create_user(
         phone=phone,
         bio=bio,
         organization_id=organization_id,
-        is_superuser=is_superuser
+        is_superuser=is_superuser,
+        is_approved=is_approved
     )
     db.add(user)
     db.commit()
