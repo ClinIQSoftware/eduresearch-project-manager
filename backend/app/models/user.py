@@ -7,9 +7,9 @@ import enum
 
 
 class AuthProvider(str, enum.Enum):
-    LOCAL = "local"
-    GOOGLE = "google"
-    MICROSOFT = "microsoft"
+    local = "local"
+    google = "google"
+    microsoft = "microsoft"
 
 
 class User(Base):
@@ -26,7 +26,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
 
-    auth_provider = Column(Enum(AuthProvider), default=AuthProvider.LOCAL)
+    auth_provider = Column(Enum(AuthProvider), default=AuthProvider.local)
     oauth_id = Column(String(255), nullable=True)  # OAuth provider user ID
 
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)

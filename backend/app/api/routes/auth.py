@@ -141,7 +141,7 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
                 auth_provider="google",
                 oauth_id=oauth_id
             )
-        elif user.auth_provider != AuthProvider.GOOGLE:
+        elif user.auth_provider != AuthProvider.google:
             # User exists but with different auth method
             raise HTTPException(
                 status_code=400,
@@ -203,7 +203,7 @@ async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
                 auth_provider="microsoft",
                 oauth_id=oauth_id
             )
-        elif user.auth_provider != AuthProvider.MICROSOFT:
+        elif user.auth_provider != AuthProvider.microsoft:
             raise HTTPException(
                 status_code=400,
                 detail="Email already registered with different authentication method"
