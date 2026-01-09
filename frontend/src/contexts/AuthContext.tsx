@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { User } from '../types';
 import { getCurrentUser } from '../services/api';
 
