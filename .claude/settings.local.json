@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:render.com)",
+      "Bash(claude mcp add:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(curl:*)",
+      "Bash(PGPASSWORD=R9vzABwmjFxq1Jlds18MFt5CO9X4tWwk psql:*)",
+      "Bash(python3 -c \"\nimport psycopg2\n\nconn = psycopg2.connect\\(''postgresql://eduresearch_db_user:R9vzABwmjFxq1Jlds18MFt5CO9X4tWwk@dpg-d5ghg68gjchc73etk1bg-a.oregon-postgres.render.com:5432/eduresearch_db''\\)\ncur = conn.cursor\\(\\)\n\n# Check current status\ncur.execute\\(\"\"SELECT id, email, name, is_superuser, is_active FROM users WHERE email = ''deschamps.jd@gmail.com''\"\"\\)\nresult = cur.fetchone\\(\\)\nprint\\(''Before:'', result\\)\n\n# Update to superuser\ncur.execute\\(\"\"UPDATE users SET is_superuser = true WHERE email = ''deschamps.jd@gmail.com''\"\"\\)\nconn.commit\\(\\)\n\n# Verify\ncur.execute\\(\"\"SELECT id, email, name, is_superuser, is_active FROM users WHERE email = ''deschamps.jd@gmail.com''\"\"\\)\nresult = cur.fetchone\\(\\)\nprint\\(''After:'', result\\)\n\ncur.close\\(\\)\nconn.close\\(\\)\n\")",
+      "Bash(pip3 install:*)",
+      "Bash(cd:*)",
+      "Bash(npm run build:*)",
+      "Bash(cd /Users/jd/Dropbox/Professional\\\\ -\\\\ Business/Education\\\\ and\\\\ research\\\\ log\\\\ and\\\\ team/eduresearch-project-manager/frontend &&:*)",
+      "Bash(/opt/homebrew/bin/npm run build)",
+      "Bash(python3:*)",
+      "Bash(claude mcp run:*)",
+      "Bash(DATABASE_URL=\"postgresql://eduresearch_db_user:R9vzABwmjFxq1Jlds18MFt5CO9X4tWwk@dpg-d5ghg68gjchc73etk1bg-a.oregon-postgres.render.com:5432/eduresearch_db\" alembic upgrade:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nRename organization to institution, split user name into first/last\n\n- Renamed ''organizations'' table to ''institutions'' throughout codebase\n- Split user ''name'' field into ''first_name'' and ''last_name''\n- Added ''institution'' text field to users for affiliation\n- Updated all API endpoints, schemas, and frontend components\n- Created database migration \\(003\\) for schema changes\n- Updated AdminDashboard with new user creation fields\n- Added DashboardTabs component for view switching\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push origin main)",
+      "Bash(git commit:*)",
+      "Bash(git fetch:*)"
+    ]
+  }
+}
