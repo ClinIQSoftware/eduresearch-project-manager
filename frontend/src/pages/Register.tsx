@@ -8,7 +8,9 @@ export default function Register() {
     email: '',
     password: '',
     confirmPassword: '',
-    name: '',
+    first_name: '',
+    last_name: '',
+    institution: '',
     department: '',
     phone: '',
   });
@@ -38,7 +40,9 @@ export default function Register() {
       await registerApi({
         email: formData.email,
         password: formData.password,
-        name: formData.name,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        institution: formData.institution || undefined,
         department: formData.department || undefined,
         phone: formData.phone || undefined,
       });
@@ -71,15 +75,27 @@ export default function Register() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Full Name *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2"
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">First Name *</label>
+              <input
+                type="text"
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Last Name *</label>
+              <input
+                type="text"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2"
+                required
+              />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Email *</label>
@@ -92,12 +108,23 @@ export default function Register() {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium mb-1">Institution/Affiliation</label>
+            <input
+              type="text"
+              value={formData.institution}
+              onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="e.g., University of Toronto"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-1">Department</label>
             <input
               type="text"
               value={formData.department}
               onChange={(e) => setFormData({ ...formData, department: e.target.value })}
               className="w-full border rounded-lg px-3 py-2"
+              placeholder="e.g., Computer Science"
             />
           </div>
           <div>
