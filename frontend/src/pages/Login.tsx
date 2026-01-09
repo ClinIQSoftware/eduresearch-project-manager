@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { login as loginApi } from '../services/api';
 
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,11 +34,11 @@ export default function Login() {
   }
 
   function handleGoogleLogin() {
-    window.location.href = '/api/auth/google';
+    window.location.href = `${API_URL}/auth/google`;
   }
 
   function handleMicrosoftLogin() {
-    window.location.href = '/api/auth/microsoft';
+    window.location.href = `${API_URL}/auth/microsoft`;
   }
 
   return (
