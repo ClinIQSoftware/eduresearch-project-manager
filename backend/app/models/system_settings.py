@@ -27,11 +27,11 @@ class SystemSettings(Base):
     google_oauth_enabled = Column(Boolean, default=True)
     microsoft_oauth_enabled = Column(Boolean, default=True)
 
-    # Organization scope (null = global settings)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, unique=True)
+    # Institution scope (null = global settings)
+    institution_id = Column(Integer, ForeignKey("institutions.id"), nullable=True, unique=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    organization = relationship("Organization")
+    institution = relationship("Institution")
