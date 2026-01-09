@@ -45,7 +45,7 @@ export default function Dashboard() {
 
   // Get recent projects sorted by updated_at
   const recentProjects = [...projects]
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
     .slice(0, 5);
 
   // Get upcoming projects by start date
@@ -170,7 +170,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   <p className="text-xs text-gray-400 mt-2">
-                    Updated: {new Date(project.updated_at).toLocaleDateString()}
+                    Updated: {new Date(project.updated_at || project.created_at).toLocaleDateString()}
                   </p>
                 </Link>
               ))}

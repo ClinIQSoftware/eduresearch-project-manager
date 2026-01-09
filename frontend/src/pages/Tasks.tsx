@@ -140,7 +140,7 @@ export default function Tasks() {
         >
           <option value="">All Projects</option>
           {projects.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
+            <option key={p.id} value={p.id}>{p.title}</option>
           ))}
         </select>
       </div>
@@ -249,7 +249,7 @@ export default function Tasks() {
                   >
                     <option value="">No Project</option>
                     {projects.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+                      <option key={p.id} value={p.id}>{p.title}</option>
                     ))}
                   </select>
                 </div>

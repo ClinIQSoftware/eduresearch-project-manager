@@ -70,7 +70,15 @@ export default function ProjectDetailPage() {
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await updateProject(Number(id), editData);
+      await updateProject(Number(id), {
+        title: editData.title,
+        description: editData.description ?? undefined,
+        classification: editData.classification,
+        status: editData.status,
+        open_to_participants: editData.open_to_participants,
+        start_date: editData.start_date ?? undefined,
+        color: editData.color,
+      });
       setEditing(false);
       fetchProject();
     } catch (error) {

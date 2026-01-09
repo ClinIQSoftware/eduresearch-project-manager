@@ -16,7 +16,7 @@ export default function TimeTracking() {
   }, []);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (activeEntry) {
       interval = setInterval(() => {
         const start = new Date(activeEntry.start_time).getTime();
@@ -24,7 +24,9 @@ export default function TimeTracking() {
         setElapsedTime(Math.floor((now - start) / 1000));
       }, 1000);
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [activeEntry]);
 
   async function fetchData() {
