@@ -7,11 +7,12 @@ from starlette.requests import Request
 from app.database import get_db
 from app.config import settings
 from app.schemas.user import (
-    UserCreate, UserResponse, UserUpdate, Token, LoginRequest
+    UserCreate, UserResponse, UserUpdate, Token, LoginRequest, PasswordChange
 )
 from app.services.auth import (
     authenticate_user, create_user, create_oauth_user,
-    get_user_by_email, create_access_token, get_password_hash
+    get_user_by_email, create_access_token, get_password_hash,
+    verify_password
 )
 from app.dependencies import get_current_user
 from app.models.user import User, AuthProvider
@@ -123,12 +124,52 @@ def update_me(
 ):
     """Update current user profile."""
     update_data = user_data.model_dump(exclude_unset=True)
+
+    # Check if email is being changed and if it's already taken
+    if "email" in update_data and update_data["email"] != current_user.email:
+        existing_user = get_user_by_email(db, update_data["email"])
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+
     for key, value in update_data.items():
         setattr(current_user, key, value)
 
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/change-password")
+def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change current user's password."""
+    # OAuth users cannot change password
+    if current_user.auth_provider != AuthProvider.local:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password cannot be changed for OAuth users"
+        )
+
+    # Verify current password
+    if not current_user.password_hash or not verify_password(
+        password_data.current_password, current_user.password_hash
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+
+    # Update password
+    current_user.password_hash = get_password_hash(password_data.new_password)
+    db.commit()
+
+    return {"message": "Password changed successfully"}
 
 
 @router.get("/google")

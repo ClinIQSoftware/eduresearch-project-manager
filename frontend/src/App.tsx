@@ -13,6 +13,7 @@ import Reports from './pages/Reports';
 import AdminDashboard from './pages/AdminDashboard';
 import Tasks from './pages/Tasks';
 import TimeTracking from './pages/TimeTracking';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -90,6 +91,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <TimeTracking />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Settings />
               </Layout>
             </ProtectedRoute>
           }

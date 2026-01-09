@@ -43,14 +43,20 @@ class UserUpdate(BaseModel):
     last_name: Optional[str] = None
     phone: Optional[str] = None
     bio: Optional[str] = None
+    email: Optional[EmailStr] = None
+    institution_id: Optional[int] = None
+    department_id: Optional[int] = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
 
 
 class UserUpdateAdmin(UserUpdate):
-    email: Optional[EmailStr] = None
+    """Admin can also change is_active and is_superuser."""
     is_active: Optional[bool] = None
     is_superuser: Optional[bool] = None
-    institution_id: Optional[int] = None
-    department_id: Optional[int] = None
 
 
 class UserResponse(BaseModel):

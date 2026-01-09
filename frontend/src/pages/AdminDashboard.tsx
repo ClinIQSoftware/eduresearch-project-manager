@@ -91,7 +91,16 @@ function UsersTab() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
+    email: '',
+    first_name: '',
+    last_name: '',
+    institution_id: '' as string | number,
+    department_id: '' as string | number,
+  });
+  const [editFormData, setEditFormData] = useState({
     email: '',
     first_name: '',
     last_name: '',
@@ -205,6 +214,45 @@ function UsersTab() {
       console.error('Error rejecting user:', error);
     }
   }
+
+  function openEditModal(user: User) {
+    setEditingUser(user);
+    setEditFormData({
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      institution_id: user.institution_id || '',
+      department_id: user.department_id || '',
+    });
+    setShowEditForm(true);
+    setError('');
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingUser) return;
+    setError('');
+    try {
+      await updateUser(editingUser.id, {
+        email: editFormData.email,
+        first_name: editFormData.first_name,
+        last_name: editFormData.last_name,
+        institution_id: editFormData.institution_id ? Number(editFormData.institution_id) : null,
+        department_id: editFormData.department_id ? Number(editFormData.department_id) : null,
+      });
+      setShowEditForm(false);
+      setEditingUser(null);
+      setSuccess('User updated successfully');
+      fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to update user');
+    }
+  }
+
+  // Filter departments for edit form
+  const editFilteredDepartments = editFormData.institution_id
+    ? departments.filter(d => d.institution_id === Number(editFormData.institution_id))
+    : departments;
 
   if (loading) return <div className="text-center py-8">Loading...</div>;
 
@@ -339,6 +387,12 @@ function UsersTab() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <button
+                    onClick={() => openEditModal(u)}
+                    className="text-blue-600 hover:underline mr-2"
+                  >
+                    Edit
+                  </button>
+                  <button
                     onClick={() => handleToggleActive(u.id, u.is_active)}
                     className={`mr-2 ${u.is_active ? 'text-red-600' : 'text-green-600'} hover:underline`}
                   >
@@ -444,6 +498,97 @@ function UsersTab() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Create User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditForm && editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Edit User</h2>
+            {error && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">{error}</div>
+            )}
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">First Name *</label>
+                  <input
+                    type="text"
+                    value={editFormData.first_name}
+                    onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Last Name *</label>
+                  <input
+                    type="text"
+                    value={editFormData.last_name}
+                    onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Institution</label>
+                <select
+                  value={editFormData.institution_id}
+                  onChange={(e) => setEditFormData({ ...editFormData, institution_id: e.target.value, department_id: '' })}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="">No Institution</option>
+                  {institutions.map((inst) => (
+                    <option key={inst.id} value={inst.id}>{inst.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Department</label>
+                <select
+                  value={editFormData.department_id}
+                  onChange={(e) => setEditFormData({ ...editFormData, department_id: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  disabled={!editFormData.institution_id}
+                >
+                  <option value="">No Department</option>
+                  {editFilteredDepartments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
+                {!editFormData.institution_id && (
+                  <p className="text-xs text-gray-500 mt-1">Select an institution first</p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowEditForm(false); setEditingUser(null); }}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>
@@ -1100,7 +1245,7 @@ function ImportTab() {
         <h3 className="font-semibold mb-2">Step 1: Download Template</h3>
         <p className="text-sm text-gray-600 mb-4">
           Download the Excel template and fill in user details. Required fields: email, first_name, last_name.
-          Optional fields: institution, department, phone, bio, institution_id, is_superuser.
+          Optional fields: phone, bio, institution (by name), department (by name), is_superuser.
         </p>
         <button
           onClick={handleDownloadTemplate}

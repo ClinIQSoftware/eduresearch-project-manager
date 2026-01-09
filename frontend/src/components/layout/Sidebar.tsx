@@ -78,6 +78,19 @@ export default function Sidebar() {
             </span>
           )}
         </div>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-4 py-2 rounded-lg transition-colors mb-2 ${
+              isActive
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-300 hover:bg-gray-800'
+            }`
+          }
+        >
+          <span>&#x2699;</span>
+          <span>Settings</span>
+        </NavLink>
         <button
           onClick={handleLogout}
           className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"

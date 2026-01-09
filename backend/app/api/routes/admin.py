@@ -10,6 +10,8 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.email_settings import EmailSettings
 from app.models.system_settings import SystemSettings
+from app.models.institution import Institution
+from app.models.department import Department
 from app.schemas.user import UserResponse, UserUpdateAdmin, UserCreateAdmin, PendingUserResponse
 from app.schemas.project import ProjectResponse, ProjectUpdate
 from app.schemas.email_settings import (
@@ -430,7 +432,8 @@ async def bulk_upload_users(
 ):
     """
     Bulk upload users from Excel file.
-    Expected columns: email, first_name, last_name, phone, bio, institution_id, department_id, is_superuser
+    Expected columns: email, first_name, last_name, phone, bio, institution, department, is_superuser
+    Institution and department can be specified by name or by ID (institution_id, department_id).
     """
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="File must be an Excel file (.xlsx or .xls)")
@@ -452,6 +455,13 @@ async def bulk_upload_users(
                     status_code=400,
                     detail=f"Missing required column: {col}"
                 )
+
+        # Pre-load institutions and departments for name lookup
+        institutions_by_name = {i.name.lower(): i for i in db.query(Institution).all()}
+        departments_by_name = {}
+        for d in db.query(Department).all():
+            key = (d.institution_id, d.name.lower())
+            departments_by_name[key] = d
 
         created = 0
         skipped = 0
@@ -485,23 +495,50 @@ async def bulk_upload_users(
                 phone = row_data.get('phone', '').strip() if row_data.get('phone') else None
                 bio = row_data.get('bio', '').strip() if row_data.get('bio') else None
 
-                inst_id = row_data.get('institution_id')
-                if inst_id and str(inst_id).strip():
+                # Handle institution - by name or by ID
+                inst_id = None
+                inst_name = row_data.get('institution', '').strip() if row_data.get('institution') else ''
+                inst_id_val = row_data.get('institution_id')
+
+                if inst_name:
+                    # Lookup by name
+                    inst = institutions_by_name.get(inst_name.lower())
+                    if inst:
+                        inst_id = inst.id
+                    else:
+                        errors.append(f"Row {row_num}: Institution '{inst_name}' not found")
+                        continue
+                elif inst_id_val and str(inst_id_val).strip():
+                    # Use ID directly
                     try:
-                        inst_id = int(inst_id)
+                        inst_id = int(inst_id_val)
                     except (ValueError, TypeError):
                         inst_id = None
-                else:
-                    inst_id = None
 
-                dept_id = row_data.get('department_id')
-                if dept_id and str(dept_id).strip():
+                # Handle department - by name or by ID
+                dept_id = None
+                dept_name = row_data.get('department', '').strip() if row_data.get('department') else ''
+                dept_id_val = row_data.get('department_id')
+
+                if dept_name:
+                    # Lookup by name (requires institution_id)
+                    if inst_id:
+                        dept_key = (inst_id, dept_name.lower())
+                        dept = departments_by_name.get(dept_key)
+                        if dept:
+                            dept_id = dept.id
+                        else:
+                            errors.append(f"Row {row_num}: Department '{dept_name}' not found in the specified institution")
+                            continue
+                    else:
+                        errors.append(f"Row {row_num}: Department specified but no institution provided")
+                        continue
+                elif dept_id_val and str(dept_id_val).strip():
+                    # Use ID directly
                     try:
-                        dept_id = int(dept_id)
+                        dept_id = int(dept_id_val)
                     except (ValueError, TypeError):
                         dept_id = None
-                else:
-                    dept_id = None
 
                 is_superuser = False
                 superuser_val = row_data.get('is_superuser', '')
@@ -555,15 +592,21 @@ async def get_upload_template(
     sheet = workbook.active
     sheet.title = "Users"
 
-    # Add headers
-    headers = ['email', 'first_name', 'last_name', 'phone', 'bio', 'institution_id', 'department_id', 'is_superuser']
+    # Add headers - include both name and ID columns for flexibility
+    headers = ['email', 'first_name', 'last_name', 'phone', 'bio', 'institution', 'department', 'is_superuser']
     for col, header in enumerate(headers, start=1):
         sheet.cell(row=1, column=col, value=header)
 
     # Add example row
-    example = ['user@example.com', 'John Doe', 'Research', '+1234567890', 'Bio text', '', 'false']
+    example = ['user@example.com', 'John', 'Doe', '+1234567890', 'Bio text', 'Example University', 'Research Department', 'false']
     for col, value in enumerate(example, start=1):
         sheet.cell(row=2, column=col, value=value)
+
+    # Add instructions row
+    instructions = ['Required', 'Required', 'Required', 'Optional', 'Optional', 'Optional - use institution name', 'Optional - use department name', 'Optional - true/false']
+    for col, value in enumerate(instructions, start=1):
+        cell = sheet.cell(row=3, column=col, value=value)
+        cell.font = openpyxl.styles.Font(italic=True, color="808080")
 
     # Save to BytesIO
     output = BytesIO()

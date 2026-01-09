@@ -57,7 +57,15 @@ export const updateProfile = (data: {
   last_name?: string;
   phone?: string;
   bio?: string;
+  email?: string;
+  institution_id?: number | null;
+  department_id?: number | null;
 }) => api.put<User>('/auth/me', data);
+
+export const changePassword = (data: {
+  current_password: string;
+  new_password: string;
+}) => api.post<{ message: string }>('/auth/change-password', data);
 
 // Institutions
 export const getInstitutions = () => api.get<Institution[]>('/institutions');
@@ -184,6 +192,8 @@ export const updateUser = (userId: number, data: {
   email?: string;
   is_active?: boolean;
   is_superuser?: boolean;
+  institution_id?: number | null;
+  department_id?: number | null;
 }) => api.put<User>(`/admin/users/${userId}`, data);
 
 export const deactivateUser = (userId: number) =>
