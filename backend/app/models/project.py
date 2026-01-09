@@ -39,11 +39,11 @@ class Project(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Foreign keys
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
+    institution_id = Column(Integer, ForeignKey("institutions.id"), nullable=True)
     lead_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
-    organization = relationship("Organization", back_populates="projects")
+    institution_entity = relationship("Institution", back_populates="projects")
     lead = relationship("User", back_populates="led_projects", foreign_keys=[lead_id])
     members = relationship("ProjectMember", back_populates="project", cascade="all, delete-orphan")
     join_requests = relationship("JoinRequest", back_populates="project", cascade="all, delete-orphan")

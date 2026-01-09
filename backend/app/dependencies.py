@@ -77,7 +77,7 @@ def require_superuser(current_user: User = Depends(get_current_user)) -> User:
 
 
 def is_organization_admin(db: Session, user_id: int, organization_id: int) -> bool:
-    """Check if user is an admin of the organization."""
+    """Check if user is an admin of the organization/institution."""
     result = db.execute(
         organization_admins.select().where(
             organization_admins.c.user_id == user_id,
@@ -85,6 +85,12 @@ def is_organization_admin(db: Session, user_id: int, organization_id: int) -> bo
         )
     ).first()
     return result is not None
+
+
+# Alias for institution terminology
+def is_institution_admin(db: Session, user_id: int, institution_id: int) -> bool:
+    """Check if user is an admin of the institution."""
+    return is_organization_admin(db, user_id, institution_id)
 
 
 def require_organization_admin(organization_id: int):
@@ -99,11 +105,16 @@ def require_organization_admin(organization_id: int):
         if not is_organization_admin(db, current_user.id, organization_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Organization admin access required"
+                detail="Institution admin access required"
             )
         return current_user
 
     return dependency
+
+
+def require_institution_admin(institution_id: int):
+    """Dependency factory to require institution admin access."""
+    return require_organization_admin(institution_id)
 
 
 def get_project_or_404(project_id: int, db: Session = Depends(get_db)) -> Project:

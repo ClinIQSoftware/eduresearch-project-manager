@@ -227,5 +227,50 @@ EduResearch Project Manager
         await self.send_email(to_email, subject, body, html_body, attachments)
 
 
+    async def send_welcome_email(
+        self,
+        to_email: str,
+        user_name: str,
+        temp_password: str,
+        login_url: str = None
+    ):
+        """Send welcome email with temporary password to new user."""
+        login_url = login_url or f"{settings.frontend_url}/login"
+        subject = "[EduResearch] Welcome - Your Account Has Been Created"
+        body = f"""
+Hello {user_name},
+
+Your EduResearch Project Manager account has been created.
+
+Your login credentials:
+Email: {to_email}
+Temporary Password: {temp_password}
+
+Please log in and change your password on first login, or connect your Google/Microsoft account for easier access.
+
+Login here: {login_url}
+
+Best regards,
+EduResearch Project Manager
+        """
+        html_body = f"""
+<html>
+<body>
+<h2>Welcome to EduResearch Project Manager!</h2>
+<p>Hello {user_name},</p>
+<p>Your account has been created.</p>
+<h3>Your Login Credentials:</h3>
+<p><strong>Email:</strong> {to_email}</p>
+<p><strong>Temporary Password:</strong> <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">{temp_password}</code></p>
+<p>Please log in and change your password on first login, or connect your Google/Microsoft account for easier access.</p>
+<p><a href="{login_url}" style="display: inline-block; background: #3B82F6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Log In Now</a></p>
+<hr>
+<p style="color: #666; font-size: 12px;">EduResearch Project Manager</p>
+</body>
+</html>
+        """
+        return await self.send_email(to_email, subject, body, html_body)
+
+
 # Default email service instance
 email_service = EmailService()

@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import {
   getAdminUsers, createUser, updateUser, deactivateUser,
   getSystemSettings, updateSystemSettings, getPendingUsers,
-  approveUser, rejectUser, bulkUploadUsers, downloadUserTemplate
+  approveUser, rejectUser, bulkUploadUsers, downloadUserTemplate,
+  getInstitutions, createInstitution, deleteInstitution
 } from '../services/api';
-import type { User, SystemSettings, BulkUploadResult } from '../types';
+import type { User, SystemSettings, BulkUploadResult, Institution } from '../types';
 
-type TabType = 'users' | 'security' | 'import';
+type TabType = 'users' | 'institutions' | 'security' | 'import';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('users');
@@ -27,6 +28,16 @@ export default function AdminDashboard() {
             }`}
           >
             Users
+          </button>
+          <button
+            onClick={() => setActiveTab('institutions')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'institutions'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Institutions
           </button>
           <button
             onClick={() => setActiveTab('security')}
@@ -53,6 +64,7 @@ export default function AdminDashboard() {
 
       {/* Tab Content */}
       {activeTab === 'users' && <UsersTab />}
+      {activeTab === 'institutions' && <InstitutionsTab />}
       {activeTab === 'security' && <SecurityTab />}
       {activeTab === 'import' && <ImportTab />}
     </div>
@@ -63,15 +75,19 @@ export default function AdminDashboard() {
 function UsersTab() {
   const [users, setUsers] = useState<User[]>([]);
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    name: '',
+    first_name: '',
+    last_name: '',
+    institution: '',
     department: '',
+    institution_id: '' as string | number,
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -79,12 +95,14 @@ function UsersTab() {
 
   async function fetchData() {
     try {
-      const [usersRes, pendingRes] = await Promise.all([
+      const [usersRes, pendingRes, instsRes] = await Promise.all([
         getAdminUsers(),
-        getPendingUsers()
+        getPendingUsers(),
+        getInstitutions()
       ]);
       setUsers(usersRes.data);
       setPendingUsers(pendingRes.data);
+      setInstitutions(instsRes.data);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -95,15 +113,19 @@ function UsersTab() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setSuccess('');
     try {
       await createUser({
         email: formData.email,
-        password: formData.password,
-        name: formData.name,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        institution: formData.institution || undefined,
         department: formData.department || undefined,
+        institution_id: formData.institution_id ? Number(formData.institution_id) : undefined,
       });
       setShowForm(false);
-      setFormData({ email: '', password: '', name: '', department: '' });
+      setFormData({ email: '', first_name: '', last_name: '', institution: '', department: '', institution_id: '' });
+      setSuccess('User created! A temporary password has been emailed to them.');
       fetchData();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to create user');
@@ -156,6 +178,11 @@ function UsersTab() {
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {success && (
+        <div className="bg-green-50 text-green-600 p-4 rounded-lg">{success}</div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white p-4 rounded-lg shadow">
@@ -233,7 +260,7 @@ function UsersTab() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Institution / Dept</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Auth</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
@@ -250,7 +277,11 @@ function UsersTab() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {u.department || '-'}
+                  <div>
+                    {u.institution && <p>{u.institution}</p>}
+                    {u.department && <p className="text-xs">{u.department}</p>}
+                    {!u.institution && !u.department && '-'}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`text-xs px-2 py-1 rounded ${
@@ -300,6 +331,238 @@ function UsersTab() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Add User</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              A temporary password will be generated and emailed to the user.
+            </p>
+            {error && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">{error}</div>
+            )}
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">First Name *</label>
+                  <input
+                    type="text"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Last Name *</label>
+                  <input
+                    type="text"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Institution/Affiliation</label>
+                <input
+                  type="text"
+                  value={formData.institution}
+                  onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  placeholder="e.g., University of Toronto"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Department</label>
+                <input
+                  type="text"
+                  value={formData.department}
+                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  placeholder="e.g., Computer Science"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Institution Entity</label>
+                <select
+                  value={formData.institution_id}
+                  onChange={(e) => setFormData({ ...formData, institution_id: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="">No Institution Entity</option>
+                  {institutions.map((inst) => (
+                    <option key={inst.id} value={inst.id}>{inst.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== INSTITUTIONS TAB ====================
+function InstitutionsTab() {
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    fetchInstitutions();
+  }, []);
+
+  async function fetchInstitutions() {
+    try {
+      const response = await getInstitutions();
+      setInstitutions(response.data);
+    } catch (error) {
+      console.error('Error fetching institutions:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    try {
+      await createInstitution({
+        name: formData.name,
+        description: formData.description || undefined,
+      });
+      setShowForm(false);
+      setFormData({ name: '', description: '' });
+      setSuccess('Institution created successfully');
+      fetchInstitutions();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to create institution');
+    }
+  }
+
+  async function handleDelete(instId: number, instName: string) {
+    if (!confirm(`Delete institution "${instName}"? This cannot be undone.`)) return;
+    setError('');
+    setSuccess('');
+    try {
+      await deleteInstitution(instId);
+      setSuccess('Institution deleted successfully');
+      fetchInstitutions();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to delete institution');
+    }
+  }
+
+  if (loading) return <div className="text-center py-8">Loading...</div>;
+
+  return (
+    <div className="space-y-6">
+      {/* Messages */}
+      {success && (
+        <div className="bg-green-50 text-green-600 p-4 rounded-lg">{success}</div>
+      )}
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <p className="text-sm text-gray-500">Total Institutions</p>
+          <p className="text-2xl font-bold">{institutions.length}</p>
+        </div>
+      </div>
+
+      {/* Add Institution Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
+          + Add Institution
+        </button>
+      </div>
+
+      {/* Institutions Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {institutions.map((inst) => (
+              <tr key={inst.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {inst.id}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap font-medium">
+                  {inst.name}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-500">
+                  {inst.description || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {new Date(inst.created_at).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <button
+                    onClick={() => handleDelete(inst.id, inst.name)}
+                    className="text-red-600 hover:underline"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {institutions.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  No institutions yet. Create one to get started.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Create Institution Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add Institution</h2>
             {error && (
               <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">{error}</div>
             )}
@@ -315,33 +578,12 @@ function UsersTab() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Email *</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Password *</label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2"
-                  required
-                  minLength={6}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Department</label>
-                <input
-                  type="text"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2"
+                  rows={3}
                 />
               </div>
               <div className="flex justify-end gap-2">
@@ -356,7 +598,7 @@ function UsersTab() {
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Create User
+                  Create Institution
                 </button>
               </div>
             </form>
@@ -612,8 +854,8 @@ function ImportTab() {
       <div className="bg-white p-6 rounded-lg shadow">
         <h3 className="font-semibold mb-2">Step 1: Download Template</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Download the Excel template and fill in user details. Required fields: email, name.
-          Optional fields: department, phone, bio, organization_id, is_superuser.
+          Download the Excel template and fill in user details. Required fields: email, first_name, last_name.
+          Optional fields: institution, department, phone, bio, institution_id, is_superuser.
         </p>
         <button
           onClick={handleDownloadTemplate}

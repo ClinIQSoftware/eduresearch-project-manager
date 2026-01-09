@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type {
-  User, Organization, Project, ProjectWithLead, ProjectDetail,
+  User, Institution, Project, ProjectWithLead, ProjectDetail,
   JoinRequestWithUser, ProjectFile, ProjectWithLeadReport,
   LeadWithProjects, UserWithProjects, Task, TimeEntry, AnalyticsSummary,
   ProjectClassification, ProjectStatus, RequestStatus,
@@ -39,10 +39,13 @@ api.interceptors.response.use(
 export const register = (data: {
   email: string;
   password: string;
-  name: string;
+  first_name: string;
+  last_name: string;
+  institution?: string;
   department?: string;
   phone?: string;
   bio?: string;
+  institution_id?: number;
 }) => api.post<User>('/auth/register', data);
 
 export const login = (email: string, password: string) =>
@@ -51,22 +54,32 @@ export const login = (email: string, password: string) =>
 export const getCurrentUser = () => api.get<User>('/auth/me');
 
 export const updateProfile = (data: {
-  name?: string;
+  first_name?: string;
+  last_name?: string;
+  institution?: string;
   department?: string;
   phone?: string;
   bio?: string;
 }) => api.put<User>('/auth/me', data);
 
-// Organizations
-export const getOrganizations = () => api.get<Organization[]>('/organizations');
-export const getOrganization = (id: number) => api.get<Organization>(`/organizations/${id}`);
+// Institutions
+export const getInstitutions = () => api.get<Institution[]>('/institutions');
+export const getInstitution = (id: number) => api.get<Institution>(`/institutions/${id}`);
+export const createInstitution = (data: { name: string; description?: string }) =>
+  api.post<Institution>('/institutions', data);
+export const updateInstitution = (id: number, data: { name?: string; description?: string }) =>
+  api.put<Institution>(`/institutions/${id}`, data);
+export const deleteInstitution = (id: number) => api.delete(`/institutions/${id}`);
 
 // Projects
 export const getProjects = (params?: {
+  view?: 'global' | 'institution';
   classification?: ProjectClassification;
   status?: ProjectStatus;
   open_to_participants?: boolean;
 }) => api.get<ProjectWithLead[]>('/projects', { params });
+
+export const getMyProjects = () => api.get<ProjectWithLead[]>('/projects/my-projects');
 
 export const getProject = (id: number) => api.get<ProjectDetail>(`/projects/${id}`);
 
@@ -140,19 +153,22 @@ export const getUsersWithProjects = () =>
   api.get<UserWithProjects[]>('/reports/users-with-projects');
 
 // Admin
-export const getAdminUsers = (organizationId?: number) =>
-  api.get<User[]>('/admin/users', { params: { organization_id: organizationId } });
+export const getAdminUsers = (institutionId?: number) =>
+  api.get<User[]>('/admin/users', { params: { institution_id: institutionId } });
 
 export const createUser = (data: {
   email: string;
-  password: string;
-  name: string;
+  first_name: string;
+  last_name: string;
+  institution?: string;
   department?: string;
-  organization_id?: number;
+  institution_id?: number;
+  is_superuser?: boolean;
 }) => api.post<User>('/admin/users', data);
 
 export const updateUser = (userId: number, data: {
-  name?: string;
+  first_name?: string;
+  last_name?: string;
   email?: string;
   is_active?: boolean;
   is_superuser?: boolean;

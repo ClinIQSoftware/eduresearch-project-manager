@@ -4,7 +4,10 @@ export type AuthProvider = 'local' | 'google' | 'microsoft';
 export interface User {
   id: number;
   email: string;
-  name: string;
+  first_name: string;
+  last_name: string;
+  name: string;  // Computed from first_name + last_name
+  institution: string | null;  // User's institution/affiliation text
   department: string | null;
   phone: string | null;
   bio: string | null;
@@ -13,7 +16,7 @@ export interface User {
   is_approved: boolean;
   approved_at: string | null;
   auth_provider: AuthProvider;
-  organization_id: number | null;
+  institution_id: number | null;  // Link to Institution entity
   created_at: string;
   updated_at: string | null;
 }
@@ -31,7 +34,7 @@ export interface SystemSettings {
   session_timeout_minutes: number;
   google_oauth_enabled: boolean;
   microsoft_oauth_enabled: boolean;
-  organization_id: number | null;
+  institution_id: number | null;
   updated_at: string | null;
 }
 
@@ -44,12 +47,15 @@ export interface BulkUploadResult {
 export interface UserBrief {
   id: number;
   email: string;
-  name: string;
+  first_name: string;
+  last_name: string;
+  name: string;  // Computed from first_name + last_name
+  institution: string | null;
   department: string | null;
 }
 
-// Organization types
-export interface Organization {
+// Institution types
+export interface Institution {
   id: number;
   name: string;
   description: string | null;
@@ -72,7 +78,7 @@ export interface Project {
   open_to_participants: boolean;
   start_date: string | null;
   last_status_change: string | null;
-  organization_id: number | null;
+  institution_id: number | null;
   lead_id: number | null;
   created_at: string;
   updated_at: string | null;

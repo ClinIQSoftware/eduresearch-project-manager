@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -10,7 +10,7 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.email_settings import EmailSettings
 from app.models.system_settings import SystemSettings
-from app.schemas.user import UserResponse, UserUpdateAdmin, UserCreate, PendingUserResponse
+from app.schemas.user import UserResponse, UserUpdateAdmin, UserCreateAdmin, PendingUserResponse
 from app.schemas.project import ProjectResponse, ProjectUpdate
 from app.schemas.email_settings import (
     EmailSettingsCreate, EmailSettingsUpdate, EmailSettingsResponse
@@ -18,8 +18,9 @@ from app.schemas.email_settings import (
 from app.schemas.system_settings import (
     SystemSettingsResponse, SystemSettingsUpdate, BulkUploadResult
 )
-from app.dependencies import get_current_user, require_superuser, is_organization_admin
+from app.dependencies import get_current_user, require_superuser, is_institution_admin, is_institution_admin
 from app.services.auth import create_user, get_password_hash
+from app.services.email import email_service
 
 router = APIRouter()
 
@@ -28,7 +29,7 @@ router = APIRouter()
 
 @router.get("/users", response_model=List[UserResponse])
 def get_all_users(
-    organization_id: Optional[int] = None,
+    institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -36,49 +37,67 @@ def get_all_users(
     query = db.query(User)
 
     if current_user.is_superuser:
-        if organization_id:
-            query = query.filter(User.organization_id == organization_id)
+        if institution_id:
+            query = query.filter(User.institution_id == institution_id)
     else:
-        # Org admin can only see their org's users
-        if current_user.organization_id:
-            if not is_organization_admin(db, current_user.id, current_user.organization_id):
+        # Institution admin can only see their institution's users
+        if current_user.institution_id:
+            if not is_institution_admin(db, current_user.id, current_user.institution_id):
                 raise HTTPException(status_code=403, detail="Admin access required")
-            query = query.filter(User.organization_id == current_user.organization_id)
+            query = query.filter(User.institution_id == current_user.institution_id)
         else:
             raise HTTPException(status_code=403, detail="Admin access required")
 
-    return query.order_by(User.name).all()
+    return query.order_by(User.last_name, User.first_name).all()
 
 
 @router.post("/users", response_model=UserResponse)
-def create_user_admin(
-    user_data: UserCreate,
+async def create_user_admin(
+    user_data: UserCreateAdmin,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new user (admin only)."""
+    """Create a new user (admin only). Auto-generates password and sends welcome email."""
     # Check admin access
     if not current_user.is_superuser:
-        if user_data.organization_id:
-            if not is_organization_admin(db, current_user.id, user_data.organization_id):
+        if user_data.institution_id:
+            if not is_institution_admin(db, current_user.id, user_data.institution_id):
                 raise HTTPException(status_code=403, detail="Admin access required")
         else:
             raise HTTPException(status_code=403, detail="Superuser access required")
+
+    # Only superuser can create superusers
+    if user_data.is_superuser and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Only superuser can create superuser accounts")
 
     # Check if email exists
     existing = db.query(User).filter(User.email == user_data.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    # Generate temporary password
+    temp_password = generate_temp_password()
+
     user = create_user(
         db=db,
         email=user_data.email,
-        password=user_data.password,
-        name=user_data.name,
+        password=temp_password,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        institution=user_data.institution,
         department=user_data.department,
-        phone=user_data.phone,
-        bio=user_data.bio,
-        organization_id=user_data.organization_id
+        institution_id=user_data.institution_id,
+        is_superuser=user_data.is_superuser
+    )
+
+    # Send welcome email with temporary password in background
+    full_name = f"{user_data.first_name} {user_data.last_name}".strip()
+    background_tasks.add_task(
+        email_service.send_welcome_email,
+        user_data.email,
+        full_name,
+        temp_password
     )
 
     return user
@@ -98,8 +117,8 @@ def update_user_admin(
 
     # Check admin access
     if not current_user.is_superuser:
-        if user.organization_id:
-            if not is_organization_admin(db, current_user.id, user.organization_id):
+        if user.institution_id:
+            if not is_institution_admin(db, current_user.id, user.institution_id):
                 raise HTTPException(status_code=403, detail="Admin access required")
         else:
             raise HTTPException(status_code=403, detail="Superuser access required")
@@ -173,28 +192,28 @@ def update_project_admin(
 
 @router.get("/email-settings", response_model=EmailSettingsResponse)
 def get_email_settings(
-    organization_id: Optional[int] = None,
+    institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get email settings."""
     # Check admin access
     if not current_user.is_superuser:
-        if organization_id:
-            if not is_organization_admin(db, current_user.id, organization_id):
+        if institution_id:
+            if not is_institution_admin(db, current_user.id, institution_id):
                 raise HTTPException(status_code=403, detail="Admin access required")
         else:
             raise HTTPException(status_code=403, detail="Superuser access required")
 
     settings = db.query(EmailSettings).filter(
-        EmailSettings.organization_id == organization_id
+        EmailSettings.institution_id == institution_id
     ).first()
 
     if not settings:
         # Return default settings
         return EmailSettingsResponse(
             id=0,
-            organization_id=organization_id,
+            institution_id=institution_id,
             smtp_host="smtp.gmail.com",
             smtp_port=587,
             from_name="EduResearch Project Manager",
@@ -207,26 +226,26 @@ def get_email_settings(
 @router.put("/email-settings", response_model=EmailSettingsResponse)
 def update_email_settings(
     settings_data: EmailSettingsUpdate,
-    organization_id: Optional[int] = None,
+    institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Update email settings."""
     # Check admin access
     if not current_user.is_superuser:
-        if organization_id:
-            if not is_organization_admin(db, current_user.id, organization_id):
+        if institution_id:
+            if not is_institution_admin(db, current_user.id, institution_id):
                 raise HTTPException(status_code=403, detail="Admin access required")
         else:
             raise HTTPException(status_code=403, detail="Superuser access required")
 
     settings = db.query(EmailSettings).filter(
-        EmailSettings.organization_id == organization_id
+        EmailSettings.institution_id == institution_id
     ).first()
 
     if not settings:
         # Create new settings
-        settings = EmailSettings(organization_id=organization_id)
+        settings = EmailSettings(institution_id=institution_id)
         db.add(settings)
 
     update_data = settings_data.model_dump(exclude_unset=True)
@@ -242,27 +261,27 @@ def update_email_settings(
 
 @router.get("/system-settings", response_model=SystemSettingsResponse)
 def get_system_settings(
-    organization_id: Optional[int] = None,
+    institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get system settings (superuser only for global, org admin for org-specific)."""
     if not current_user.is_superuser:
-        if organization_id:
-            if not is_organization_admin(db, current_user.id, organization_id):
+        if institution_id:
+            if not is_institution_admin(db, current_user.id, institution_id):
                 raise HTTPException(status_code=403, detail="Admin access required")
         else:
             raise HTTPException(status_code=403, detail="Superuser access required")
 
     settings = db.query(SystemSettings).filter(
-        SystemSettings.organization_id == organization_id
+        SystemSettings.institution_id == institution_id
     ).first()
 
     if not settings:
         # Return default settings
         return SystemSettingsResponse(
             id=0,
-            organization_id=organization_id,
+            institution_id=institution_id,
             require_registration_approval=False,
             registration_approval_mode="block",
             min_password_length=8,
@@ -281,25 +300,25 @@ def get_system_settings(
 @router.put("/system-settings", response_model=SystemSettingsResponse)
 def update_system_settings(
     settings_data: SystemSettingsUpdate,
-    organization_id: Optional[int] = None,
+    institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Update system settings (superuser only for global, org admin for org-specific)."""
     if not current_user.is_superuser:
-        if organization_id:
-            if not is_organization_admin(db, current_user.id, organization_id):
+        if institution_id:
+            if not is_institution_admin(db, current_user.id, institution_id):
                 raise HTTPException(status_code=403, detail="Admin access required")
         else:
             raise HTTPException(status_code=403, detail="Superuser access required")
 
     settings = db.query(SystemSettings).filter(
-        SystemSettings.organization_id == organization_id
+        SystemSettings.institution_id == institution_id
     ).first()
 
     if not settings:
         # Create new settings
-        settings = SystemSettings(organization_id=organization_id)
+        settings = SystemSettings(institution_id=institution_id)
         db.add(settings)
 
     update_data = settings_data.model_dump(exclude_unset=True)
@@ -315,24 +334,24 @@ def update_system_settings(
 
 @router.get("/pending-users", response_model=List[PendingUserResponse])
 def get_pending_users(
-    organization_id: Optional[int] = None,
+    institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get users pending approval."""
     if not current_user.is_superuser:
-        if organization_id:
-            if not is_organization_admin(db, current_user.id, organization_id):
+        if institution_id:
+            if not is_institution_admin(db, current_user.id, institution_id):
                 raise HTTPException(status_code=403, detail="Admin access required")
         else:
             raise HTTPException(status_code=403, detail="Superuser access required")
 
     query = db.query(User).filter(User.is_approved == False)
 
-    if organization_id:
-        query = query.filter(User.organization_id == organization_id)
-    elif not current_user.is_superuser and current_user.organization_id:
-        query = query.filter(User.organization_id == current_user.organization_id)
+    if institution_id:
+        query = query.filter(User.institution_id == institution_id)
+    elif not current_user.is_superuser and current_user.institution_id:
+        query = query.filter(User.institution_id == current_user.institution_id)
 
     return query.order_by(User.created_at.desc()).all()
 
@@ -353,8 +372,8 @@ def approve_user(
 
     # Check admin access
     if not current_user.is_superuser:
-        if user.organization_id:
-            if not is_organization_admin(db, current_user.id, user.organization_id):
+        if user.institution_id:
+            if not is_institution_admin(db, current_user.id, user.institution_id):
                 raise HTTPException(status_code=403, detail="Admin access required")
         else:
             raise HTTPException(status_code=403, detail="Superuser access required")
@@ -384,8 +403,8 @@ def reject_user(
 
     # Check admin access
     if not current_user.is_superuser:
-        if user.organization_id:
-            if not is_organization_admin(db, current_user.id, user.organization_id):
+        if user.institution_id:
+            if not is_institution_admin(db, current_user.id, user.institution_id):
                 raise HTTPException(status_code=403, detail="Admin access required")
         else:
             raise HTTPException(status_code=403, detail="Superuser access required")
@@ -412,7 +431,7 @@ async def bulk_upload_users(
 ):
     """
     Bulk upload users from Excel file.
-    Expected columns: email, name, department, phone, bio, organization_id, is_superuser
+    Expected columns: email, name, department, phone, bio, institution_id, is_superuser
     """
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="File must be an Excel file (.xlsx or .xls)")
@@ -467,7 +486,7 @@ async def bulk_upload_users(
                 phone = row_data.get('phone', '').strip() if row_data.get('phone') else None
                 bio = row_data.get('bio', '').strip() if row_data.get('bio') else None
 
-                org_id = row_data.get('organization_id')
+                org_id = row_data.get('institution_id')
                 if org_id and str(org_id).strip():
                     try:
                         org_id = int(org_id)
@@ -489,7 +508,7 @@ async def bulk_upload_users(
                     department=department,
                     phone=phone,
                     bio=bio,
-                    organization_id=org_id,
+                    institution_id=org_id,
                     is_superuser=is_superuser,
                     is_approved=True,  # Auto-approve bulk uploaded users
                     is_active=True
@@ -528,7 +547,7 @@ async def get_upload_template(
     sheet.title = "Users"
 
     # Add headers
-    headers = ['email', 'name', 'department', 'phone', 'bio', 'organization_id', 'is_superuser']
+    headers = ['email', 'name', 'department', 'phone', 'bio', 'institution_id', 'is_superuser']
     for col, header in enumerate(headers, start=1):
         sheet.cell(row=1, column=col, value=header)
 

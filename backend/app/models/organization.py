@@ -4,17 +4,17 @@ from sqlalchemy.sql import func
 from app.database import Base
 
 
-# Association table for organization admins
+# Association table for institution admins (keeping table name for migration compatibility)
 organization_admins = Table(
     'organization_admins',
     Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
-    Column('organization_id', Integer, ForeignKey('organizations.id'), primary_key=True)
+    Column('organization_id', Integer, ForeignKey('institutions.id'), primary_key=True)
 )
 
 
-class Organization(Base):
-    __tablename__ = "organizations"
+class Institution(Base):
+    __tablename__ = "institutions"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
@@ -23,6 +23,6 @@ class Organization(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    users = relationship("User", back_populates="organization")
-    projects = relationship("Project", back_populates="organization", cascade="all, delete-orphan")
-    admins = relationship("User", secondary=organization_admins, back_populates="admin_of_organizations")
+    users = relationship("User", back_populates="institution_entity")
+    projects = relationship("Project", back_populates="institution_entity", cascade="all, delete-orphan")
+    admins = relationship("User", secondary=organization_admins, back_populates="admin_of_institutions")

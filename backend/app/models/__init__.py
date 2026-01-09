@@ -1,4 +1,4 @@
-from app.models.organization import Organization, organization_admins
+from app.models.organization import Institution, organization_admins
 from app.models.user import User, AuthProvider
 from app.models.project import Project, ProjectClassification, ProjectStatus
 from app.models.project_member import ProjectMember, MemberRole
@@ -10,7 +10,7 @@ from app.models.task import Task, TaskStatus, TaskPriority
 from app.models.time_entry import TimeEntry
 
 __all__ = [
-    "Organization", "organization_admins",
+    "Institution", "organization_admins",
     "User", "AuthProvider",
     "Project", "ProjectClassification", "ProjectStatus",
     "ProjectMember", "MemberRole",

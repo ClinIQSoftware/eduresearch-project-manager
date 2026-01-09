@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, computed_field
 from datetime import datetime
 from typing import Optional
 from app.models.user import AuthProvider
@@ -6,7 +6,9 @@ from app.models.user import AuthProvider
 
 class UserBase(BaseModel):
     email: EmailStr
-    name: str
+    first_name: str
+    last_name: str
+    institution: Optional[str] = None  # User's institution/affiliation text field
     department: Optional[str] = None
     phone: Optional[str] = None
     bio: Optional[str] = None
@@ -14,19 +16,33 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
-    organization_id: Optional[int] = None
+    institution_id: Optional[int] = None
+
+
+class UserCreateAdmin(BaseModel):
+    """Schema for admin user creation - password is auto-generated."""
+    email: EmailStr
+    first_name: str
+    last_name: str
+    institution: Optional[str] = None
+    department: Optional[str] = None
+    institution_id: Optional[int] = None
+    is_superuser: bool = False
 
 
 class UserCreateOAuth(BaseModel):
     email: EmailStr
-    name: str
+    first_name: str
+    last_name: str
     auth_provider: AuthProvider
     oauth_id: str
-    organization_id: Optional[int] = None
+    institution_id: Optional[int] = None
 
 
 class UserUpdate(BaseModel):
-    name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    institution: Optional[str] = None
     department: Optional[str] = None
     phone: Optional[str] = None
     bio: Optional[str] = None
@@ -36,19 +52,32 @@ class UserUpdateAdmin(UserUpdate):
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
     is_superuser: Optional[bool] = None
-    organization_id: Optional[int] = None
+    institution_id: Optional[int] = None
 
 
-class UserResponse(UserBase):
+class UserResponse(BaseModel):
     id: int
+    email: EmailStr
+    first_name: str
+    last_name: str
+    institution: Optional[str] = None
+    department: Optional[str] = None
+    phone: Optional[str] = None
+    bio: Optional[str] = None
     is_active: bool
     is_superuser: bool
     is_approved: bool = True
     approved_at: Optional[datetime] = None
     auth_provider: AuthProvider
-    organization_id: Optional[int] = None
+    institution_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+    @computed_field
+    @property
+    def name(self) -> str:
+        """Computed full name for backwards compatibility."""
+        return f"{self.first_name} {self.last_name}".strip()
 
     class Config:
         from_attributes = True
@@ -62,8 +91,16 @@ class PendingUserResponse(UserResponse):
 class UserBrief(BaseModel):
     id: int
     email: EmailStr
-    name: str
+    first_name: str
+    last_name: str
+    institution: Optional[str] = None
     department: Optional[str] = None
+
+    @computed_field
+    @property
+    def name(self) -> str:
+        """Computed full name for backwards compatibility."""
+        return f"{self.first_name} {self.last_name}".strip()
 
     class Config:
         from_attributes = True

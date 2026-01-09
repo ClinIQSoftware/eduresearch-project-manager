@@ -59,9 +59,9 @@ def get_projects_with_leads(
     """Get all projects with their lead information."""
     query = db.query(Project).options(joinedload(Project.lead))
 
-    # Filter by organization unless superuser
-    if not current_user.is_superuser and current_user.organization_id:
-        query = query.filter(Project.organization_id == current_user.organization_id)
+    # Filter by institution unless superuser
+    if not current_user.is_superuser and current_user.institution_id:
+        query = query.filter(Project.institution_id == current_user.institution_id)
 
     projects = query.order_by(Project.title).all()
 
@@ -94,20 +94,20 @@ def get_leads_with_projects(
         Project, Project.lead_id == User.id
     ).distinct()
 
-    # Filter by organization
-    if not current_user.is_superuser and current_user.organization_id:
-        query = query.filter(User.organization_id == current_user.organization_id)
+    # Filter by institution
+    if not current_user.is_superuser and current_user.institution_id:
+        query = query.filter(User.institution_id == current_user.institution_id)
 
-    leads = query.order_by(User.name).all()
+    leads = query.order_by(User.first_name, User.last_name).all()
 
     result = []
     for lead in leads:
         # Get projects for this lead
         projects_query = db.query(Project).filter(Project.lead_id == lead.id)
 
-        if not current_user.is_superuser and current_user.organization_id:
+        if not current_user.is_superuser and current_user.institution_id:
             projects_query = projects_query.filter(
-                Project.organization_id == current_user.organization_id
+                Project.institution_id == current_user.institution_id
             )
 
         projects = projects_query.all()
@@ -139,11 +139,11 @@ def get_users_with_projects(
         ProjectMember, ProjectMember.user_id == User.id
     ).distinct()
 
-    # Filter by organization
-    if not current_user.is_superuser and current_user.organization_id:
-        query = query.filter(User.organization_id == current_user.organization_id)
+    # Filter by institution
+    if not current_user.is_superuser and current_user.institution_id:
+        query = query.filter(User.institution_id == current_user.institution_id)
 
-    users = query.order_by(User.name).all()
+    users = query.order_by(User.first_name, User.last_name).all()
 
     result = []
     for user in users:
@@ -152,11 +152,11 @@ def get_users_with_projects(
             joinedload(ProjectMember.project)
         ).filter(ProjectMember.user_id == user.id).all()
 
-        # Filter by organization
-        if not current_user.is_superuser and current_user.organization_id:
+        # Filter by institution
+        if not current_user.is_superuser and current_user.institution_id:
             memberships = [
                 m for m in memberships
-                if m.project and m.project.organization_id == current_user.organization_id
+                if m.project and m.project.institution_id == current_user.institution_id
             ]
 
         result.append(UserWithProjects(

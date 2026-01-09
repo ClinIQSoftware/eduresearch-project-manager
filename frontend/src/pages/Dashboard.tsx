@@ -1,25 +1,98 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getProjects } from '../services/api';
-import type { ProjectWithLead } from '../types';
+import { getProjects, getMyProjects, getInstitutions } from '../services/api';
+import { DashboardTabs, type DashboardView } from '../components/dashboard/DashboardTabs';
+import { useAuth } from '../contexts/AuthContext';
+import type { ProjectWithLead, Institution } from '../types';
+
+const VIEW_STORAGE_KEY = 'dashboardView';
+const INST_STORAGE_KEY = 'dashboardInstitution';
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [projects, setProjects] = useState<ProjectWithLead[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [selectedInstId, setSelectedInstId] = useState<string>(() => {
+    return localStorage.getItem(INST_STORAGE_KEY) || '';
+  });
   const [loading, setLoading] = useState(true);
+  const [activeView, setActiveView] = useState<DashboardView>(() => {
+    const saved = localStorage.getItem(VIEW_STORAGE_KEY);
+    return (saved as DashboardView) || 'personal';
+  });
+
+  // Fetch institutions for the dropdown (only if user is superuser)
+  useEffect(() => {
+    if (user?.is_superuser) {
+      getInstitutions()
+        .then((res) => setInstitutions(res.data))
+        .catch((err) => console.error('Error fetching institutions:', err));
+    }
+  }, [user]);
+
+  const fetchProjects = useCallback(async () => {
+    setLoading(true);
+    try {
+      let response;
+      switch (activeView) {
+        case 'personal':
+          response = await getMyProjects();
+          break;
+        case 'global':
+          response = await getProjects({ view: 'global' });
+          break;
+        case 'institution':
+        default:
+          // If superuser and institution selected, filter by institution
+          if (user?.is_superuser && selectedInstId) {
+            response = await getProjects({ view: 'global' });
+            // Filter client-side by selected institution
+            response.data = response.data.filter(
+              (p) => p.institution_id === Number(selectedInstId)
+            );
+          } else {
+            response = await getProjects();
+          }
+          break;
+      }
+      setProjects(response.data);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeView, selectedInstId, user]);
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await getProjects();
-        setProjects(response.data);
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      } finally {
-        setLoading(false);
-      }
+    fetchProjects();
+  }, [fetchProjects]);
+
+  const handleViewChange = (view: DashboardView) => {
+    setActiveView(view);
+    localStorage.setItem(VIEW_STORAGE_KEY, view);
+  };
+
+  const handleInstChange = (instId: string) => {
+    setSelectedInstId(instId);
+    localStorage.setItem(INST_STORAGE_KEY, instId);
+  };
+
+  const getViewTitle = () => {
+    switch (activeView) {
+      case 'personal':
+        return 'My Projects';
+      case 'institution':
+        if (user?.is_superuser && selectedInstId) {
+          const inst = institutions.find((i) => i.id === Number(selectedInstId));
+          return inst ? `${inst.name} Projects` : 'Institution Projects';
+        }
+        return 'Institution Projects';
+      case 'global':
+        return 'All Projects';
+      default:
+        return 'Dashboard';
     }
-    fetchData();
-  }, []);
+  };
 
   if (loading) {
     return <div className="text-center py-8">Loading...</div>;
@@ -70,7 +143,28 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">{getViewTitle()}</h1>
+      </div>
+
+      <DashboardTabs activeView={activeView} onViewChange={handleViewChange} />
+
+      {/* Institution Filter (only for superusers on Institution view) */}
+      {user?.is_superuser && activeView === 'institution' && institutions.length > 0 && (
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-gray-700">Filter by Institution:</label>
+          <select
+            value={selectedInstId}
+            onChange={(e) => handleInstChange(e.target.value)}
+            className="border rounded-lg px-3 py-2 text-sm min-w-[200px]"
+          >
+            <option value="">All Institutions</option>
+            {institutions.map((inst) => (
+              <option key={inst.id} value={inst.id}>{inst.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

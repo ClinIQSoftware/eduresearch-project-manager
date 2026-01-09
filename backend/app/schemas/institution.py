@@ -4,21 +4,21 @@ from typing import Optional, List
 from app.schemas.user import UserBrief
 
 
-class OrganizationBase(BaseModel):
+class InstitutionBase(BaseModel):
     name: str
     description: Optional[str] = None
 
 
-class OrganizationCreate(OrganizationBase):
+class InstitutionCreate(InstitutionBase):
     pass
 
 
-class OrganizationUpdate(BaseModel):
+class InstitutionUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
 
 
-class OrganizationResponse(OrganizationBase):
+class InstitutionResponse(InstitutionBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -27,7 +27,7 @@ class OrganizationResponse(OrganizationBase):
         from_attributes = True
 
 
-class OrganizationWithMembers(OrganizationResponse):
+class InstitutionWithMembers(InstitutionResponse):
     admins: List[UserBrief] = []
 
     class Config:

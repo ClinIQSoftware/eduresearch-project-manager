@@ -20,14 +20,19 @@ router = APIRouter()
 
 @router.get("/", response_model=List[ProjectWithLead])
 def get_projects(
+    view: Optional[str] = None,
     classification: Optional[ProjectClassification] = None,
     status: Optional[ProjectStatus] = None,
     open_to_participants: Optional[bool] = None,
-    organization_id: Optional[int] = None,
+    institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all projects with optional filters."""
+    """Get all projects with optional filters.
+
+    Args:
+        view: Optional view mode - "global" to see all projects, otherwise filters by institution
+    """
     query = db.query(Project).options(joinedload(Project.lead))
 
     if classification:
@@ -36,14 +41,47 @@ def get_projects(
         query = query.filter(Project.status == status)
     if open_to_participants is not None:
         query = query.filter(Project.open_to_participants == open_to_participants)
-    if organization_id:
-        query = query.filter(Project.organization_id == organization_id)
 
-    # Filter by user's organization unless superuser
-    if not current_user.is_superuser and current_user.organization_id:
-        query = query.filter(Project.organization_id == current_user.organization_id)
+    # View-based filtering
+    if view == "global":
+        # Global view - no institution filter, show all projects
+        pass
+    elif institution_id:
+        query = query.filter(Project.institution_id == institution_id)
+    elif not current_user.is_superuser and current_user.institution_id:
+        # Default: filter by user's institution
+        query = query.filter(Project.institution_id == current_user.institution_id)
 
     return query.order_by(Project.created_at.desc()).all()
+
+
+@router.get("/my-projects", response_model=List[ProjectWithLead])
+def get_my_projects(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get projects where current user is lead or participant."""
+    from sqlalchemy import union, select
+
+    # Get project IDs where user is the lead
+    lead_project_ids = db.query(Project.id).filter(Project.lead_id == current_user.id)
+
+    # Get project IDs where user is a member
+    member_project_ids = db.query(ProjectMember.project_id).filter(
+        ProjectMember.user_id == current_user.id
+    )
+
+    # Combine both sets of project IDs
+    all_project_ids = lead_project_ids.union(member_project_ids).subquery()
+
+    # Fetch full project data with lead info
+    projects = db.query(Project).options(
+        joinedload(Project.lead)
+    ).filter(
+        Project.id.in_(select(all_project_ids))
+    ).order_by(Project.created_at.desc()).all()
+
+    return projects
 
 
 @router.post("/", response_model=ProjectResponse)
@@ -59,9 +97,9 @@ def create_project(
         last_status_change=datetime.utcnow()
     )
 
-    # Use user's organization if not specified
-    if not project.organization_id and current_user.organization_id:
-        project.organization_id = current_user.organization_id
+    # Use user's institution if not specified
+    if not project.institution_id and current_user.institution_id:
+        project.institution_id = current_user.institution_id
 
     db.add(project)
     db.commit()

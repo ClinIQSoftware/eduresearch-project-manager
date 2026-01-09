@@ -59,11 +59,13 @@ def create_user(
     db: Session,
     email: str,
     password: str,
-    name: str,
+    first_name: str,
+    last_name: str,
+    institution: Optional[str] = None,
     department: Optional[str] = None,
     phone: Optional[str] = None,
     bio: Optional[str] = None,
-    organization_id: Optional[int] = None,
+    institution_id: Optional[int] = None,
     is_superuser: bool = False,
     is_approved: bool = True
 ) -> User:
@@ -71,11 +73,13 @@ def create_user(
     user = User(
         email=email,
         password_hash=hashed_password,
-        name=name,
+        first_name=first_name,
+        last_name=last_name,
+        institution=institution,
         department=department,
         phone=phone,
         bio=bio,
-        organization_id=organization_id,
+        institution_id=institution_id,
         is_superuser=is_superuser,
         is_approved=is_approved
     )
@@ -88,18 +92,20 @@ def create_user(
 def create_oauth_user(
     db: Session,
     email: str,
-    name: str,
+    first_name: str,
+    last_name: str,
     auth_provider: str,
     oauth_id: str,
-    organization_id: Optional[int] = None
+    institution_id: Optional[int] = None
 ) -> User:
     from app.models.user import AuthProvider
     user = User(
         email=email,
-        name=name,
+        first_name=first_name,
+        last_name=last_name,
         auth_provider=AuthProvider(auth_provider),
         oauth_id=oauth_id,
-        organization_id=organization_id
+        institution_id=institution_id
     )
     db.add(user)
     db.commit()

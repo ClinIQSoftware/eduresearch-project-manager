@@ -2,9 +2,9 @@ from app.schemas.user import (
     UserBase, UserCreate, UserCreateOAuth, UserUpdate, UserUpdateAdmin,
     UserResponse, UserBrief, Token, TokenData, LoginRequest
 )
-from app.schemas.organization import (
-    OrganizationBase, OrganizationCreate, OrganizationUpdate,
-    OrganizationResponse, OrganizationWithMembers, AddMemberRequest
+from app.schemas.institution import (
+    InstitutionBase, InstitutionCreate, InstitutionUpdate,
+    InstitutionResponse, InstitutionWithMembers, AddMemberRequest
 )
 from app.schemas.project import (
     ProjectBase, ProjectCreate, ProjectUpdate, ProjectResponse,
@@ -24,8 +24,8 @@ from app.schemas.time_entry import TimeEntryCreate, TimeEntryUpdate, TimeEntryRe
 __all__ = [
     "UserBase", "UserCreate", "UserCreateOAuth", "UserUpdate", "UserUpdateAdmin",
     "UserResponse", "UserBrief", "Token", "TokenData", "LoginRequest",
-    "OrganizationBase", "OrganizationCreate", "OrganizationUpdate",
-    "OrganizationResponse", "OrganizationWithMembers", "AddMemberRequest",
+    "InstitutionBase", "InstitutionCreate", "InstitutionUpdate",
+    "InstitutionResponse", "InstitutionWithMembers", "AddMemberRequest",
     "ProjectBase", "ProjectCreate", "ProjectUpdate", "ProjectResponse",
     "ProjectWithLead", "ProjectMemberInfo", "ProjectDetail", "AddProjectMemberRequest",
     "JoinRequestBase", "JoinRequestCreate", "JoinRequestResponse",

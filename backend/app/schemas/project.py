@@ -16,7 +16,7 @@ class ProjectBase(BaseModel):
 
 
 class ProjectCreate(ProjectBase):
-    organization_id: Optional[int] = None
+    institution_id: Optional[int] = None
 
 
 class ProjectUpdate(BaseModel):
@@ -31,7 +31,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(ProjectBase):
     id: int
-    organization_id: Optional[int] = None
+    institution_id: Optional[int] = None
     lead_id: Optional[int] = None
     last_status_change: Optional[datetime] = None
     created_at: datetime

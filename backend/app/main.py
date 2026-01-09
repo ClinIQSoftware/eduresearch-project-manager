@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from app.api.routes import (
-    auth, organizations, projects, tasks, timetracking,
+    auth, institutions, projects, tasks, timetracking,
     analytics, join_requests, files, reports, admin
 )
 from app.config import settings
@@ -34,8 +34,8 @@ app.add_middleware(
 # Auth routes
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 
-# Organization routes
-app.include_router(organizations.router, prefix="/api/organizations", tags=["Organizations"])
+# Institution routes
+app.include_router(institutions.router, prefix="/api/institutions", tags=["Institutions"])
 
 # Project routes
 app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])

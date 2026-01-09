@@ -68,11 +68,13 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         db=db,
         email=user_data.email,
         password=user_data.password,
-        name=user_data.name,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        institution=user_data.institution,
         department=user_data.department,
         phone=user_data.phone,
         bio=user_data.bio,
-        organization_id=user_data.organization_id,
+        institution_id=user_data.institution_id,
         is_approved=not require_approval  # Pending if approval required
     )
     return user
@@ -153,7 +155,14 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="Failed to get user info")
 
         email = user_info.get('email')
-        name = user_info.get('name', email.split('@')[0])
+        given_name = user_info.get('given_name', '')
+        family_name = user_info.get('family_name', '')
+        if not given_name and not family_name:
+            # Fallback to full name or email
+            full_name = user_info.get('name', email.split('@')[0])
+            parts = full_name.split(' ', 1)
+            given_name = parts[0]
+            family_name = parts[1] if len(parts) > 1 else ''
         oauth_id = user_info.get('sub')
 
         # Check if user exists
@@ -163,7 +172,8 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             user = create_oauth_user(
                 db=db,
                 email=email,
-                name=name,
+                first_name=given_name,
+                last_name=family_name,
                 auth_provider="google",
                 oauth_id=oauth_id
             )
@@ -216,7 +226,14 @@ async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
             user_info = resp.json()
 
         email = user_info.get('mail') or user_info.get('userPrincipalName')
-        name = user_info.get('displayName', email.split('@')[0])
+        given_name = user_info.get('givenName', '')
+        family_name = user_info.get('surname', '')
+        if not given_name and not family_name:
+            # Fallback to display name or email
+            full_name = user_info.get('displayName', email.split('@')[0])
+            parts = full_name.split(' ', 1)
+            given_name = parts[0]
+            family_name = parts[1] if len(parts) > 1 else ''
         oauth_id = user_info.get('id')
 
         # Check if user exists
@@ -225,7 +242,8 @@ async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
             user = create_oauth_user(
                 db=db,
                 email=email,
-                name=name,
+                first_name=given_name,
+                last_name=family_name,
                 auth_provider="microsoft",
                 oauth_id=oauth_id
             )
