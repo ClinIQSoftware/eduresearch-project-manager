@@ -1,10 +1,10 @@
 import axios from 'axios';
 import type {
-  User, Institution, Project, ProjectWithLead, ProjectDetail,
+  User, Institution, Department, DepartmentWithMembers, Project, ProjectWithLead, ProjectDetail,
   JoinRequestWithUser, ProjectFile, ProjectWithLeadReport,
   LeadWithProjects, UserWithProjects, Task, TimeEntry, AnalyticsSummary,
   ProjectClassification, ProjectStatus, RequestStatus,
-  SystemSettings, BulkUploadResult
+  SystemSettings, BulkUploadResult, UserBrief
 } from '../types';
 
 // Use environment variable for API URL, fallback to /api for local dev with proxy
@@ -41,11 +41,10 @@ export const register = (data: {
   password: string;
   first_name: string;
   last_name: string;
-  institution?: string;
-  department?: string;
   phone?: string;
   bio?: string;
   institution_id?: number;
+  department_id?: number;
 }) => api.post<User>('/auth/register', data);
 
 export const login = (email: string, password: string) =>
@@ -56,8 +55,6 @@ export const getCurrentUser = () => api.get<User>('/auth/me');
 export const updateProfile = (data: {
   first_name?: string;
   last_name?: string;
-  institution?: string;
-  department?: string;
   phone?: string;
   bio?: string;
 }) => api.put<User>('/auth/me', data);
@@ -70,6 +67,22 @@ export const createInstitution = (data: { name: string; description?: string }) 
 export const updateInstitution = (id: number, data: { name?: string; description?: string }) =>
   api.put<Institution>(`/institutions/${id}`, data);
 export const deleteInstitution = (id: number) => api.delete(`/institutions/${id}`);
+
+// Departments
+export const getDepartments = (institutionId?: number) =>
+  api.get<Department[]>('/departments', { params: { institution_id: institutionId } });
+export const getDepartment = (id: number) => api.get<DepartmentWithMembers>(`/departments/${id}`);
+export const createDepartment = (data: { name: string; description?: string; institution_id: number }) =>
+  api.post<Department>('/departments', data);
+export const updateDepartment = (id: number, data: { name?: string; description?: string }) =>
+  api.put<Department>(`/departments/${id}`, data);
+export const deleteDepartment = (id: number) => api.delete(`/departments/${id}`);
+export const getDepartmentMembers = (deptId: number) =>
+  api.get<UserBrief[]>(`/departments/${deptId}/members`);
+export const addDepartmentMember = (deptId: number, userId: number) =>
+  api.post(`/departments/${deptId}/members/${userId}`);
+export const removeDepartmentMember = (deptId: number, userId: number) =>
+  api.delete(`/departments/${deptId}/members/${userId}`);
 
 // Projects
 export const getProjects = (params?: {
@@ -160,9 +173,8 @@ export const createUser = (data: {
   email: string;
   first_name: string;
   last_name: string;
-  institution?: string;
-  department?: string;
   institution_id?: number;
+  department_id?: number;
   is_superuser?: boolean;
 }) => api.post<User>('/admin/users', data);
 

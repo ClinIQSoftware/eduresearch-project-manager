@@ -20,8 +20,6 @@ class User(Base):
     password_hash = Column(String(255), nullable=True)  # Nullable for OAuth users
     first_name = Column(String(255), nullable=False)
     last_name = Column(String(255), nullable=False)
-    institution = Column(String(255), nullable=True)  # User's institution/affiliation text
-    department = Column(String(255), nullable=True)
     phone = Column(String(50), nullable=True)
     bio = Column(String(2000), nullable=True)
 
@@ -36,7 +34,9 @@ class User(Base):
     auth_provider = Column(Enum(AuthProvider), default=AuthProvider.local)
     oauth_id = Column(String(255), nullable=True)  # OAuth provider user ID
 
+    # Institution and Department relationships
     institution_id = Column(Integer, ForeignKey("institutions.id"), nullable=True)
+    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
 
     @property
     def name(self):
@@ -48,6 +48,7 @@ class User(Base):
 
     # Relationships
     institution_entity = relationship("Institution", back_populates="users")
+    department_entity = relationship("Department", back_populates="users")
     admin_of_institutions = relationship("Institution", secondary=organization_admins, back_populates="admins")
     led_projects = relationship("Project", back_populates="lead", foreign_keys="Project.lead_id")
     project_memberships = relationship("ProjectMember", back_populates="user", cascade="all, delete-orphan")

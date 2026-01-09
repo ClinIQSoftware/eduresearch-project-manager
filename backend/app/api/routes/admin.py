@@ -85,9 +85,8 @@ async def create_user_admin(
         password=temp_password,
         first_name=user_data.first_name,
         last_name=user_data.last_name,
-        institution=user_data.institution,
-        department=user_data.department,
         institution_id=user_data.institution_id,
+        department_id=user_data.department_id,
         is_superuser=user_data.is_superuser
     )
 
@@ -431,7 +430,7 @@ async def bulk_upload_users(
 ):
     """
     Bulk upload users from Excel file.
-    Expected columns: email, name, department, phone, bio, institution_id, is_superuser
+    Expected columns: email, first_name, last_name, phone, bio, institution_id, department_id, is_superuser
     """
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="File must be an Excel file (.xlsx or .xls)")
@@ -446,7 +445,7 @@ async def bulk_upload_users(
         # Get headers from first row
         headers = [cell.value.lower().strip() if cell.value else '' for cell in sheet[1]]
 
-        required_columns = ['email', 'name']
+        required_columns = ['email', 'first_name', 'last_name']
         for col in required_columns:
             if col not in headers:
                 raise HTTPException(
@@ -465,10 +464,11 @@ async def bulk_upload_users(
             row_data = dict(zip(headers, row))
 
             email = row_data.get('email', '').strip() if row_data.get('email') else ''
-            name = row_data.get('name', '').strip() if row_data.get('name') else ''
+            first_name = row_data.get('first_name', '').strip() if row_data.get('first_name') else ''
+            last_name = row_data.get('last_name', '').strip() if row_data.get('last_name') else ''
 
-            if not email or not name:
-                errors.append(f"Row {row_num}: Missing email or name")
+            if not email or not first_name or not last_name:
+                errors.append(f"Row {row_num}: Missing email, first_name, or last_name")
                 continue
 
             # Check if user already exists
@@ -482,18 +482,26 @@ async def bulk_upload_users(
                 temp_password = generate_temp_password()
 
                 # Get optional fields
-                department = row_data.get('department', '').strip() if row_data.get('department') else None
                 phone = row_data.get('phone', '').strip() if row_data.get('phone') else None
                 bio = row_data.get('bio', '').strip() if row_data.get('bio') else None
 
-                org_id = row_data.get('institution_id')
-                if org_id and str(org_id).strip():
+                inst_id = row_data.get('institution_id')
+                if inst_id and str(inst_id).strip():
                     try:
-                        org_id = int(org_id)
+                        inst_id = int(inst_id)
                     except (ValueError, TypeError):
-                        org_id = None
+                        inst_id = None
                 else:
-                    org_id = None
+                    inst_id = None
+
+                dept_id = row_data.get('department_id')
+                if dept_id and str(dept_id).strip():
+                    try:
+                        dept_id = int(dept_id)
+                    except (ValueError, TypeError):
+                        dept_id = None
+                else:
+                    dept_id = None
 
                 is_superuser = False
                 superuser_val = row_data.get('is_superuser', '')
@@ -503,12 +511,13 @@ async def bulk_upload_users(
                 # Create user
                 user = User(
                     email=email,
-                    name=name,
+                    first_name=first_name,
+                    last_name=last_name,
                     password_hash=get_password_hash(temp_password),
-                    department=department,
                     phone=phone,
                     bio=bio,
-                    institution_id=org_id,
+                    institution_id=inst_id,
+                    department_id=dept_id,
                     is_superuser=is_superuser,
                     is_approved=True,  # Auto-approve bulk uploaded users
                     is_active=True
@@ -547,7 +556,7 @@ async def get_upload_template(
     sheet.title = "Users"
 
     # Add headers
-    headers = ['email', 'name', 'department', 'phone', 'bio', 'institution_id', 'is_superuser']
+    headers = ['email', 'first_name', 'last_name', 'phone', 'bio', 'institution_id', 'department_id', 'is_superuser']
     for col, header in enumerate(headers, start=1):
         sheet.cell(row=1, column=col, value=header)
 

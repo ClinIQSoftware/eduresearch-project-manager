@@ -8,8 +8,6 @@ class UserBase(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    institution: Optional[str] = None  # User's institution/affiliation text field
-    department: Optional[str] = None
     phone: Optional[str] = None
     bio: Optional[str] = None
 
@@ -17,6 +15,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     institution_id: Optional[int] = None
+    department_id: Optional[int] = None
 
 
 class UserCreateAdmin(BaseModel):
@@ -24,9 +23,8 @@ class UserCreateAdmin(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    institution: Optional[str] = None
-    department: Optional[str] = None
     institution_id: Optional[int] = None
+    department_id: Optional[int] = None
     is_superuser: bool = False
 
 
@@ -37,13 +35,12 @@ class UserCreateOAuth(BaseModel):
     auth_provider: AuthProvider
     oauth_id: str
     institution_id: Optional[int] = None
+    department_id: Optional[int] = None
 
 
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    institution: Optional[str] = None
-    department: Optional[str] = None
     phone: Optional[str] = None
     bio: Optional[str] = None
 
@@ -53,6 +50,7 @@ class UserUpdateAdmin(UserUpdate):
     is_active: Optional[bool] = None
     is_superuser: Optional[bool] = None
     institution_id: Optional[int] = None
+    department_id: Optional[int] = None
 
 
 class UserResponse(BaseModel):
@@ -60,8 +58,6 @@ class UserResponse(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    institution: Optional[str] = None
-    department: Optional[str] = None
     phone: Optional[str] = None
     bio: Optional[str] = None
     is_active: bool
@@ -70,6 +66,7 @@ class UserResponse(BaseModel):
     approved_at: Optional[datetime] = None
     auth_provider: AuthProvider
     institution_id: Optional[int] = None
+    department_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -93,8 +90,8 @@ class UserBrief(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    institution: Optional[str] = None
-    department: Optional[str] = None
+    institution_id: Optional[int] = None
+    department_id: Optional[int] = None
 
     @computed_field
     @property

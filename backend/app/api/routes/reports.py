@@ -33,7 +33,7 @@ class LeadWithProjects(BaseModel):
     id: int
     name: str
     email: str
-    department: Optional[str] = None
+    department_id: Optional[int] = None
     projects: List[dict]
 
     class Config:
@@ -44,7 +44,7 @@ class UserWithProjects(BaseModel):
     id: int
     name: str
     email: str
-    department: Optional[str] = None
+    department_id: Optional[int] = None
     projects: List[dict]
 
     class Config:
@@ -116,7 +116,7 @@ def get_leads_with_projects(
             id=lead.id,
             name=lead.name,
             email=lead.email,
-            department=lead.department,
+            department_id=lead.department_id,
             projects=[{
                 "id": p.id,
                 "title": p.title,
@@ -163,7 +163,7 @@ def get_users_with_projects(
             id=user.id,
             name=user.name,
             email=user.email,
-            department=user.department,
+            department_id=user.department_id,
             projects=[{
                 "id": m.project.id,
                 "title": m.project.title,

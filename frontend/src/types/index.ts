@@ -7,8 +7,6 @@ export interface User {
   first_name: string;
   last_name: string;
   name: string;  // Computed from first_name + last_name
-  institution: string | null;  // User's institution/affiliation text
-  department: string | null;
   phone: string | null;
   bio: string | null;
   is_active: boolean;
@@ -17,6 +15,7 @@ export interface User {
   approved_at: string | null;
   auth_provider: AuthProvider;
   institution_id: number | null;  // Link to Institution entity
+  department_id: number | null;  // Link to Department entity
   created_at: string;
   updated_at: string | null;
 }
@@ -50,8 +49,8 @@ export interface UserBrief {
   first_name: string;
   last_name: string;
   name: string;  // Computed from first_name + last_name
-  institution: string | null;
-  department: string | null;
+  institution_id: number | null;
+  department_id: number | null;
 }
 
 // Institution types
@@ -61,6 +60,20 @@ export interface Institution {
   description: string | null;
   created_at: string;
   updated_at: string | null;
+}
+
+// Department types
+export interface Department {
+  id: number;
+  name: string;
+  description: string | null;
+  institution_id: number;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface DepartmentWithMembers extends Department {
+  users: UserBrief[];
 }
 
 // Project types
@@ -148,7 +161,7 @@ export interface LeadWithProjects {
   id: number;
   name: string;
   email: string;
-  department: string | null;
+  department_id: number | null;
   projects: {
     id: number;
     title: string;
@@ -161,7 +174,7 @@ export interface UserWithProjects {
   id: number;
   name: string;
   email: string;
-  department: string | null;
+  department_id: number | null;
   projects: {
     id: number;
     title: string;

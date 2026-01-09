@@ -21,7 +21,7 @@ from app.models.system_settings import SystemSettings
 def get_system_settings(db: Session) -> SystemSettings:
     """Get global system settings."""
     settings_obj = db.query(SystemSettings).filter(
-        SystemSettings.organization_id == None
+        SystemSettings.institution_id == None
     ).first()
     return settings_obj
 
@@ -70,11 +70,10 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         password=user_data.password,
         first_name=user_data.first_name,
         last_name=user_data.last_name,
-        institution=user_data.institution,
-        department=user_data.department,
         phone=user_data.phone,
         bio=user_data.bio,
         institution_id=user_data.institution_id,
+        department_id=user_data.department_id,
         is_approved=not require_approval  # Pending if approval required
     )
     return user

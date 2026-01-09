@@ -1,4 +1,5 @@
 from app.models.organization import Institution, organization_admins
+from app.models.department import Department
 from app.models.user import User, AuthProvider
 from app.models.project import Project, ProjectClassification, ProjectStatus
 from app.models.project_member import ProjectMember, MemberRole
@@ -11,6 +12,7 @@ from app.models.time_entry import TimeEntry
 
 __all__ = [
     "Institution", "organization_admins",
+    "Department",
     "User", "AuthProvider",
     "Project", "ProjectClassification", "ProjectStatus",
     "ProjectMember", "MemberRole",

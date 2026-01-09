@@ -10,8 +10,6 @@ export default function Register() {
     confirmPassword: '',
     first_name: '',
     last_name: '',
-    institution: '',
-    department: '',
     phone: '',
   });
   const [error, setError] = useState('');
@@ -42,8 +40,6 @@ export default function Register() {
         password: formData.password,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        institution: formData.institution || undefined,
-        department: formData.department || undefined,
         phone: formData.phone || undefined,
       });
 
@@ -105,26 +101,6 @@ export default function Register() {
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full border rounded-lg px-3 py-2"
               required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Institution/Affiliation</label>
-            <input
-              type="text"
-              value={formData.institution}
-              onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2"
-              placeholder="e.g., University of Toronto"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Department</label>
-            <input
-              type="text"
-              value={formData.department}
-              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2"
-              placeholder="e.g., Computer Science"
             />
           </div>
           <div>

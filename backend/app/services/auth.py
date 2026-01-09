@@ -61,11 +61,10 @@ def create_user(
     password: str,
     first_name: str,
     last_name: str,
-    institution: Optional[str] = None,
-    department: Optional[str] = None,
     phone: Optional[str] = None,
     bio: Optional[str] = None,
     institution_id: Optional[int] = None,
+    department_id: Optional[int] = None,
     is_superuser: bool = False,
     is_approved: bool = True
 ) -> User:
@@ -75,11 +74,10 @@ def create_user(
         password_hash=hashed_password,
         first_name=first_name,
         last_name=last_name,
-        institution=institution,
-        department=department,
         phone=phone,
         bio=bio,
         institution_id=institution_id,
+        department_id=department_id,
         is_superuser=is_superuser,
         is_approved=is_approved
     )

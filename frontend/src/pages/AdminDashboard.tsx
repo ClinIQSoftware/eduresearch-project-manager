@@ -3,11 +3,12 @@ import {
   getAdminUsers, createUser, updateUser, deactivateUser,
   getSystemSettings, updateSystemSettings, getPendingUsers,
   approveUser, rejectUser, bulkUploadUsers, downloadUserTemplate,
-  getInstitutions, createInstitution, deleteInstitution
+  getInstitutions, createInstitution, deleteInstitution,
+  getDepartments, createDepartment, deleteDepartment
 } from '../services/api';
-import type { User, SystemSettings, BulkUploadResult, Institution } from '../types';
+import type { User, SystemSettings, BulkUploadResult, Institution, Department } from '../types';
 
-type TabType = 'users' | 'institutions' | 'security' | 'import';
+type TabType = 'users' | 'institutions' | 'departments' | 'security' | 'import';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('users');
@@ -40,6 +41,16 @@ export default function AdminDashboard() {
             Institutions
           </button>
           <button
+            onClick={() => setActiveTab('departments')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'departments'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Departments
+          </button>
+          <button
             onClick={() => setActiveTab('security')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'security'
@@ -65,6 +76,7 @@ export default function AdminDashboard() {
       {/* Tab Content */}
       {activeTab === 'users' && <UsersTab />}
       {activeTab === 'institutions' && <InstitutionsTab />}
+      {activeTab === 'departments' && <DepartmentsTab />}
       {activeTab === 'security' && <SecurityTab />}
       {activeTab === 'import' && <ImportTab />}
     </div>
@@ -76,15 +88,15 @@ function UsersTab() {
   const [users, setUsers] = useState<User[]>([]);
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     first_name: '',
     last_name: '',
-    institution: '',
-    department: '',
     institution_id: '' as string | number,
+    department_id: '' as string | number,
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -95,14 +107,16 @@ function UsersTab() {
 
   async function fetchData() {
     try {
-      const [usersRes, pendingRes, instsRes] = await Promise.all([
+      const [usersRes, pendingRes, instsRes, deptsRes] = await Promise.all([
         getAdminUsers(),
         getPendingUsers(),
-        getInstitutions()
+        getInstitutions(),
+        getDepartments()
       ]);
       setUsers(usersRes.data);
       setPendingUsers(pendingRes.data);
       setInstitutions(instsRes.data);
+      setDepartments(deptsRes.data);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -119,18 +133,36 @@ function UsersTab() {
         email: formData.email,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        institution: formData.institution || undefined,
-        department: formData.department || undefined,
         institution_id: formData.institution_id ? Number(formData.institution_id) : undefined,
+        department_id: formData.department_id ? Number(formData.department_id) : undefined,
       });
       setShowForm(false);
-      setFormData({ email: '', first_name: '', last_name: '', institution: '', department: '', institution_id: '' });
+      setFormData({ email: '', first_name: '', last_name: '', institution_id: '', department_id: '' });
       setSuccess('User created! A temporary password has been emailed to them.');
       fetchData();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to create user');
     }
   }
+
+  // Get institution name by ID
+  function getInstitutionName(instId: number | null): string {
+    if (!instId) return '-';
+    const inst = institutions.find(i => i.id === instId);
+    return inst?.name || '-';
+  }
+
+  // Get department name by ID
+  function getDepartmentName(deptId: number | null): string {
+    if (!deptId) return '-';
+    const dept = departments.find(d => d.id === deptId);
+    return dept?.name || '-';
+  }
+
+  // Filter departments by selected institution
+  const filteredDepartments = formData.institution_id
+    ? departments.filter(d => d.institution_id === Number(formData.institution_id))
+    : departments;
 
   async function handleToggleActive(userId: number, currentStatus: boolean) {
     try {
@@ -278,9 +310,8 @@ function UsersTab() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <div>
-                    {u.institution && <p>{u.institution}</p>}
-                    {u.department && <p className="text-xs">{u.department}</p>}
-                    {!u.institution && !u.department && '-'}
+                    <p>{getInstitutionName(u.institution_id)}</p>
+                    {u.department_id && <p className="text-xs">{getDepartmentName(u.department_id)}</p>}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -371,37 +402,34 @@ function UsersTab() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Institution/Affiliation</label>
-                <input
-                  type="text"
-                  value={formData.institution}
-                  onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2"
-                  placeholder="e.g., University of Toronto"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Department</label>
-                <input
-                  type="text"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2"
-                  placeholder="e.g., Computer Science"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Institution Entity</label>
+                <label className="block text-sm font-medium mb-1">Institution</label>
                 <select
                   value={formData.institution_id}
-                  onChange={(e) => setFormData({ ...formData, institution_id: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, institution_id: e.target.value, department_id: '' })}
                   className="w-full border rounded-lg px-3 py-2"
                 >
-                  <option value="">No Institution Entity</option>
+                  <option value="">No Institution</option>
                   {institutions.map((inst) => (
                     <option key={inst.id} value={inst.id}>{inst.name}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Department</label>
+                <select
+                  value={formData.department_id}
+                  onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  disabled={!formData.institution_id}
+                >
+                  <option value="">No Department</option>
+                  {filteredDepartments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
+                {!formData.institution_id && (
+                  <p className="text-xs text-gray-500 mt-1">Select an institution first</p>
+                )}
               </div>
               <div className="flex justify-end gap-2">
                 <button
@@ -599,6 +627,223 @@ function InstitutionsTab() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Create Institution
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== DEPARTMENTS TAB ====================
+function DepartmentsTab() {
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({ name: '', description: '', institution_id: '' as string | number });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    try {
+      const [deptsRes, instsRes] = await Promise.all([
+        getDepartments(),
+        getInstitutions()
+      ]);
+      setDepartments(deptsRes.data);
+      setInstitutions(instsRes.data);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (!formData.institution_id) {
+      setError('Please select an institution');
+      return;
+    }
+    try {
+      await createDepartment({
+        name: formData.name,
+        description: formData.description || undefined,
+        institution_id: Number(formData.institution_id),
+      });
+      setShowForm(false);
+      setFormData({ name: '', description: '', institution_id: '' });
+      setSuccess('Department created successfully');
+      fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to create department');
+    }
+  }
+
+  async function handleDelete(deptId: number, deptName: string) {
+    if (!confirm(`Delete department "${deptName}"? This cannot be undone.`)) return;
+    setError('');
+    setSuccess('');
+    try {
+      await deleteDepartment(deptId);
+      setSuccess('Department deleted successfully');
+      fetchData();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to delete department');
+    }
+  }
+
+  // Get institution name by ID
+  function getInstitutionName(instId: number): string {
+    const inst = institutions.find(i => i.id === instId);
+    return inst?.name || '-';
+  }
+
+  if (loading) return <div className="text-center py-8">Loading...</div>;
+
+  return (
+    <div className="space-y-6">
+      {/* Messages */}
+      {success && (
+        <div className="bg-green-50 text-green-600 p-4 rounded-lg">{success}</div>
+      )}
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <p className="text-sm text-gray-500">Total Departments</p>
+          <p className="text-2xl font-bold">{departments.length}</p>
+        </div>
+      </div>
+
+      {/* Add Department Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
+          + Add Department
+        </button>
+      </div>
+
+      {/* Departments Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Institution</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {departments.map((dept) => (
+              <tr key={dept.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {dept.id}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap font-medium">
+                  {dept.name}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {getInstitutionName(dept.institution_id)}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-500">
+                  {dept.description || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {new Date(dept.created_at).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <button
+                    onClick={() => handleDelete(dept.id, dept.name)}
+                    className="text-red-600 hover:underline"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {departments.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  No departments yet. Create one to get started.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Create Department Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add Department</h2>
+            {error && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">{error}</div>
+            )}
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Institution *</label>
+                <select
+                  value={formData.institution_id}
+                  onChange={(e) => setFormData({ ...formData, institution_id: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  required
+                >
+                  <option value="">Select an institution</option>
+                  {institutions.map((inst) => (
+                    <option key={inst.id} value={inst.id}>{inst.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create Department
                 </button>
               </div>
             </form>

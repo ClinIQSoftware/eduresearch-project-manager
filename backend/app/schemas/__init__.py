@@ -6,6 +6,10 @@ from app.schemas.institution import (
     InstitutionBase, InstitutionCreate, InstitutionUpdate,
     InstitutionResponse, InstitutionWithMembers, AddMemberRequest
 )
+from app.schemas.department import (
+    DepartmentBase, DepartmentCreate, DepartmentUpdate,
+    DepartmentResponse, DepartmentWithMembers, DepartmentBrief
+)
 from app.schemas.project import (
     ProjectBase, ProjectCreate, ProjectUpdate, ProjectResponse,
     ProjectWithLead, ProjectMemberInfo, ProjectDetail, AddProjectMemberRequest
@@ -26,6 +30,8 @@ __all__ = [
     "UserResponse", "UserBrief", "Token", "TokenData", "LoginRequest",
     "InstitutionBase", "InstitutionCreate", "InstitutionUpdate",
     "InstitutionResponse", "InstitutionWithMembers", "AddMemberRequest",
+    "DepartmentBase", "DepartmentCreate", "DepartmentUpdate",
+    "DepartmentResponse", "DepartmentWithMembers", "DepartmentBrief",
     "ProjectBase", "ProjectCreate", "ProjectUpdate", "ProjectResponse",
     "ProjectWithLead", "ProjectMemberInfo", "ProjectDetail", "AddProjectMemberRequest",
     "JoinRequestBase", "JoinRequestCreate", "JoinRequestResponse",
