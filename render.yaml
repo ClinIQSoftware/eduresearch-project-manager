@@ -3,7 +3,7 @@
 
 databases:
   - name: eduresearch-db
-    plan: starter
+    plan: basic
     databaseName: eduresearch
     user: eduresearch
 
