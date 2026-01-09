@@ -71,7 +71,7 @@ def create_project(
     member = ProjectMember(
         project_id=project.id,
         user_id=current_user.id,
-        role=MemberRole.LEAD
+        role=MemberRole.lead
     )
     db.add(member)
     db.commit()
@@ -221,7 +221,7 @@ def add_project_member(
         raise HTTPException(status_code=400, detail="User is already a project member")
 
     # Add member
-    role = MemberRole.LEAD if member_data.role == "lead" else MemberRole.PARTICIPANT
+    role = MemberRole.lead if member_data.role == "lead" else MemberRole.participant
     member = ProjectMember(
         project_id=project_id,
         user_id=member_data.user_id,

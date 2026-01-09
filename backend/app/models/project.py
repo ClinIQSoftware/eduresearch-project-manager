@@ -6,17 +6,17 @@ import enum
 
 
 class ProjectClassification(str, enum.Enum):
-    EDUCATION = "education"
-    RESEARCH = "research"
-    QUALITY_IMPROVEMENT = "quality_improvement"
-    ADMINISTRATIVE = "administrative"
+    education = "education"
+    research = "research"
+    quality_improvement = "quality_improvement"
+    administrative = "administrative"
 
 
 class ProjectStatus(str, enum.Enum):
-    PREPARATION = "preparation"
-    RECRUITMENT = "recruitment"
-    ANALYSIS = "analysis"
-    WRITING = "writing"
+    preparation = "preparation"
+    recruitment = "recruitment"
+    analysis = "analysis"
+    writing = "writing"
 
 
 class Project(Base):
@@ -28,8 +28,8 @@ class Project(Base):
     color = Column(String(7), default="#3B82F6")
 
     # New classification and status fields
-    classification = Column(Enum(ProjectClassification), default=ProjectClassification.RESEARCH)
-    status = Column(Enum(ProjectStatus), default=ProjectStatus.PREPARATION)
+    classification = Column(Enum(ProjectClassification), default=ProjectClassification.research)
+    status = Column(Enum(ProjectStatus), default=ProjectStatus.preparation)
     open_to_participants = Column(Boolean, default=True)
 
     # Dates

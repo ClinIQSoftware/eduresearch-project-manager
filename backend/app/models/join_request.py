@@ -6,9 +6,9 @@ import enum
 
 
 class RequestStatus(str, enum.Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
 
 
 class JoinRequest(Base):
@@ -18,7 +18,7 @@ class JoinRequest(Base):
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     message = Column(String(1000), nullable=True)
-    status = Column(Enum(RequestStatus), default=RequestStatus.PENDING)
+    status = Column(Enum(RequestStatus), default=RequestStatus.pending)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     responded_at = Column(DateTime(timezone=True), nullable=True)
 

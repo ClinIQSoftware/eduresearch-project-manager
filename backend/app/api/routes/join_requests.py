@@ -44,7 +44,7 @@ async def create_join_request(
     existing_request = db.query(JoinRequest).filter(
         JoinRequest.project_id == request_data.project_id,
         JoinRequest.user_id == current_user.id,
-        JoinRequest.status == RequestStatus.PENDING
+        JoinRequest.status == RequestStatus.pending
     ).first()
     if existing_request:
         raise HTTPException(status_code=400, detail="Request already pending")
@@ -134,7 +134,7 @@ async def respond_to_join_request(
     if not current_user.is_superuser and project.lead_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only project lead can respond")
 
-    if join_request.status != RequestStatus.PENDING:
+    if join_request.status != RequestStatus.pending:
         raise HTTPException(status_code=400, detail="Request already processed")
 
     # Update request status
@@ -142,11 +142,11 @@ async def respond_to_join_request(
     join_request.responded_at = datetime.utcnow()
 
     # If approved, add as member
-    if response_data.status == RequestStatus.APPROVED:
+    if response_data.status == RequestStatus.approved:
         member = ProjectMember(
             project_id=join_request.project_id,
             user_id=join_request.user_id,
-            role=MemberRole.PARTICIPANT
+            role=MemberRole.participant
         )
         db.add(member)
 
@@ -160,7 +160,7 @@ async def respond_to_join_request(
             email_service.send_join_request_response,
             requester.email,
             project.title,
-            response_data.status == RequestStatus.APPROVED
+            response_data.status == RequestStatus.approved
         )
 
     return join_request
@@ -180,7 +180,7 @@ def cancel_join_request(
     if join_request.user_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    if join_request.status != RequestStatus.PENDING:
+    if join_request.status != RequestStatus.pending:
         raise HTTPException(status_code=400, detail="Cannot cancel processed request")
 
     db.delete(join_request)

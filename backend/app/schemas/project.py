@@ -9,8 +9,8 @@ class ProjectBase(BaseModel):
     title: str
     description: Optional[str] = None
     color: Optional[str] = "#3B82F6"
-    classification: ProjectClassification = ProjectClassification.RESEARCH
-    status: ProjectStatus = ProjectStatus.PREPARATION
+    classification: ProjectClassification = ProjectClassification.research
+    status: ProjectStatus = ProjectStatus.preparation
     open_to_participants: bool = True
     start_date: Optional[date] = None
 
