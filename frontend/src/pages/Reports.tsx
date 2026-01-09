@@ -126,7 +126,6 @@ export default function Reports() {
                       <div>
                         <h3 className="font-semibold text-lg">{lead.name}</h3>
                         <p className="text-gray-500">{lead.email}</p>
-                        {lead.department && <p className="text-sm text-gray-400">{lead.department}</p>}
                       </div>
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
                         {lead.projects.length} projects
@@ -161,7 +160,6 @@ export default function Reports() {
                       <div>
                         <h3 className="font-semibold text-lg">{u.name}</h3>
                         <p className="text-gray-500">{u.email}</p>
-                        {u.department && <p className="text-sm text-gray-400">{u.department}</p>}
                       </div>
                       <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm">
                         {u.projects.length} projects
