@@ -10,7 +10,7 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.email_settings import EmailSettings
 from app.models.system_settings import SystemSettings
-from app.models.institution import Institution
+from app.models.organization import Institution
 from app.models.department import Department
 from app.schemas.user import UserResponse, UserUpdateAdmin, UserCreateAdmin, PendingUserResponse
 from app.schemas.project import ProjectResponse, ProjectUpdate
