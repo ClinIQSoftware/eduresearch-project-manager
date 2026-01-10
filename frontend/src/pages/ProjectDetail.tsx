@@ -531,6 +531,21 @@ export default function ProjectDetailPage() {
                 </p>
               </div>
             </div>
+
+            {/* Request to Join button for non-members */}
+            {canEdit && !currentUserMember && project.open_to_participants && (
+              <div className="mt-6 pt-4 border-t">
+                <button
+                  onClick={handleJoinRequest}
+                  className="w-full sm:w-auto bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 active:bg-green-800 font-medium"
+                >
+                  Request to Join This Project
+                </button>
+                <p className="text-sm text-gray-500 mt-2">
+                  Your request will be sent to the project leads for approval.
+                </p>
+              </div>
+            )}
           </>
         )}
       </div>
