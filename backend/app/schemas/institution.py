@@ -37,3 +37,11 @@ class InstitutionWithMembers(InstitutionResponse):
 class AddMemberRequest(BaseModel):
     user_id: int
     is_admin: bool = False
+
+
+class InstitutionBrief(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True

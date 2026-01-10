@@ -24,6 +24,6 @@ class Institution(Base):
 
     # Relationships
     users = relationship("User", back_populates="institution_entity")
-    projects = relationship("Project", back_populates="institution_entity", cascade="all, delete-orphan")
+    projects = relationship("Project", back_populates="institution", cascade="all, delete-orphan")
     departments = relationship("Department", back_populates="institution", cascade="all, delete-orphan")
     admins = relationship("User", secondary=organization_admins, back_populates="admin_of_institutions")

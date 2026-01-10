@@ -3,6 +3,8 @@ from datetime import datetime, date
 from typing import Optional, List
 from app.models.project import ProjectClassification, ProjectStatus
 from app.schemas.user import UserBrief
+from app.schemas.institution import InstitutionBrief
+from app.schemas.department import DepartmentBrief
 
 
 class ProjectBase(BaseModel):
@@ -40,6 +42,8 @@ class ProjectResponse(ProjectBase):
     last_status_change: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    institution: Optional[InstitutionBrief] = None
+    department: Optional[DepartmentBrief] = None
 
     class Config:
         from_attributes = True

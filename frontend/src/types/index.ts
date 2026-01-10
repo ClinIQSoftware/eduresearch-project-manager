@@ -81,6 +81,17 @@ export type ProjectClassification = 'education' | 'research' | 'quality_improvem
 export type ProjectStatus = 'preparation' | 'recruitment' | 'analysis' | 'writing';
 export type MemberRole = 'lead' | 'participant';
 
+// Brief types for nested objects
+export interface InstitutionBrief {
+  id: number;
+  name: string;
+}
+
+export interface DepartmentBrief {
+  id: number;
+  name: string;
+}
+
 export interface Project {
   id: number;
   title: string;
@@ -96,6 +107,8 @@ export interface Project {
   lead_id: number | null;
   created_at: string;
   updated_at: string | null;
+  institution: InstitutionBrief | null;
+  department: DepartmentBrief | null;
 }
 
 export interface ProjectWithLead extends Project {

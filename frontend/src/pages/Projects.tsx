@@ -103,6 +103,20 @@ export default function Projects() {
     ? departments.filter(d => d.institution_id === formData.institution_id)
     : departments;
 
+  // Determine what institution/department info to show based on filters
+  const getLocationInfo = (project: ProjectWithLead) => {
+    const parts: string[] = [];
+    // If no institution filter, show institution
+    if (!filter.institution_id && project.institution?.name) {
+      parts.push(project.institution.name);
+    }
+    // If no department filter, show department
+    if (!filter.department_id && project.department?.name) {
+      parts.push(project.department.name);
+    }
+    return parts.length > 0 ? parts.join(' • ') : null;
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -238,72 +252,79 @@ export default function Projects() {
             No projects found.
           </p>
         ) : (
-          projects.map((project) => (
-            <div key={project.id} className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="h-2" style={{ backgroundColor: project.color }} />
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <Link to={`/projects/${project.id}`} className="font-semibold text-lg hover:text-blue-600">
-                    {project.title}
-                  </Link>
-                  {project.open_to_participants && (
-                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Open</span>
+          projects.map((project) => {
+            const locationInfo = getLocationInfo(project);
+            return (
+              <div key={project.id} className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="h-2" style={{ backgroundColor: project.color }} />
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <Link to={`/projects/${project.id}`} className="font-semibold text-lg hover:text-blue-600">
+                      {project.title}
+                    </Link>
+                    {project.open_to_participants && (
+                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Open</span>
+                    )}
+                  </div>
+
+                  {locationInfo && (
+                    <p className="text-xs text-gray-400 mb-2">{locationInfo}</p>
                   )}
-                </div>
 
-                {project.description && (
-                  <p className="text-gray-500 text-sm mb-3 line-clamp-2">{project.description}</p>
-                )}
-
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <span className={`text-xs px-2 py-1 rounded ${classificationColors[project.classification]}`}>
-                    {classificationLabels[project.classification]}
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded ${statusColors[project.status]}`}>
-                    {statusLabels[project.status]}
-                  </span>
-                </div>
-
-                {project.lead && (
-                  <p className="text-sm text-gray-600 mb-2">
-                    Lead: <span className="font-medium">{project.lead.name}</span>
-                  </p>
-                )}
-
-                <div className="text-xs text-gray-400 mb-3">
-                  {project.start_date && <p>Started: {new Date(project.start_date).toLocaleDateString()}</p>}
-                  {project.last_status_change && (
-                    <p>Last update: {new Date(project.last_status_change).toLocaleDateString()}</p>
+                  {project.description && (
+                    <p className="text-gray-500 text-sm mb-3 line-clamp-2">{project.description}</p>
                   )}
-                </div>
 
-                <div className="flex gap-2">
-                  <Link
-                    to={`/projects/${project.id}`}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    View
-                  </Link>
-                  {canEdit && project.lead_id === user?.id && (
-                    <button
-                      onClick={() => handleDelete(project.id)}
-                      className="text-red-600 hover:text-red-800 text-sm"
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <span className={`text-xs px-2 py-1 rounded ${classificationColors[project.classification]}`}>
+                      {classificationLabels[project.classification]}
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded ${statusColors[project.status]}`}>
+                      {statusLabels[project.status]}
+                    </span>
+                  </div>
+
+                  {project.lead && (
+                    <p className="text-sm text-gray-600 mb-2">
+                      Lead: <span className="font-medium">{project.lead.name}</span>
+                    </p>
+                  )}
+
+                  <div className="text-xs text-gray-400 mb-3">
+                    {project.start_date && <p>Started: {new Date(project.start_date).toLocaleDateString()}</p>}
+                    {project.last_status_change && (
+                      <p>Last update: {new Date(project.last_status_change).toLocaleDateString()}</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Link
+                      to={`/projects/${project.id}`}
+                      className="text-blue-600 hover:text-blue-800 text-sm"
                     >
-                      Delete
-                    </button>
-                  )}
-                  {canEdit && project.open_to_participants && project.lead_id !== user?.id && (
-                    <button
-                      onClick={() => handleJoinRequest(project.id)}
-                      className="text-green-600 hover:text-green-800 text-sm"
-                    >
-                      Request to Join
-                    </button>
-                  )}
+                      View
+                    </Link>
+                    {canEdit && project.lead_id === user?.id && (
+                      <button
+                        onClick={() => handleDelete(project.id)}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                      >
+                        Delete
+                      </button>
+                    )}
+                    {canEdit && project.open_to_participants && project.lead_id !== user?.id && (
+                      <button
+                        onClick={() => handleJoinRequest(project.id)}
+                        className="text-green-600 hover:text-green-800 text-sm"
+                      >
+                        Request to Join
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

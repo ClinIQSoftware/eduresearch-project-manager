@@ -175,6 +175,28 @@ export default function Dashboard() {
     administrative: 'bg-gray-100 text-gray-800',
   };
 
+  // Determine what institution/department info to show based on active view
+  const getLocationInfo = (project: ProjectWithLead) => {
+    const parts: string[] = [];
+    switch (activeView) {
+      case 'personal':
+      case 'global':
+        // Show both
+        if (project.institution?.name) parts.push(project.institution.name);
+        if (project.department?.name) parts.push(project.department.name);
+        break;
+      case 'institution':
+        // Show department only (user already knows the institution)
+        if (project.department?.name) parts.push(project.department.name);
+        break;
+      case 'department':
+        // Show institution only (user already knows the department)
+        if (project.institution?.name) parts.push(project.institution.name);
+        break;
+    }
+    return parts.length > 0 ? parts.join(' • ') : null;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -297,28 +319,34 @@ export default function Dashboard() {
             <p className="text-center text-gray-500 py-4">No projects yet</p>
           ) : (
             <div className="space-y-3">
-              {recentProjects.map((project) => (
-                <Link
-                  key={project.id}
-                  to={`/projects/${project.id}`}
-                  className="block p-3 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{project.title}</p>
-                      <p className="text-sm text-gray-500">
-                        Lead: {project.lead?.name || 'Unassigned'}
-                      </p>
+              {recentProjects.map((project) => {
+                const locationInfo = getLocationInfo(project);
+                return (
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="block p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{project.title}</p>
+                        <p className="text-sm text-gray-500">
+                          Lead: {project.lead?.name || 'Unassigned'}
+                        </p>
+                        {locationInfo && (
+                          <p className="text-xs text-gray-400">{locationInfo}</p>
+                        )}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded ${statusColors[project.status]}`}>
+                        {project.status}
+                      </span>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded ${statusColors[project.status]}`}>
-                      {project.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">
-                    Updated: {new Date(project.updated_at || project.created_at).toLocaleDateString()}
-                  </p>
-                </Link>
-              ))}
+                    <p className="text-xs text-gray-400 mt-2">
+                      Updated: {new Date(project.updated_at || project.created_at).toLocaleDateString()}
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
@@ -330,28 +358,34 @@ export default function Dashboard() {
             <p className="text-center text-gray-500 py-4">No upcoming projects</p>
           ) : (
             <div className="space-y-3">
-              {upcomingProjects.map((project) => (
-                <Link
-                  key={project.id}
-                  to={`/projects/${project.id}`}
-                  className="block p-3 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{project.title}</p>
-                      <p className="text-sm text-gray-500">
-                        Lead: {project.lead?.name || 'Unassigned'}
-                      </p>
+              {upcomingProjects.map((project) => {
+                const locationInfo = getLocationInfo(project);
+                return (
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="block p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{project.title}</p>
+                        <p className="text-sm text-gray-500">
+                          Lead: {project.lead?.name || 'Unassigned'}
+                        </p>
+                        {locationInfo && (
+                          <p className="text-xs text-gray-400">{locationInfo}</p>
+                        )}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded ${classificationColors[project.classification]}`}>
+                        {project.classification.replace('_', ' ')}
+                      </span>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded ${classificationColors[project.classification]}`}>
-                      {project.classification.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">
-                    Starts: {new Date(project.start_date!).toLocaleDateString()}
-                  </p>
-                </Link>
-              ))}
+                    <p className="text-xs text-gray-400 mt-2">
+                      Starts: {new Date(project.start_date!).toLocaleDateString()}
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
@@ -367,27 +401,33 @@ export default function Dashboard() {
             {projects
               .filter(p => p.open_to_participants)
               .slice(0, 6)
-              .map((project) => (
-                <Link
-                  key={project.id}
-                  to={`/projects/${project.id}`}
-                  className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <p className="font-medium">{project.title}</p>
-                    <span className="text-green-600 text-xs">Open</span>
-                  </div>
-                  <p className="text-sm text-gray-500 mb-2 line-clamp-2">{project.description}</p>
-                  <div className="flex gap-2">
-                    <span className={`text-xs px-2 py-1 rounded ${statusColors[project.status]}`}>
-                      {project.status}
-                    </span>
-                    <span className={`text-xs px-2 py-1 rounded ${classificationColors[project.classification]}`}>
-                      {project.classification.replace('_', ' ')}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+              .map((project) => {
+                const locationInfo = getLocationInfo(project);
+                return (
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-medium">{project.title}</p>
+                      <span className="text-green-600 text-xs">Open</span>
+                    </div>
+                    {locationInfo && (
+                      <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
+                    )}
+                    <p className="text-sm text-gray-500 mb-2 line-clamp-2">{project.description}</p>
+                    <div className="flex gap-2">
+                      <span className={`text-xs px-2 py-1 rounded ${statusColors[project.status]}`}>
+                        {project.status}
+                      </span>
+                      <span className={`text-xs px-2 py-1 rounded ${classificationColors[project.classification]}`}>
+                        {project.classification.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
           </div>
         )}
         {projects.filter(p => p.open_to_participants).length > 6 && (

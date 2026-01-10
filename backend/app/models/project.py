@@ -44,7 +44,7 @@ class Project(Base):
     lead_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
-    institution_entity = relationship("Institution", back_populates="projects")
+    institution = relationship("Institution", back_populates="projects")
     department = relationship("Department", backref="projects")
     lead = relationship("User", back_populates="led_projects", foreign_keys=[lead_id])
     members = relationship("ProjectMember", back_populates="project", cascade="all, delete-orphan")

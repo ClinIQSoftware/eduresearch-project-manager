@@ -506,7 +506,7 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4 md:mt-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mt-4 md:mt-6">
               <div>
                 <p className="text-sm text-gray-500">Classification</p>
                 <p className="font-medium">{classificationLabels[project.classification]}</p>
@@ -523,6 +523,14 @@ export default function ProjectDetailPage() {
                     .map(m => m.user.name)
                     .join(', ') || 'N/A'}
                 </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Institution</p>
+                <p className="font-medium">{project.institution?.name || 'Not assigned'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Department</p>
+                <p className="font-medium">{project.department?.name || 'Not assigned'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Start Date</p>
