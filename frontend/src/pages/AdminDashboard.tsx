@@ -4,11 +4,12 @@ import {
   getSystemSettings, updateSystemSettings, getPendingUsers,
   approveUser, rejectUser, bulkUploadUsers, downloadUserTemplate,
   getInstitutions, createInstitution, deleteInstitution,
-  getDepartments, createDepartment, deleteDepartment
+  getDepartments, createDepartment, deleteDepartment,
+  getEmailSettings, updateEmailSettings, getEmailTemplates, updateEmailTemplate, sendTestEmail
 } from '../services/api';
-import type { User, SystemSettings, BulkUploadResult, Institution, Department } from '../types';
+import type { User, SystemSettings, BulkUploadResult, Institution, Department, EmailSettings, EmailTemplate } from '../types';
 
-type TabType = 'users' | 'institutions' | 'departments' | 'security' | 'import';
+type TabType = 'users' | 'institutions' | 'departments' | 'security' | 'email' | 'import';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('users');
@@ -61,6 +62,16 @@ export default function AdminDashboard() {
             Security
           </button>
           <button
+            onClick={() => setActiveTab('email')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'email'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Email
+          </button>
+          <button
             onClick={() => setActiveTab('import')}
             className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'import'
@@ -78,6 +89,7 @@ export default function AdminDashboard() {
       {activeTab === 'institutions' && <InstitutionsTab />}
       {activeTab === 'departments' && <DepartmentsTab />}
       {activeTab === 'security' && <SecurityTab />}
+      {activeTab === 'email' && <EmailTab />}
       {activeTab === 'import' && <ImportTab />}
     </div>
   );
@@ -1360,6 +1372,367 @@ function ImportTab() {
               </ul>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== EMAIL TAB ====================
+const TEMPLATE_LABELS: Record<string, { name: string; description: string; variables: string[] }> = {
+  user_approval_request: {
+    name: 'User Approval Request',
+    description: 'Sent to admins when a new user registers and requires approval',
+    variables: ['user_name', 'user_email', 'institution_name', 'department_name', 'approval_link']
+  },
+  join_request: {
+    name: 'Join Request',
+    description: 'Sent to project leads when someone requests to join their project',
+    variables: ['project_name', 'requester_name', 'message', 'project_link']
+  },
+  task_assignment: {
+    name: 'Task Assignment',
+    description: 'Sent to users when a task is assigned to them',
+    variables: ['task_title', 'project_name', 'priority', 'due_date', 'description', 'task_link']
+  }
+};
+
+function EmailTab() {
+  const [emailSettings, setEmailSettings] = useState<EmailSettings | null>(null);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
+  const [testEmail, setTestEmail] = useState('');
+  const [testingTemplate, setTestingTemplate] = useState('');
+
+  // Form state for SMTP settings
+  const [smtpForm, setSmtpForm] = useState({
+    smtp_host: '',
+    smtp_port: 587,
+    smtp_user: '',
+    smtp_password: '',
+    from_email: '',
+    from_name: '',
+    is_active: false
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    try {
+      const [settingsRes, templatesRes] = await Promise.all([
+        getEmailSettings(),
+        getEmailTemplates()
+      ]);
+      const settings = settingsRes.data;
+      setEmailSettings(settings);
+      setSmtpForm({
+        smtp_host: settings.smtp_host || '',
+        smtp_port: settings.smtp_port || 587,
+        smtp_user: settings.smtp_user || '',
+        smtp_password: '',
+        from_email: settings.from_email || '',
+        from_name: settings.from_name || '',
+        is_active: settings.is_active
+      });
+      setTemplates(templatesRes.data);
+    } catch (error) {
+      console.error('Error fetching email settings:', error);
+      setMessage('Failed to load email settings');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSaveSettings() {
+    setSaving(true);
+    setMessage('');
+    try {
+      const updateData: any = {
+        smtp_host: smtpForm.smtp_host,
+        smtp_port: smtpForm.smtp_port,
+        smtp_user: smtpForm.smtp_user || null,
+        from_email: smtpForm.from_email || null,
+        from_name: smtpForm.from_name,
+        is_active: smtpForm.is_active
+      };
+      // Only include password if it was changed
+      if (smtpForm.smtp_password) {
+        updateData.smtp_password = smtpForm.smtp_password;
+      }
+      await updateEmailSettings(updateData);
+      setMessage('Email settings saved successfully');
+      setSmtpForm({ ...smtpForm, smtp_password: '' });
+    } catch (error: any) {
+      setMessage(error.response?.data?.detail || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSaveTemplate() {
+    if (!editingTemplate) return;
+    setSaving(true);
+    setMessage('');
+    try {
+      await updateEmailTemplate(editingTemplate.template_type, {
+        subject: editingTemplate.subject,
+        body: editingTemplate.body,
+        is_active: editingTemplate.is_active
+      });
+      setMessage('Template saved successfully');
+      setEditingTemplate(null);
+      fetchData();
+    } catch (error: any) {
+      setMessage(error.response?.data?.detail || 'Failed to save template');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTestEmail(templateType: string) {
+    if (!testEmail) {
+      setMessage('Please enter a test email address');
+      return;
+    }
+    setTestingTemplate(templateType);
+    try {
+      await sendTestEmail(templateType, testEmail);
+      setMessage(`Test email queued for ${testEmail}`);
+    } catch (error: any) {
+      setMessage(error.response?.data?.detail || 'Failed to send test email');
+    } finally {
+      setTestingTemplate('');
+    }
+  }
+
+  if (loading) return <div className="text-center py-8">Loading...</div>;
+
+  return (
+    <div className="max-w-4xl space-y-6">
+      {message && (
+        <div className={`p-3 rounded-lg ${message.includes('success') || message.includes('queued') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+          {message}
+        </div>
+      )}
+
+      {/* SMTP Settings */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">SMTP Configuration</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">SMTP Host</label>
+            <input
+              type="text"
+              value={smtpForm.smtp_host}
+              onChange={(e) => setSmtpForm({ ...smtpForm, smtp_host: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="smtp.gmail.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">SMTP Port</label>
+            <input
+              type="number"
+              value={smtpForm.smtp_port}
+              onChange={(e) => setSmtpForm({ ...smtpForm, smtp_port: parseInt(e.target.value) || 587 })}
+              className="w-full border rounded-lg px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">SMTP Username</label>
+            <input
+              type="text"
+              value={smtpForm.smtp_user}
+              onChange={(e) => setSmtpForm({ ...smtpForm, smtp_user: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="your-email@gmail.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">SMTP Password</label>
+            <input
+              type="password"
+              value={smtpForm.smtp_password}
+              onChange={(e) => setSmtpForm({ ...smtpForm, smtp_password: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="Leave blank to keep existing"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">From Email</label>
+            <input
+              type="email"
+              value={smtpForm.from_email}
+              onChange={(e) => setSmtpForm({ ...smtpForm, from_email: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="noreply@yourdomain.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">From Name</label>
+            <input
+              type="text"
+              value={smtpForm.from_name}
+              onChange={(e) => setSmtpForm({ ...smtpForm, from_name: e.target.value })}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="EduResearch Project Manager"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={smtpForm.is_active}
+              onChange={(e) => setSmtpForm({ ...smtpForm, is_active: e.target.checked })}
+              className="w-4 h-4"
+            />
+            <span>Enable email notifications</span>
+          </label>
+          <button
+            onClick={handleSaveSettings}
+            disabled={saving}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save SMTP Settings'}
+          </button>
+        </div>
+      </div>
+
+      {/* Test Email Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">Test Email</h2>
+        <div className="flex gap-4 items-end">
+          <div className="flex-1">
+            <label className="block text-sm font-medium mb-1">Test Recipient Email</label>
+            <input
+              type="email"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2"
+              placeholder="your-email@example.com"
+            />
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 mt-2">
+          Enter your email address above, then click "Send Test" on any template below to test it.
+        </p>
+      </div>
+
+      {/* Email Templates */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">Email Templates</h2>
+        <div className="space-y-4">
+          {templates.map((template) => {
+            const meta = TEMPLATE_LABELS[template.template_type] || {
+              name: template.template_type,
+              description: '',
+              variables: []
+            };
+            return (
+              <div key={template.id} className="border rounded-lg p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="font-medium">{meta.name}</h3>
+                    <p className="text-sm text-gray-500">{meta.description}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleTestEmail(template.template_type)}
+                      disabled={testingTemplate === template.template_type || !testEmail}
+                      className="px-3 py-1 text-sm border border-green-600 text-green-600 rounded hover:bg-green-50 disabled:opacity-50"
+                    >
+                      {testingTemplate === template.template_type ? 'Sending...' : 'Send Test'}
+                    </button>
+                    <button
+                      onClick={() => setEditingTemplate({ ...template })}
+                      className="px-3 py-1 text-sm border border-blue-600 text-blue-600 rounded hover:bg-blue-50"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+                <div className="text-sm">
+                  <p><span className="font-medium">Subject:</span> {template.subject}</p>
+                  <p className={`mt-1 ${template.is_active ? 'text-green-600' : 'text-red-600'}`}>
+                    {template.is_active ? 'Active' : 'Inactive'}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Edit Template Modal */}
+      {editingTemplate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">
+              Edit Template: {TEMPLATE_LABELS[editingTemplate.template_type]?.name || editingTemplate.template_type}
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={editingTemplate.subject}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, subject: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Body (HTML)</label>
+                <textarea
+                  value={editingTemplate.body}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, body: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2 font-mono text-sm"
+                  rows={15}
+                />
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm font-medium text-blue-800 mb-1">Available Variables:</p>
+                <p className="text-sm text-blue-700">
+                  {TEMPLATE_LABELS[editingTemplate.template_type]?.variables.map(v => `{{${v}}}`).join(', ') || 'None'}
+                </p>
+              </div>
+
+              <label className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={editingTemplate.is_active}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, is_active: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span>Template Active</span>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => setEditingTemplate(null)}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTemplate}
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Template'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -271,6 +271,127 @@ EduResearch Project Manager
         """
         return await self.send_email(to_email, subject, body, html_body)
 
+    def _render_template(self, template: str, context: dict) -> str:
+        """Replace {{variable}} placeholders with values from context."""
+        result = template
+        for key, value in context.items():
+            placeholder = f"{{{{{key}}}}}"
+            result = result.replace(placeholder, str(value) if value else "")
+        return result
+
+    async def send_templated_email(
+        self,
+        to_email: str,
+        subject_template: str,
+        body_template: str,
+        context: dict
+    ) -> bool:
+        """Send email using templates with variable substitution."""
+        subject = self._render_template(subject_template, context)
+        html_body = self._render_template(body_template, context)
+        # Create plain text version by stripping HTML
+        import re
+        plain_body = re.sub('<[^<]+?>', '', html_body)
+        plain_body = plain_body.replace('&nbsp;', ' ').strip()
+
+        return await self.send_email(to_email, subject, plain_body, html_body)
+
+    async def send_user_approval_request(
+        self,
+        admin_email: str,
+        user_name: str,
+        user_email: str,
+        institution_name: str = None,
+        department_name: str = None
+    ):
+        """Send email to admin when a new user requires approval."""
+        approval_link = f"{settings.frontend_url}/admin/pending-users"
+        subject = f"[EduResearch] New User Registration Requires Approval - {user_name}"
+        body = f"""
+Hello,
+
+A new user has registered and requires your approval:
+
+Name: {user_name}
+Email: {user_email}
+Institution: {institution_name or 'Not specified'}
+Department: {department_name or 'Not specified'}
+
+Please log in to approve or reject this registration:
+{approval_link}
+
+Best regards,
+EduResearch Project Manager
+        """
+        html_body = f"""
+<html>
+<body>
+<h2>New User Registration</h2>
+<p>A new user has registered and requires your approval:</p>
+<ul>
+    <li><strong>Name:</strong> {user_name}</li>
+    <li><strong>Email:</strong> {user_email}</li>
+    <li><strong>Institution:</strong> {institution_name or 'Not specified'}</li>
+    <li><strong>Department:</strong> {department_name or 'Not specified'}</li>
+</ul>
+<p><a href="{approval_link}" style="display: inline-block; background: #3B82F6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Review Request</a></p>
+<hr>
+<p style="color: #666; font-size: 12px;">EduResearch Project Manager</p>
+</body>
+</html>
+        """
+        return await self.send_email(admin_email, subject, body, html_body)
+
+    async def send_task_assignment(
+        self,
+        to_email: str,
+        task_title: str,
+        task_description: str = None,
+        project_name: str = None,
+        priority: str = None,
+        due_date: str = None,
+        assigned_by: str = None
+    ):
+        """Send email when a task is assigned to a user."""
+        task_link = f"{settings.frontend_url}/tasks"
+        subject = f"[EduResearch] Task Assigned: {task_title}"
+        body = f"""
+Hello,
+
+You have been assigned a new task{f" by {assigned_by}" if assigned_by else ""}:
+
+Task: {task_title}
+{f"Project: {project_name}" if project_name else ""}
+{f"Priority: {priority}" if priority else ""}
+{f"Due Date: {due_date}" if due_date else ""}
+
+{f"Description: {task_description}" if task_description else ""}
+
+View your tasks: {task_link}
+
+Best regards,
+EduResearch Project Manager
+        """
+        html_body = f"""
+<html>
+<body>
+<h2>New Task Assignment</h2>
+<p>You have been assigned a new task{f" by <strong>{assigned_by}</strong>" if assigned_by else ""}:</p>
+<ul>
+    <li><strong>Task:</strong> {task_title}</li>
+    {f"<li><strong>Project:</strong> {project_name}</li>" if project_name else ""}
+    {f"<li><strong>Priority:</strong> {priority}</li>" if priority else ""}
+    {f"<li><strong>Due Date:</strong> {due_date}</li>" if due_date else ""}
+</ul>
+{f"<p><strong>Description:</strong></p><p>{task_description}</p>" if task_description else ""}
+<p><a href="{task_link}" style="display: inline-block; background: #3B82F6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Task</a></p>
+<hr>
+<p style="color: #666; font-size: 12px;">EduResearch Project Manager</p>
+</body>
+</html>
+        """
+        return await self.send_email(to_email, subject, body, html_body)
+
 
 # Default email service instance
 email_service = EmailService()

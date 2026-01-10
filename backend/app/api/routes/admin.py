@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.project import Project
 from app.models.email_settings import EmailSettings
+from app.models.email_template import EmailTemplate
 from app.models.system_settings import SystemSettings
 from app.models.organization import Institution
 from app.models.department import Department
@@ -16,6 +17,9 @@ from app.schemas.user import UserResponse, UserUpdateAdmin, UserCreateAdmin, Pen
 from app.schemas.project import ProjectResponse, ProjectUpdate
 from app.schemas.email_settings import (
     EmailSettingsCreate, EmailSettingsUpdate, EmailSettingsResponse
+)
+from app.schemas.email_template import (
+    EmailTemplateResponse, EmailTemplateUpdate, TestEmailRequest
 )
 from app.schemas.system_settings import (
     SystemSettingsResponse, SystemSettingsUpdate, BulkUploadResult
@@ -650,3 +654,183 @@ async def get_upload_template(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=user_upload_template.xlsx"}
     )
+
+
+# Email Templates
+
+@router.get("/email-templates", response_model=List[EmailTemplateResponse])
+def get_email_templates(
+    institution_id: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all email templates."""
+    # Check admin access
+    if not current_user.is_superuser:
+        if institution_id:
+            if not is_institution_admin(db, current_user.id, institution_id):
+                raise HTTPException(status_code=403, detail="Admin access required")
+        else:
+            raise HTTPException(status_code=403, detail="Superuser access required")
+
+    # Get institution-specific templates first, then fall back to global
+    templates = db.query(EmailTemplate).filter(
+        EmailTemplate.institution_id == institution_id
+    ).all()
+
+    # If no institution-specific templates, get global ones
+    if not templates:
+        templates = db.query(EmailTemplate).filter(
+            EmailTemplate.institution_id.is_(None)
+        ).all()
+
+    return templates
+
+
+@router.get("/email-templates/{template_type}", response_model=EmailTemplateResponse)
+def get_email_template(
+    template_type: str,
+    institution_id: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific email template by type."""
+    # Check admin access
+    if not current_user.is_superuser:
+        if institution_id:
+            if not is_institution_admin(db, current_user.id, institution_id):
+                raise HTTPException(status_code=403, detail="Admin access required")
+        else:
+            raise HTTPException(status_code=403, detail="Superuser access required")
+
+    # Try institution-specific first
+    template = db.query(EmailTemplate).filter(
+        EmailTemplate.template_type == template_type,
+        EmailTemplate.institution_id == institution_id
+    ).first()
+
+    # Fall back to global
+    if not template:
+        template = db.query(EmailTemplate).filter(
+            EmailTemplate.template_type == template_type,
+            EmailTemplate.institution_id.is_(None)
+        ).first()
+
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    return template
+
+
+@router.put("/email-templates/{template_type}", response_model=EmailTemplateResponse)
+def update_email_template(
+    template_type: str,
+    template_data: EmailTemplateUpdate,
+    institution_id: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update an email template."""
+    # Check admin access
+    if not current_user.is_superuser:
+        if institution_id:
+            if not is_institution_admin(db, current_user.id, institution_id):
+                raise HTTPException(status_code=403, detail="Admin access required")
+        else:
+            raise HTTPException(status_code=403, detail="Superuser access required")
+
+    # Try to get existing template for this institution
+    template = db.query(EmailTemplate).filter(
+        EmailTemplate.template_type == template_type,
+        EmailTemplate.institution_id == institution_id
+    ).first()
+
+    if not template:
+        # Get the global template to copy as base
+        global_template = db.query(EmailTemplate).filter(
+            EmailTemplate.template_type == template_type,
+            EmailTemplate.institution_id.is_(None)
+        ).first()
+
+        if not global_template:
+            raise HTTPException(status_code=404, detail="Template type not found")
+
+        # Create institution-specific template
+        template = EmailTemplate(
+            institution_id=institution_id,
+            template_type=template_type,
+            subject=global_template.subject,
+            body=global_template.body,
+            is_active=global_template.is_active
+        )
+        db.add(template)
+
+    # Update with provided data
+    update_data = template_data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(template, key, value)
+
+    db.commit()
+    db.refresh(template)
+    return template
+
+
+@router.post("/email-templates/test")
+async def send_test_email(
+    request: TestEmailRequest,
+    background_tasks: BackgroundTasks,
+    institution_id: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send a test email using a specific template."""
+    # Check admin access
+    if not current_user.is_superuser:
+        if institution_id:
+            if not is_institution_admin(db, current_user.id, institution_id):
+                raise HTTPException(status_code=403, detail="Admin access required")
+        else:
+            raise HTTPException(status_code=403, detail="Superuser access required")
+
+    # Get the template
+    template = db.query(EmailTemplate).filter(
+        EmailTemplate.template_type == request.template_type,
+        EmailTemplate.institution_id == institution_id
+    ).first()
+
+    if not template:
+        template = db.query(EmailTemplate).filter(
+            EmailTemplate.template_type == request.template_type,
+            EmailTemplate.institution_id.is_(None)
+        ).first()
+
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Sample context for test
+    test_context = {
+        "user_name": "Test User",
+        "user_email": request.recipient_email,
+        "institution_name": "Test Institution",
+        "department_name": "Test Department",
+        "approval_link": "https://example.com/admin/pending-users",
+        "project_name": "Test Project",
+        "requester_name": "Test Requester",
+        "message": "This is a test join request message.",
+        "project_link": "https://example.com/projects/1",
+        "task_title": "Test Task",
+        "priority": "High",
+        "due_date": "2025-01-15",
+        "description": "This is a test task description.",
+        "task_link": "https://example.com/tasks/1"
+    }
+
+    background_tasks.add_task(
+        email_service.send_templated_email,
+        request.recipient_email,
+        template.subject,
+        template.body,
+        test_context
+    )
+
+    return {"message": f"Test email queued for {request.recipient_email}"}

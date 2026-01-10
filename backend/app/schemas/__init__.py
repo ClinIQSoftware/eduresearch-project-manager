@@ -22,6 +22,9 @@ from app.schemas.file import FileUploadResponse, FileWithUploader
 from app.schemas.email_settings import (
     EmailSettingsBase, EmailSettingsCreate, EmailSettingsUpdate, EmailSettingsResponse
 )
+from app.schemas.email_template import (
+    EmailTemplateBase, EmailTemplateCreate, EmailTemplateUpdate, EmailTemplateResponse, TestEmailRequest
+)
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from app.schemas.time_entry import TimeEntryCreate, TimeEntryUpdate, TimeEntryResponse
 
@@ -38,6 +41,7 @@ __all__ = [
     "JoinRequestWithUser", "JoinRequestWithProject", "RespondToJoinRequest",
     "FileUploadResponse", "FileWithUploader",
     "EmailSettingsBase", "EmailSettingsCreate", "EmailSettingsUpdate", "EmailSettingsResponse",
+    "EmailTemplateBase", "EmailTemplateCreate", "EmailTemplateUpdate", "EmailTemplateResponse", "TestEmailRequest",
     "TaskCreate", "TaskUpdate", "TaskResponse",
     "TimeEntryCreate", "TimeEntryUpdate", "TimeEntryResponse",
 ]

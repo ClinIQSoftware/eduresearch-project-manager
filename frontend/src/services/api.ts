@@ -4,7 +4,8 @@ import type {
   JoinRequestWithUser, ProjectFile, ProjectWithLeadReport,
   LeadWithProjects, UserWithProjects, Task, TimeEntry, AnalyticsSummary,
   ProjectClassification, ProjectStatus, RequestStatus,
-  SystemSettings, BulkUploadResult, UserBrief
+  SystemSettings, BulkUploadResult, UserBrief,
+  EmailSettings, EmailTemplate
 } from '../types';
 
 // Use environment variable for API URL, fallback to /api for local dev with proxy
@@ -289,5 +290,25 @@ export const getAnalyticsSummary = () => api.get<AnalyticsSummary>('/analytics/s
 export const getTimeByProject = () => api.get<any[]>('/analytics/time-by-project');
 export const getDailyTime = (days?: number) => api.get<any[]>('/analytics/daily-time', { params: { days } });
 export const getTasksCompleted = (days?: number) => api.get<any[]>('/analytics/tasks-completed', { params: { days } });
+
+// Email Settings
+export const getEmailSettings = (institutionId?: number) =>
+  api.get<EmailSettings>('/admin/email-settings', { params: { institution_id: institutionId } });
+
+export const updateEmailSettings = (data: Partial<EmailSettings> & { smtp_password?: string }, institutionId?: number) =>
+  api.put<EmailSettings>('/admin/email-settings', data, { params: { institution_id: institutionId } });
+
+// Email Templates
+export const getEmailTemplates = (institutionId?: number) =>
+  api.get<EmailTemplate[]>('/admin/email-templates', { params: { institution_id: institutionId } });
+
+export const getEmailTemplate = (templateType: string, institutionId?: number) =>
+  api.get<EmailTemplate>(`/admin/email-templates/${templateType}`, { params: { institution_id: institutionId } });
+
+export const updateEmailTemplate = (templateType: string, data: { subject?: string; body?: string; is_active?: boolean }, institutionId?: number) =>
+  api.put<EmailTemplate>(`/admin/email-templates/${templateType}`, data, { params: { institution_id: institutionId } });
+
+export const sendTestEmail = (templateType: string, recipientEmail: string, institutionId?: number) =>
+  api.post('/admin/email-templates/test', { template_type: templateType, recipient_email: recipientEmail }, { params: { institution_id: institutionId } });
 
 export default api;

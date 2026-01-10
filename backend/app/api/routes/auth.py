@@ -1,5 +1,6 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+import asyncio
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from authlib.integrations.starlette_client import OAuth
@@ -14,9 +15,12 @@ from app.services.auth import (
     get_user_by_email, create_access_token, get_password_hash,
     verify_password
 )
+from app.services.email import email_service
 from app.dependencies import get_current_user
 from app.models.user import User, AuthProvider
 from app.models.system_settings import SystemSettings
+from app.models.organization import Institution, organization_admins
+from app.models.department import Department
 
 
 def get_system_settings(db: Session) -> SystemSettings:
@@ -25,6 +29,93 @@ def get_system_settings(db: Session) -> SystemSettings:
         SystemSettings.institution_id == None
     ).first()
     return settings_obj
+
+
+def get_institution_admins(db: Session, institution_id: int):
+    """Get all admins (including superusers) for an institution."""
+    if not institution_id:
+        # Get all superusers for users without institution
+        return db.query(User).filter(User.is_superuser == True, User.is_active == True).all()
+
+    # Get institution admins and superusers
+    admins = db.query(User).join(
+        organization_admins,
+        User.id == organization_admins.c.user_id
+    ).filter(
+        organization_admins.c.institution_id == institution_id,
+        User.is_active == True
+    ).all()
+
+    # Also include superusers
+    superusers = db.query(User).filter(User.is_superuser == True, User.is_active == True).all()
+
+    # Combine and deduplicate
+    admin_ids = {a.id for a in admins}
+    for su in superusers:
+        if su.id not in admin_ids:
+            admins.append(su)
+
+    return admins
+
+
+def send_approval_emails(
+    background_tasks: BackgroundTasks,
+    db: Session,
+    user: User
+):
+    """Send approval request emails to institution admins."""
+    admins = get_institution_admins(db, user.institution_id)
+
+    # Get institution and department names
+    institution_name = None
+    department_name = None
+    if user.institution_id:
+        inst = db.query(Institution).filter(Institution.id == user.institution_id).first()
+        institution_name = inst.name if inst else None
+    if user.department_id:
+        dept = db.query(Department).filter(Department.id == user.department_id).first()
+        department_name = dept.name if dept else None
+
+    user_name = f"{user.first_name} {user.last_name}".strip()
+
+    for admin in admins:
+        background_tasks.add_task(
+            email_service.send_user_approval_request,
+            admin.email,
+            user_name,
+            user.email,
+            institution_name,
+            department_name
+        )
+
+
+async def send_approval_emails_async(db: Session, user: User):
+    """Send approval request emails asynchronously (for OAuth callbacks)."""
+    admins = get_institution_admins(db, user.institution_id)
+
+    # Get institution and department names
+    institution_name = None
+    department_name = None
+    if user.institution_id:
+        inst = db.query(Institution).filter(Institution.id == user.institution_id).first()
+        institution_name = inst.name if inst else None
+    if user.department_id:
+        dept = db.query(Department).filter(Department.id == user.department_id).first()
+        department_name = dept.name if dept else None
+
+    user_name = f"{user.first_name} {user.last_name}".strip()
+
+    for admin in admins:
+        asyncio.create_task(
+            email_service.send_user_approval_request(
+                admin.email,
+                user_name,
+                user.email,
+                institution_name,
+                department_name
+            )
+        )
+
 
 router = APIRouter()
 
@@ -52,7 +143,11 @@ if settings.microsoft_client_id:
 
 
 @router.post("/register", response_model=UserResponse)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
+def register(
+    user_data: UserCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     """Register a new user with email and password."""
     existing_user = get_user_by_email(db, user_data.email)
     if existing_user:
@@ -77,6 +172,11 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         department_id=user_data.department_id,
         is_approved=not require_approval  # Pending if approval required
     )
+
+    # Send approval request emails if needed
+    if not user.is_approved:
+        send_approval_emails(background_tasks, db, user)
+
     return user
 
 
@@ -207,6 +307,7 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
 
         # Check if user exists
         user = get_user_by_email(db, email)
+        is_new_user = False
         if not user:
             # Check if registration approval is required
             sys_settings = get_system_settings(db)
@@ -222,6 +323,12 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
                 oauth_id=oauth_id,
                 is_approved=not require_approval
             )
+            is_new_user = True
+
+            # Send approval request emails if needed
+            if not user.is_approved:
+                await send_approval_emails_async(db, user)
+
         elif user.auth_provider != AuthProvider.google:
             # User exists but with different auth method
             raise HTTPException(
@@ -293,6 +400,7 @@ async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
 
         # Check if user exists
         user = get_user_by_email(db, email)
+        is_new_user = False
         if not user:
             # Check if registration approval is required
             sys_settings = get_system_settings(db)
@@ -307,6 +415,12 @@ async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
                 oauth_id=oauth_id,
                 is_approved=not require_approval
             )
+            is_new_user = True
+
+            # Send approval request emails if needed
+            if not user.is_approved:
+                await send_approval_emails_async(db, user)
+
         elif user.auth_provider != AuthProvider.microsoft:
             raise HTTPException(
                 status_code=400,

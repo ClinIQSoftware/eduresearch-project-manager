@@ -223,3 +223,26 @@ export interface AnalyticsSummary {
   total_time_minutes: number;
   today_time_minutes: number;
 }
+
+// Email Settings types
+export interface EmailSettings {
+  id: number;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_user: string | null;
+  from_email: string | null;
+  from_name: string;
+  is_active: boolean;
+  organization_id: number | null;
+}
+
+export interface EmailTemplate {
+  id: number;
+  template_type: string;
+  subject: string;
+  body: string;
+  is_active: boolean;
+  institution_id: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
