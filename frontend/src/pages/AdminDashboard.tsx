@@ -1398,7 +1398,6 @@ const TEMPLATE_LABELS: Record<string, { name: string; description: string; varia
 };
 
 function EmailTab() {
-  const [emailSettings, setEmailSettings] = useState<EmailSettings | null>(null);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1429,7 +1428,6 @@ function EmailTab() {
         getEmailTemplates()
       ]);
       const settings = settingsRes.data;
-      setEmailSettings(settings);
       setSmtpForm({
         smtp_host: settings.smtp_host || '',
         smtp_port: settings.smtp_port || 587,
