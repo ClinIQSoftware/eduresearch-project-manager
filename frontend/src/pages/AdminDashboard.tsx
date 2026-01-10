@@ -7,7 +7,7 @@ import {
   getDepartments, createDepartment, deleteDepartment,
   getEmailSettings, updateEmailSettings, getEmailTemplates, updateEmailTemplate, sendTestEmail
 } from '../services/api';
-import type { User, SystemSettings, BulkUploadResult, Institution, Department, EmailSettings, EmailTemplate } from '../types';
+import type { User, SystemSettings, BulkUploadResult, Institution, Department, EmailTemplate } from '../types';
 
 type TabType = 'users' | 'institutions' | 'departments' | 'security' | 'email' | 'import';
 
