@@ -49,7 +49,7 @@ export default function ProjectDetailPage() {
     due_date: '',
     assigned_to_id: '' as string | number,
   });
-  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [_editingTaskId, setEditingTaskId] = useState<number | null>(null);
 
   // Determine if current user is a lead (check ProjectMember role)
   const currentUserMember = project?.members.find(m => m.user_id === user?.id);
@@ -119,7 +119,13 @@ export default function ProjectDetailPage() {
 
   async function handleUpdateTask(taskId: number, data: Partial<Task>) {
     try {
-      await updateTask(taskId, data);
+      // Convert null values to undefined for API compatibility
+      const apiData = {
+        ...data,
+        description: data.description === null ? undefined : data.description,
+        due_date: data.due_date === null ? undefined : data.due_date,
+      };
+      await updateTask(taskId, apiData);
       fetchTasks();
     } catch (error: any) {
       alert(error.response?.data?.detail || 'Failed to update task');
