@@ -33,7 +33,11 @@ def get_projects(
     Args:
         view: Optional view mode - "global" to see all projects, otherwise filters by institution
     """
-    query = db.query(Project).options(joinedload(Project.lead))
+    query = db.query(Project).options(
+        joinedload(Project.lead),
+        joinedload(Project.institution),
+        joinedload(Project.department)
+    )
 
     if classification:
         query = query.filter(Project.classification == classification)
@@ -76,7 +80,9 @@ def get_my_projects(
 
     # Fetch full project data with lead info
     projects = db.query(Project).options(
-        joinedload(Project.lead)
+        joinedload(Project.lead),
+        joinedload(Project.institution),
+        joinedload(Project.department)
     ).filter(
         Project.id.in_(select(all_project_ids))
     ).order_by(Project.created_at.desc()).all()
@@ -126,6 +132,8 @@ def get_project(
     """Get project details with members."""
     project = db.query(Project).options(
         joinedload(Project.lead),
+        joinedload(Project.institution),
+        joinedload(Project.department),
         joinedload(Project.members).joinedload(ProjectMember.user)
     ).filter(Project.id == project_id).first()
 
