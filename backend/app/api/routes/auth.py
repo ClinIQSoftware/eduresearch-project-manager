@@ -208,6 +208,10 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
         # Check if user exists
         user = get_user_by_email(db, email)
         if not user:
+            # Check if registration approval is required
+            sys_settings = get_system_settings(db)
+            require_approval = sys_settings.require_registration_approval if sys_settings else False
+
             # Create new user
             user = create_oauth_user(
                 db=db,
@@ -215,7 +219,8 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
                 first_name=given_name,
                 last_name=family_name,
                 auth_provider="google",
-                oauth_id=oauth_id
+                oauth_id=oauth_id,
+                is_approved=not require_approval
             )
         elif user.auth_provider != AuthProvider.google:
             # User exists but with different auth method
@@ -223,6 +228,16 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
                 status_code=400,
                 detail="Email already registered with different authentication method"
             )
+
+        # Check if user is approved
+        if not user.is_approved:
+            sys_settings = get_system_settings(db)
+            approval_mode = sys_settings.registration_approval_mode if sys_settings else "block"
+
+            if approval_mode == "block":
+                return RedirectResponse(
+                    url=f"{settings.frontend_url}/login?error=Your account is pending approval"
+                )
 
         # Create access token
         access_token = create_access_token(data={"sub": str(user.id)})
@@ -279,19 +294,34 @@ async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
         # Check if user exists
         user = get_user_by_email(db, email)
         if not user:
+            # Check if registration approval is required
+            sys_settings = get_system_settings(db)
+            require_approval = sys_settings.require_registration_approval if sys_settings else False
+
             user = create_oauth_user(
                 db=db,
                 email=email,
                 first_name=given_name,
                 last_name=family_name,
                 auth_provider="microsoft",
-                oauth_id=oauth_id
+                oauth_id=oauth_id,
+                is_approved=not require_approval
             )
         elif user.auth_provider != AuthProvider.microsoft:
             raise HTTPException(
                 status_code=400,
                 detail="Email already registered with different authentication method"
             )
+
+        # Check if user is approved
+        if not user.is_approved:
+            sys_settings = get_system_settings(db)
+            approval_mode = sys_settings.registration_approval_mode if sys_settings else "block"
+
+            if approval_mode == "block":
+                return RedirectResponse(
+                    url=f"{settings.frontend_url}/login?error=Your account is pending approval"
+                )
 
         access_token = create_access_token(data={"sub": str(user.id)})
 

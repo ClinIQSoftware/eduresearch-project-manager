@@ -94,7 +94,8 @@ def create_oauth_user(
     last_name: str,
     auth_provider: str,
     oauth_id: str,
-    institution_id: Optional[int] = None
+    institution_id: Optional[int] = None,
+    is_approved: bool = True
 ) -> User:
     from app.models.user import AuthProvider
     user = User(
@@ -103,7 +104,8 @@ def create_oauth_user(
         last_name=last_name,
         auth_provider=AuthProvider(auth_provider),
         oauth_id=oauth_id,
-        institution_id=institution_id
+        institution_id=institution_id,
+        is_approved=is_approved
     )
     db.add(user)
     db.commit()
