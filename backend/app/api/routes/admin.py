@@ -157,6 +157,38 @@ def deactivate_user(
     return {"message": "User deactivated"}
 
 
+@router.delete("/users/{user_id}/permanent")
+def delete_user_permanently(
+    user_id: int,
+    current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db)
+):
+    """Permanently delete a user (superuser only). This action cannot be undone."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+
+    if user.is_superuser:
+        # Count other superusers
+        other_superusers = db.query(User).filter(
+            User.is_superuser == True,
+            User.id != user_id
+        ).count()
+        if other_superusers == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot delete the last superuser"
+            )
+
+    db.delete(user)
+    db.commit()
+
+    return {"message": "User permanently deleted"}
+
+
 # Project Management (Superuser)
 
 @router.get("/projects", response_model=List[ProjectResponse])

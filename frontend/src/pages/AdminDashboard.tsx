@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  getAdminUsers, createUser, updateUser, deactivateUser,
+  getAdminUsers, createUser, updateUser, deactivateUser, deleteUserPermanently,
   getSystemSettings, updateSystemSettings, getPendingUsers,
   approveUser, rejectUser, bulkUploadUsers, downloadUserTemplate,
   getInstitutions, createInstitution, deleteInstitution,
@@ -14,15 +14,15 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('users');
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+    <div className="space-y-4 md:space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Admin Dashboard</h1>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+      {/* Tab Navigation - scrollable on mobile */}
+      <div className="border-b border-gray-200 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+        <nav className="-mb-px flex space-x-4 md:space-x-8 min-w-max">
           <button
             onClick={() => setActiveTab('users')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'users'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -32,7 +32,7 @@ export default function AdminDashboard() {
           </button>
           <button
             onClick={() => setActiveTab('institutions')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'institutions'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -42,7 +42,7 @@ export default function AdminDashboard() {
           </button>
           <button
             onClick={() => setActiveTab('departments')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'departments'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -52,23 +52,23 @@ export default function AdminDashboard() {
           </button>
           <button
             onClick={() => setActiveTab('security')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'security'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Security Settings
+            Security
           </button>
           <button
             onClick={() => setActiveTab('import')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'import'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            User Import
+            Import
           </button>
         </nav>
       </div>
@@ -161,13 +161,6 @@ function UsersTab() {
     return inst?.name || '-';
   }
 
-  // Get department name by ID
-  function getDepartmentName(deptId: number | null): string {
-    if (!deptId) return '-';
-    const dept = departments.find(d => d.id === deptId);
-    return dept?.name || '-';
-  }
-
   // Filter departments by selected institution
   const filteredDepartments = formData.institution_id
     ? departments.filter(d => d.institution_id === Number(formData.institution_id))
@@ -183,6 +176,17 @@ function UsersTab() {
       fetchData();
     } catch (error) {
       console.error('Error updating user:', error);
+    }
+  }
+
+  async function handleDeleteUser(userId: number, userName: string) {
+    if (!confirm(`PERMANENTLY DELETE ${userName}? This action cannot be undone.`)) return;
+    try {
+      await deleteUserPermanently(userId);
+      setSuccess('User permanently deleted');
+      fetchData();
+    } catch (error: any) {
+      setError(error.response?.data?.detail || 'Error deleting user');
     }
   }
 
@@ -264,30 +268,30 @@ function UsersTab() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-500">Total Users</p>
-          <p className="text-2xl font-bold">{users.length}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <p className="text-xs md:text-sm text-gray-500">Total</p>
+          <p className="text-xl md:text-2xl font-bold">{users.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-500">Active Users</p>
-          <p className="text-2xl font-bold text-green-600">
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <p className="text-xs md:text-sm text-gray-500">Active</p>
+          <p className="text-xl md:text-2xl font-bold text-green-600">
             {users.filter(u => u.is_active).length}
           </p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-500">Pending Approval</p>
-          <p className="text-2xl font-bold text-yellow-600">{pendingUsers.length}</p>
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <p className="text-xs md:text-sm text-gray-500">Pending</p>
+          <p className="text-xl md:text-2xl font-bold text-yellow-600">{pendingUsers.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-500">Superusers</p>
-          <p className="text-2xl font-bold text-purple-600">
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <p className="text-xs md:text-sm text-gray-500">Superusers</p>
+          <p className="text-xl md:text-2xl font-bold text-purple-600">
             {users.filter(u => u.is_superuser).length}
           </p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-500">OAuth Users</p>
-          <p className="text-2xl font-bold text-blue-600">
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow col-span-2 sm:col-span-1">
+          <p className="text-xs md:text-sm text-gray-500">OAuth</p>
+          <p className="text-xl md:text-2xl font-bold text-blue-600">
             {users.filter(u => u.auth_provider !== 'local').length}
           </p>
         </div>
@@ -334,81 +338,109 @@ function UsersTab() {
         </button>
       </div>
 
-      {/* Users Table */}
+      {/* Users List - Card view on mobile, Table on desktop */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Institution / Dept</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Auth</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <p className="font-medium">{u.name}</p>
-                    <p className="text-sm text-gray-500">{u.email}</p>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div>
-                    <p>{getInstitutionName(u.institution_id)}</p>
-                    {u.department_id && <p className="text-xs">{getDepartmentName(u.department_id)}</p>}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    u.auth_provider === 'google' ? 'bg-red-100 text-red-800' :
-                    u.auth_provider === 'microsoft' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {u.auth_provider}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`text-xs px-2 py-1 rounded ${
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Institution</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Auth</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div>
+                      <p className="font-medium text-sm">{u.name}</p>
+                      <p className="text-xs text-gray-500">{u.email}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
+                    {getInstitutionName(u.institution_id)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      u.auth_provider === 'google' ? 'bg-red-100 text-red-800' :
+                      u.auth_provider === 'microsoft' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {u.auth_provider}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex gap-1">
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {u.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                      {u.is_superuser && (
+                        <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded">Admin</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs">
+                    <button onClick={() => openEditModal(u)} className="text-blue-600 hover:underline mr-2">Edit</button>
+                    <button onClick={() => handleToggleActive(u.id, u.is_active)} className={`mr-2 ${u.is_active ? 'text-orange-600' : 'text-green-600'} hover:underline`}>
+                      {u.is_active ? 'Deactivate' : 'Activate'}
+                    </button>
+                    <button onClick={() => handleToggleSuperuser(u.id, u.is_superuser)} className="text-purple-600 hover:underline mr-2">
+                      {u.is_superuser ? 'Remove Admin' : 'Make Admin'}
+                    </button>
+                    <button onClick={() => handleDeleteUser(u.id, u.name)} className="text-red-600 hover:underline">
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {users.map((u) => (
+            <div key={u.id} className="p-4 space-y-2">
+              <div className="flex justify-between items-start">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm truncate">{u.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                </div>
+                <div className="flex flex-wrap gap-1 ml-2">
+                  <span className={`text-xs px-2 py-0.5 rounded ${
                     u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
                     {u.is_active ? 'Active' : 'Inactive'}
                   </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
                   {u.is_superuser && (
-                    <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
-                      Superuser
-                    </span>
+                    <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded">Admin</span>
                   )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <button
-                    onClick={() => openEditModal(u)}
-                    className="text-blue-600 hover:underline mr-2"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleToggleActive(u.id, u.is_active)}
-                    className={`mr-2 ${u.is_active ? 'text-red-600' : 'text-green-600'} hover:underline`}
-                  >
-                    {u.is_active ? 'Deactivate' : 'Activate'}
-                  </button>
-                  <button
-                    onClick={() => handleToggleSuperuser(u.id, u.is_superuser)}
-                    className="text-purple-600 hover:underline"
-                  >
-                    {u.is_superuser ? 'Remove Admin' : 'Make Admin'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                {getInstitutionName(u.institution_id)} • {u.auth_provider}
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs pt-1">
+                <button onClick={() => openEditModal(u)} className="text-blue-600">Edit</button>
+                <button onClick={() => handleToggleActive(u.id, u.is_active)} className={u.is_active ? 'text-orange-600' : 'text-green-600'}>
+                  {u.is_active ? 'Deactivate' : 'Activate'}
+                </button>
+                <button onClick={() => handleToggleSuperuser(u.id, u.is_superuser)} className="text-purple-600">
+                  {u.is_superuser ? 'Remove Admin' : 'Make Admin'}
+                </button>
+                <button onClick={() => handleDeleteUser(u.id, u.name)} className="text-red-600">
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Create User Modal */}

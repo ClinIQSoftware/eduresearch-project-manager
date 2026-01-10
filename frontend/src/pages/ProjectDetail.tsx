@@ -319,38 +319,38 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <button onClick={() => navigate('/projects')} className="text-blue-600 hover:underline">
-          Back to Projects
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <button onClick={() => navigate('/projects')} className="text-blue-600 hover:underline text-sm sm:text-base">
+          &larr; Back to Projects
         </button>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           {isMember && (
             <button
               onClick={handleLeaveProject}
               disabled={!canLeave}
-              className={`px-4 py-2 rounded-lg border ${
+              className={`flex-1 sm:flex-none px-3 py-2 rounded-lg border text-sm ${
                 canLeave
-                  ? 'border-orange-600 text-orange-600 hover:bg-orange-50'
+                  ? 'border-orange-600 text-orange-600 hover:bg-orange-50 active:bg-orange-100'
                   : 'border-gray-300 text-gray-400 cursor-not-allowed'
               }`}
               title={!canLeave ? 'You are the only lead. Promote another member first.' : ''}
             >
-              Leave Project
+              Leave
             </button>
           )}
           {isLead && (
             <>
               <button
                 onClick={() => setEditing(!editing)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                className="flex-1 sm:flex-none bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800 text-sm"
               >
-                {editing ? 'Cancel' : 'Edit Project'}
+                {editing ? 'Cancel' : 'Edit'}
               </button>
               <button
                 onClick={handleDeleteProject}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                className="flex-1 sm:flex-none bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 active:bg-red-800 text-sm"
               >
-                Delete Project
+                Delete
               </button>
             </>
           )}
@@ -358,7 +358,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Project Info */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
         {editing ? (
           <form onSubmit={handleUpdate} className="space-y-4">
             <div>
@@ -379,7 +379,7 @@ export default function ProjectDetailPage() {
                 rows={3}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Classification</label>
                 <select
@@ -411,27 +411,27 @@ export default function ProjectDetailPage() {
                 id="open"
                 checked={editData.open_to_participants}
                 onChange={(e) => setEditData({ ...editData, open_to_participants: e.target.checked })}
-                className="mr-2"
+                className="mr-2 w-5 h-5"
               />
               <label htmlFor="open">Open to new participants</label>
             </div>
-            <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+            <button type="submit" className="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 active:bg-green-800">
               Save Changes
             </button>
           </form>
         ) : (
           <>
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
-                <h1 className="text-2xl font-bold">{project.title}</h1>
-                {project.description && <p className="text-gray-600 mt-2">{project.description}</p>}
+                <h1 className="text-xl sm:text-2xl font-bold">{project.title}</h1>
+                {project.description && <p className="text-gray-600 mt-2 text-sm sm:text-base">{project.description}</p>}
               </div>
               {project.open_to_participants && (
-                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-lg">Open to Join</span>
+                <span className="self-start bg-green-100 text-green-800 px-3 py-1 rounded-lg text-sm whitespace-nowrap">Open to Join</span>
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4 md:mt-6">
               <div>
                 <p className="text-sm text-gray-500">Classification</p>
                 <p className="font-medium">{classificationLabels[project.classification]}</p>
@@ -461,78 +461,75 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Members */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Team Members ({project.members.length})</h2>
+          <h2 className="text-base sm:text-lg font-semibold">Team ({project.members.length})</h2>
           {isLead && (
             <button
               onClick={openAddMember}
-              className="text-blue-600 hover:text-blue-800"
+              className="text-blue-600 hover:text-blue-800 text-sm sm:text-base"
             >
-              + Add Member
+              + Add
             </button>
           )}
         </div>
-        <div className="divide-y">
+        <div className="space-y-3 sm:space-y-0 sm:divide-y">
           {project.members.map((member) => {
             const isOnlyLead = member.role === 'lead' && leadCount <= 1;
             return (
-              <div key={member.id} className="py-3 flex justify-between items-center">
-                <div>
-                  <p className="font-medium">
-                    {member.user.name}
-                    {member.user_id === user?.id && <span className="text-gray-500 text-sm ml-2">(You)</span>}
-                  </p>
-                  <p className="text-sm text-gray-500">{member.user.email}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`text-sm px-2 py-1 rounded ${
+              <div key={member.id} className="p-3 sm:py-3 sm:px-0 border sm:border-0 rounded-lg sm:rounded-none flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm sm:text-base truncate">
+                      {member.user.name}
+                      {member.user_id === user?.id && <span className="text-gray-500 text-xs ml-1">(You)</span>}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">{member.user.email}</p>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded whitespace-nowrap ${
                     member.role === 'lead' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {member.role === 'lead' ? 'Lead' : 'Participant'}
+                    {member.role === 'lead' ? 'Lead' : 'Member'}
                   </span>
+                </div>
 
-                  {isLead && (
-                    <div className="flex gap-2">
-                      {/* Promote/Demote Button */}
-                      {member.role === 'lead' ? (
-                        <button
-                          onClick={() => handleRoleChange(member.user_id, 'participant', member.user.name)}
-                          disabled={isOnlyLead}
-                          className={`text-sm ${
-                            isOnlyLead
-                              ? 'text-gray-400 cursor-not-allowed'
-                              : 'text-orange-600 hover:text-orange-800'
-                          }`}
-                          title={isOnlyLead ? 'Cannot demote the only lead' : 'Demote to participant'}
-                        >
-                          Demote
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleRoleChange(member.user_id, 'lead', member.user.name)}
-                          className="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          Make Lead
-                        </button>
-                      )}
-
-                      {/* Remove Button */}
+                {isLead && (
+                  <div className="flex gap-3 text-xs sm:text-sm">
+                    {member.role === 'lead' ? (
                       <button
-                        onClick={() => handleRemoveMember(member.user_id, member.user.name)}
+                        onClick={() => handleRoleChange(member.user_id, 'participant', member.user.name)}
                         disabled={isOnlyLead}
-                        className={`text-sm ${
+                        className={`${
                           isOnlyLead
                             ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-red-600 hover:text-red-800'
+                            : 'text-orange-600 hover:text-orange-800'
                         }`}
-                        title={isOnlyLead ? 'Cannot remove the only lead' : 'Remove from project'}
+                        title={isOnlyLead ? 'Cannot demote the only lead' : 'Demote to participant'}
                       >
-                        Remove
+                        Demote
                       </button>
-                    </div>
-                  )}
-                </div>
+                    ) : (
+                      <button
+                        onClick={() => handleRoleChange(member.user_id, 'lead', member.user.name)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Make Lead
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleRemoveMember(member.user_id, member.user.name)}
+                      disabled={isOnlyLead}
+                      className={`${
+                        isOnlyLead
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-red-600 hover:text-red-800'
+                      }`}
+                      title={isOnlyLead ? 'Cannot remove the only lead' : 'Remove from project'}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -540,9 +537,9 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Files */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Files ({files.length})</h2>
+          <h2 className="text-base sm:text-lg font-semibold">Files ({files.length})</h2>
           <div>
             <input
               ref={fileInputRef}
@@ -553,36 +550,36 @@ export default function ProjectDetailPage() {
             />
             <label
               htmlFor="file-upload"
-              className="cursor-pointer text-blue-600 hover:text-blue-800"
+              className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm sm:text-base"
             >
-              {uploading ? 'Uploading...' : '+ Upload File'}
+              {uploading ? 'Uploading...' : '+ Upload'}
             </label>
           </div>
         </div>
         {files.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">No files uploaded yet</p>
+          <p className="text-gray-500 text-center py-4 text-sm">No files uploaded yet</p>
         ) : (
-          <div className="divide-y">
+          <div className="space-y-3 sm:space-y-0 sm:divide-y">
             {files.map((file) => (
-              <div key={file.id} className="py-3 flex justify-between items-center">
-                <div>
-                  <p className="font-medium">{file.original_filename}</p>
-                  <p className="text-sm text-gray-500">
-                    {formatFileSize(file.file_size)} • Uploaded {new Date(file.uploaded_at).toLocaleDateString()}
-                    {file.uploaded_by && ` by ${file.uploaded_by.name}`}
+              <div key={file.id} className="p-3 sm:py-3 sm:px-0 border sm:border-0 rounded-lg sm:rounded-none flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm sm:text-base truncate">{file.original_filename}</p>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    {formatFileSize(file.file_size)} • {new Date(file.uploaded_at).toLocaleDateString()}
+                    {file.uploaded_by && <span className="hidden sm:inline"> by {file.uploaded_by.name}</span>}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3 text-xs sm:text-sm">
                   <button
                     onClick={() => handleDownload(file.id, file.original_filename)}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
+                    className="text-blue-600 hover:text-blue-800"
                   >
                     Download
                   </button>
                   {(isLead || file.uploaded_by_id === user?.id) && (
                     <button
                       onClick={() => handleDeleteFile(file.id)}
-                      className="text-red-600 hover:text-red-800 text-sm"
+                      className="text-red-600 hover:text-red-800"
                     >
                       Delete
                     </button>
@@ -595,13 +592,13 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Tasks */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Tasks ({tasks.length})</h2>
+          <h2 className="text-base sm:text-lg font-semibold">Tasks ({tasks.length})</h2>
           {isMember && (
             <button
               onClick={() => setShowTaskForm(true)}
-              className="text-blue-600 hover:text-blue-800"
+              className="text-blue-600 hover:text-blue-800 text-sm sm:text-base"
             >
               + Add Task
             </button>
@@ -609,15 +606,15 @@ export default function ProjectDetailPage() {
         </div>
 
         {tasks.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">No tasks yet</p>
+          <p className="text-gray-500 text-center py-4 text-sm">No tasks yet</p>
         ) : (
-          <div className="divide-y">
+          <div className="space-y-3 sm:space-y-0 sm:divide-y">
             {tasks.map((task) => (
-              <div key={task.id} className="py-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className={`font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : ''}`}>
+              <div key={task.id} className="p-3 sm:py-4 sm:px-0 border sm:border-0 rounded-lg sm:rounded-none">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h3 className={`font-medium text-sm sm:text-base ${task.status === 'completed' ? 'line-through text-gray-400' : ''}`}>
                         {task.title}
                       </h3>
                       <span className={`text-xs px-2 py-0.5 rounded ${taskStatusColors[task.status]}`}>
@@ -628,27 +625,24 @@ export default function ProjectDetailPage() {
                       </span>
                     </div>
                     {task.description && (
-                      <p className="text-sm text-gray-600 mb-2">{task.description}</p>
+                      <p className="text-xs sm:text-sm text-gray-600 mb-2">{task.description}</p>
                     )}
-                    <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                    <div className="flex flex-wrap gap-2 sm:gap-3 text-xs text-gray-500">
                       {task.assigned_to && (
-                        <span>Assigned to: <span className="font-medium">{task.assigned_to.first_name} {task.assigned_to.last_name}</span></span>
+                        <span>Assigned: <span className="font-medium">{task.assigned_to.first_name}</span></span>
                       )}
                       {task.due_date && (
                         <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
                       )}
-                      {task.created_by && (
-                        <span>Created by: {task.created_by.first_name} {task.created_by.last_name}</span>
-                      )}
                     </div>
                   </div>
                   {isMember && (
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-2 sm:gap-2 sm:ml-4">
                       {task.status !== 'completed' && (
                         <select
                           value={task.status}
                           onChange={(e) => handleUpdateTask(task.id, { status: e.target.value as TaskStatus })}
-                          className="text-xs border rounded px-2 py-1"
+                          className="text-xs border rounded px-2 py-1.5 flex-1 sm:flex-none"
                         >
                           <option value="todo">To Do</option>
                           <option value="in_progress">In Progress</option>
@@ -658,14 +652,14 @@ export default function ProjectDetailPage() {
                       {task.status === 'completed' && (
                         <button
                           onClick={() => handleUpdateTask(task.id, { status: 'todo' })}
-                          className="text-xs text-blue-600 hover:underline"
+                          className="text-xs text-blue-600 hover:underline px-2 py-1"
                         >
                           Reopen
                         </button>
                       )}
                       <button
                         onClick={() => handleDeleteTask(task.id)}
-                        className="text-xs text-red-600 hover:underline"
+                        className="text-xs text-red-600 hover:underline px-2 py-1"
                       >
                         Delete
                       </button>
@@ -680,9 +674,9 @@ export default function ProjectDetailPage() {
 
       {/* Add Task Modal */}
       {showTaskForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Add Task</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg md:text-xl font-bold mb-4">Add Task</h2>
             <form onSubmit={handleCreateTask} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Title *</label>
@@ -703,7 +697,7 @@ export default function ProjectDetailPage() {
                   rows={3}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Priority</label>
                   <select
@@ -736,22 +730,22 @@ export default function ProjectDetailPage() {
                   <option value="">Unassigned</option>
                   {project?.members.map((member) => (
                     <option key={member.user_id} value={member.user_id}>
-                      {member.user.first_name} {member.user.last_name} ({member.role})
+                      {member.user.first_name} {member.user.last_name}
                     </option>
                   ))}
                 </select>
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => { setShowTaskForm(false); resetTaskForm(); }}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50 active:bg-gray-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800"
                 >
                   Create Task
                 </button>
@@ -763,9 +757,9 @@ export default function ProjectDetailPage() {
 
       {/* Add Member Modal */}
       {showAddMember && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Add Member</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-lg md:text-xl font-bold mb-4">Add Member</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">User</label>
@@ -776,7 +770,7 @@ export default function ProjectDetailPage() {
                 >
                   <option value="">Select a user</option>
                   {availableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                    <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </select>
               </div>
@@ -792,21 +786,21 @@ export default function ProjectDetailPage() {
                 </select>
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 mt-4">
               <button
                 onClick={() => {
                   setShowAddMember(false);
                   setSelectedUserId('');
                   setSelectedRole('participant');
                 }}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50 active:bg-gray-100"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddMember}
                 disabled={!selectedUserId}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50"
               >
                 Add Member
               </button>

@@ -110,23 +110,23 @@ export default function Tasks() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Tasks</h1>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Tasks</h1>
         <button
           onClick={() => { setShowForm(true); setEditingTask(null); setFormData({ title: '', description: '', status: 'todo', priority: 'medium', project_id: '', due_date: '' }); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800"
         >
           + New Task
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
+      <div className="flex gap-2 md:gap-4 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
         <select
           value={filter.status || ''}
           onChange={(e) => setFilter({ ...filter, status: e.target.value as TaskStatus || undefined })}
-          className="border rounded-lg px-3 py-2"
+          className="border rounded-lg px-3 py-2 text-sm md:text-base min-w-[120px]"
         >
           <option value="">All Status</option>
           <option value="todo">To Do</option>
@@ -136,7 +136,7 @@ export default function Tasks() {
         <select
           value={filter.project_id || ''}
           onChange={(e) => setFilter({ ...filter, project_id: e.target.value ? Number(e.target.value) : undefined })}
-          className="border rounded-lg px-3 py-2"
+          className="border rounded-lg px-3 py-2 text-sm md:text-base min-w-[140px]"
         >
           <option value="">All Projects</option>
           {projects.map((p) => (
@@ -148,40 +148,42 @@ export default function Tasks() {
       {/* Task List */}
       <div className="space-y-3">
         {tasks.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">No tasks yet. Create your first task!</p>
+          <p className="text-center text-gray-500 py-8 text-sm">No tasks yet. Create your first task!</p>
         ) : (
           tasks.map((task) => (
-            <div key={task.id} className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
-              <input
-                type="checkbox"
-                checked={task.status === 'completed'}
-                onChange={() => handleStatusChange(task, task.status === 'completed' ? 'todo' : 'completed')}
-                className="w-5 h-5"
-              />
-              <div className="flex-1">
-                <h3 className={`font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : ''}`}>
-                  {task.title}
-                </h3>
-                {task.description && (
-                  <p className="text-sm text-gray-500">{task.description}</p>
-                )}
-                <div className="flex gap-2 mt-2">
-                  <span className={`text-xs px-2 py-1 rounded ${statusColors[task.status]}`}>
-                    {task.status.replace('_', ' ')}
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded ${priorityColors[task.priority]}`}>
-                    {task.priority}
-                  </span>
-                  {task.due_date && (
-                    <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-800">
-                      Due: {new Date(task.due_date).toLocaleDateString()}
-                    </span>
+            <div key={task.id} className="bg-white p-3 md:p-4 rounded-lg shadow">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={task.status === 'completed'}
+                  onChange={() => handleStatusChange(task, task.status === 'completed' ? 'todo' : 'completed')}
+                  className="w-5 h-5 mt-0.5 flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <h3 className={`font-medium text-sm md:text-base ${task.status === 'completed' ? 'line-through text-gray-400' : ''}`}>
+                    {task.title}
+                  </h3>
+                  {task.description && (
+                    <p className="text-xs md:text-sm text-gray-500 mt-1">{task.description}</p>
                   )}
+                  <div className="flex flex-wrap gap-1 md:gap-2 mt-2">
+                    <span className={`text-xs px-2 py-0.5 rounded ${statusColors[task.status]}`}>
+                      {task.status.replace('_', ' ')}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${priorityColors[task.priority]}`}>
+                      {task.priority}
+                    </span>
+                    {task.due_date && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-800">
+                        {new Date(task.due_date).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => openEdit(task)} className="text-blue-600 hover:text-blue-800">Edit</button>
-                <button onClick={() => handleDelete(task.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                <div className="flex gap-2 text-xs md:text-sm flex-shrink-0">
+                  <button onClick={() => openEdit(task)} className="text-blue-600 hover:text-blue-800">Edit</button>
+                  <button onClick={() => handleDelete(task.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                </div>
               </div>
             </div>
           ))
@@ -190,9 +192,9 @@ export default function Tasks() {
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">{editingTask ? 'Edit Task' : 'New Task'}</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg md:text-xl font-bold mb-4">{editingTask ? 'Edit Task' : 'New Task'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Title</label>
@@ -213,7 +215,7 @@ export default function Tasks() {
                   rows={3}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Status</label>
                   <select
@@ -239,7 +241,7 @@ export default function Tasks() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Project</label>
                   <select
@@ -263,17 +265,17 @@ export default function Tasks() {
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => { setShowForm(false); setEditingTask(null); }}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50 active:bg-gray-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800"
                 >
                   {editingTask ? 'Update' : 'Create'}
                 </button>

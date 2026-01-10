@@ -142,82 +142,84 @@ export default function Projects() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Projects</h1>
         <button
           onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800"
         >
           + New Project
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-4 flex-wrap">
-        <select
-          value={filter.institution_id || ''}
-          onChange={(e) => setFilter({
-            ...filter,
-            institution_id: e.target.value ? Number(e.target.value) : undefined,
-            department_id: undefined // Reset department when institution changes
-          })}
-          className="border rounded-lg px-3 py-2"
-        >
-          <option value="">All Institutions</option>
-          {institutions.map((inst) => (
-            <option key={inst.id} value={inst.id}>{inst.name}</option>
-          ))}
-        </select>
-        <select
-          value={filter.department_id || ''}
-          onChange={(e) => setFilter({
-            ...filter,
-            department_id: e.target.value ? Number(e.target.value) : undefined
-          })}
-          className="border rounded-lg px-3 py-2"
-          disabled={!filter.institution_id}
-        >
-          <option value="">All Departments</option>
-          {filteredDepartments.map((dept) => (
-            <option key={dept.id} value={dept.id}>{dept.name}</option>
-          ))}
-        </select>
-        <select
-          value={filter.classification || ''}
-          onChange={(e) => setFilter({ ...filter, classification: e.target.value as ProjectClassification || undefined })}
-          className="border rounded-lg px-3 py-2"
-        >
-          <option value="">All Classifications</option>
-          {Object.entries(classificationLabels).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-        <select
-          value={filter.status || ''}
-          onChange={(e) => setFilter({ ...filter, status: e.target.value as ProjectStatus || undefined })}
-          className="border rounded-lg px-3 py-2"
-        >
-          <option value="">All Status</option>
-          {Object.entries(statusLabels).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-        <select
-          value={filter.open_to_participants === undefined ? '' : filter.open_to_participants.toString()}
-          onChange={(e) => setFilter({
-            ...filter,
-            open_to_participants: e.target.value === '' ? undefined : e.target.value === 'true'
-          })}
-          className="border rounded-lg px-3 py-2"
-        >
-          <option value="">All</option>
-          <option value="true">Open to Participants</option>
-          <option value="false">Closed</option>
-        </select>
+      {/* Filters - scrollable on mobile */}
+      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+        <div className="flex gap-2 md:gap-4 flex-nowrap md:flex-wrap min-w-max md:min-w-0">
+          <select
+            value={filter.institution_id || ''}
+            onChange={(e) => setFilter({
+              ...filter,
+              institution_id: e.target.value ? Number(e.target.value) : undefined,
+              department_id: undefined
+            })}
+            className="border rounded-lg px-3 py-2 text-sm md:text-base min-w-[140px]"
+          >
+            <option value="">All Institutions</option>
+            {institutions.map((inst) => (
+              <option key={inst.id} value={inst.id}>{inst.name}</option>
+            ))}
+          </select>
+          <select
+            value={filter.department_id || ''}
+            onChange={(e) => setFilter({
+              ...filter,
+              department_id: e.target.value ? Number(e.target.value) : undefined
+            })}
+            className="border rounded-lg px-3 py-2 text-sm md:text-base min-w-[140px]"
+            disabled={!filter.institution_id}
+          >
+            <option value="">All Depts</option>
+            {filteredDepartments.map((dept) => (
+              <option key={dept.id} value={dept.id}>{dept.name}</option>
+            ))}
+          </select>
+          <select
+            value={filter.classification || ''}
+            onChange={(e) => setFilter({ ...filter, classification: e.target.value as ProjectClassification || undefined })}
+            className="border rounded-lg px-3 py-2 text-sm md:text-base min-w-[140px]"
+          >
+            <option value="">All Types</option>
+            {Object.entries(classificationLabels).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+          <select
+            value={filter.status || ''}
+            onChange={(e) => setFilter({ ...filter, status: e.target.value as ProjectStatus || undefined })}
+            className="border rounded-lg px-3 py-2 text-sm md:text-base min-w-[120px]"
+          >
+            <option value="">All Status</option>
+            {Object.entries(statusLabels).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+          <select
+            value={filter.open_to_participants === undefined ? '' : filter.open_to_participants.toString()}
+            onChange={(e) => setFilter({
+              ...filter,
+              open_to_participants: e.target.value === '' ? undefined : e.target.value === 'true'
+            })}
+            className="border rounded-lg px-3 py-2 text-sm md:text-base min-w-[100px]"
+          >
+            <option value="">Open?</option>
+            <option value="true">Open</option>
+            <option value="false">Closed</option>
+          </select>
+        </div>
       </div>
 
       {/* Project Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {projects.length === 0 ? (
           <p className="col-span-full text-center text-gray-500 py-8">
             No projects found.
@@ -294,9 +296,9 @@ export default function Projects() {
 
       {/* Create Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">New Project</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-4 md:p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg md:text-xl font-bold mb-4">New Project</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Title *</label>
@@ -317,7 +319,7 @@ export default function Projects() {
                   rows={3}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Classification</label>
                   <select
@@ -343,7 +345,7 @@ export default function Projects() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Start Date</label>
                   <input
@@ -353,28 +355,28 @@ export default function Projects() {
                     className="w-full border rounded-lg px-3 py-2"
                   />
                 </div>
-                <div className="flex items-center pt-6">
+                <div className="flex items-center sm:pt-6">
                   <input
                     type="checkbox"
                     id="open_to_participants"
                     checked={formData.open_to_participants}
                     onChange={(e) => setFormData({ ...formData, open_to_participants: e.target.checked })}
-                    className="mr-2"
+                    className="mr-2 w-5 h-5"
                   />
-                  <label htmlFor="open_to_participants" className="text-sm">Open to new participants</label>
+                  <label htmlFor="open_to_participants" className="text-sm">Open to participants</label>
                 </div>
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50 active:bg-gray-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800"
                 >
                   Create Project
                 </button>

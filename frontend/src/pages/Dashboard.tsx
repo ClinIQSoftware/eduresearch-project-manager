@@ -167,22 +167,22 @@ export default function Dashboard() {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-500">Total Projects</p>
-          <p className="text-2xl font-bold">{stats.total}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <p className="text-xs md:text-sm text-gray-500">Total Projects</p>
+          <p className="text-xl md:text-2xl font-bold">{stats.total}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-500">Open to Participants</p>
-          <p className="text-2xl font-bold text-green-600">{stats.open}</p>
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <p className="text-xs md:text-sm text-gray-500">Open to Join</p>
+          <p className="text-xl md:text-2xl font-bold text-green-600">{stats.open}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-500">In Recruitment</p>
-          <p className="text-2xl font-bold text-blue-600">{stats.byStatus.recruitment}</p>
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <p className="text-xs md:text-sm text-gray-500">Recruiting</p>
+          <p className="text-xl md:text-2xl font-bold text-blue-600">{stats.byStatus.recruitment}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <p className="text-sm text-gray-500">Research Projects</p>
-          <p className="text-2xl font-bold text-purple-600">{stats.byClassification.research}</p>
+        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
+          <p className="text-xs md:text-sm text-gray-500">Research</p>
+          <p className="text-xl md:text-2xl font-bold text-purple-600">{stats.byClassification.research}</p>
         </div>
       </div>
 
@@ -312,7 +312,7 @@ export default function Dashboard() {
         {projects.filter(p => p.open_to_participants).length === 0 ? (
           <p className="text-center text-gray-500 py-4">No projects currently open</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {projects
               .filter(p => p.open_to_participants)
               .slice(0, 6)

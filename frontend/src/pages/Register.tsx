@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { register as registerApi, login as loginApi } from '../services/api';
+import { register as registerApi, login as loginApi, getInstitutions, getDepartments } from '../services/api';
+import type { Institution, Department } from '../types';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -11,12 +14,46 @@ export default function Register() {
     first_name: '',
     last_name: '',
     phone: '',
+    institution_id: '',
+    department_id: '',
   });
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Fetch institutions and departments for dropdowns
+    async function fetchData() {
+      try {
+        const [instsRes, deptsRes] = await Promise.all([
+          getInstitutions(),
+          getDepartments()
+        ]);
+        setInstitutions(instsRes.data);
+        setDepartments(deptsRes.data);
+      } catch (error) {
+        console.error('Error fetching institutions/departments:', error);
+      }
+    }
+    fetchData();
+  }, []);
+
+  // Filter departments based on selected institution
+  const filteredDepartments = formData.institution_id
+    ? departments.filter(d => d.institution_id === Number(formData.institution_id))
+    : [];
+
+  function handleGoogleLogin() {
+    window.location.href = `${API_URL}/auth/google`;
+  }
+
+  function handleMicrosoftLogin() {
+    window.location.href = `${API_URL}/auth/microsoft`;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,6 +78,8 @@ export default function Register() {
         first_name: formData.first_name,
         last_name: formData.last_name,
         phone: formData.phone || undefined,
+        institution_id: formData.institution_id ? Number(formData.institution_id) : undefined,
+        department_id: formData.department_id ? Number(formData.department_id) : undefined,
       });
 
       // Auto-login after registration
@@ -69,6 +108,34 @@ export default function Register() {
             {error}
           </div>
         )}
+
+        {/* OAuth Buttons */}
+        <div className="mb-6">
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={handleGoogleLogin}
+              className="flex items-center justify-center px-4 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              <span className="text-red-500 mr-2">G</span>
+              Google
+            </button>
+            <button
+              onClick={handleMicrosoftLogin}
+              className="flex items-center justify-center px-4 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              <span className="text-blue-500 mr-2">M</span>
+              Microsoft
+            </button>
+          </div>
+          <div className="relative mt-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or register with email</span>
+            </div>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -103,6 +170,34 @@ export default function Register() {
               required
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Institution</label>
+            <select
+              value={formData.institution_id}
+              onChange={(e) => setFormData({ ...formData, institution_id: e.target.value, department_id: '' })}
+              className="w-full border rounded-lg px-3 py-2"
+            >
+              <option value="">Select your institution (optional)</option>
+              {institutions.map((inst) => (
+                <option key={inst.id} value={inst.id}>{inst.name}</option>
+              ))}
+            </select>
+          </div>
+          {formData.institution_id && filteredDepartments.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Department</label>
+              <select
+                value={formData.department_id}
+                onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="">Select your department (optional)</option>
+                {filteredDepartments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium mb-1">Phone</label>
             <input

@@ -199,6 +199,9 @@ export const updateUser = (userId: number, data: {
 export const deactivateUser = (userId: number) =>
   api.delete(`/admin/users/${userId}`);
 
+export const deleteUserPermanently = (userId: number) =>
+  api.delete(`/admin/users/${userId}/permanent`);
+
 // System Settings
 export const getSystemSettings = () =>
   api.get<SystemSettings>('/admin/system-settings');

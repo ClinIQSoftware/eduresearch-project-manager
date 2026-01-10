@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import Sidebar from './Sidebar';
+import MobileNav from './MobileNav';
 
 interface LayoutProps {
   children: ReactNode;
@@ -8,8 +9,16 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-screen">
-      <Sidebar />
-      <main className="flex-1 overflow-auto p-6">
+      {/* Mobile navigation - hidden on desktop */}
+      <MobileNav />
+
+      {/* Desktop sidebar - hidden on mobile */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
+
+      {/* Main content with top padding on mobile for fixed header */}
+      <main className="flex-1 overflow-auto pt-16 md:pt-0 p-4 md:p-6">
         {children}
       </main>
     </div>
