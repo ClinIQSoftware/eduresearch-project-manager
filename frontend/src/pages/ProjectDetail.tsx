@@ -4,9 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   getProject, updateProject, deleteProject, getProjectFiles, uploadFile, downloadFile,
   deleteFile, removeProjectMember, getAdminUsers, addProjectMember,
-  updateMemberRole, leaveProject
+  updateMemberRole, leaveProject, getProjectTasks, createTask, updateTask, deleteTask
 } from '../services/api';
-import type { ProjectDetail, ProjectFile, ProjectClassification, ProjectStatus, User } from '../types';
+import type { ProjectDetail, ProjectFile, ProjectClassification, ProjectStatus, User, Task, TaskStatus, TaskPriority } from '../types';
 
 const statusLabels: Record<ProjectStatus, string> = {
   preparation: 'Preparation',
@@ -39,6 +39,18 @@ export default function ProjectDetailPage() {
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('participant');
 
+  // Tasks state
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskFormData, setTaskFormData] = useState({
+    title: '',
+    description: '',
+    priority: 'medium' as TaskPriority,
+    due_date: '',
+    assigned_to_id: '' as string | number,
+  });
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+
   // Determine if current user is a lead (check ProjectMember role)
   const currentUserMember = project?.members.find(m => m.user_id === user?.id);
   const isLead = currentUserMember?.role === 'lead' || user?.is_superuser;
@@ -52,6 +64,7 @@ export default function ProjectDetailPage() {
     if (id) {
       fetchProject();
       fetchFiles();
+      fetchTasks();
     }
   }, [id]);
 
@@ -75,6 +88,76 @@ export default function ProjectDetailPage() {
       console.error('Error fetching files:', error);
     }
   }
+
+  async function fetchTasks() {
+    try {
+      const response = await getProjectTasks(Number(id));
+      setTasks(response.data);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  }
+
+  async function handleCreateTask(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await createTask({
+        title: taskFormData.title,
+        description: taskFormData.description || undefined,
+        priority: taskFormData.priority,
+        due_date: taskFormData.due_date || undefined,
+        project_id: Number(id),
+        assigned_to_id: taskFormData.assigned_to_id ? Number(taskFormData.assigned_to_id) : undefined,
+      });
+      setShowTaskForm(false);
+      resetTaskForm();
+      fetchTasks();
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to create task');
+    }
+  }
+
+  async function handleUpdateTask(taskId: number, data: Partial<Task>) {
+    try {
+      await updateTask(taskId, data);
+      fetchTasks();
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to update task');
+    }
+  }
+
+  async function handleDeleteTask(taskId: number) {
+    if (!confirm('Delete this task?')) return;
+    try {
+      await deleteTask(taskId);
+      fetchTasks();
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to delete task');
+    }
+  }
+
+  function resetTaskForm() {
+    setTaskFormData({
+      title: '',
+      description: '',
+      priority: 'medium',
+      due_date: '',
+      assigned_to_id: '',
+    });
+    setEditingTaskId(null);
+  }
+
+  const priorityColors: Record<TaskPriority, string> = {
+    low: 'bg-gray-100 text-gray-800',
+    medium: 'bg-yellow-100 text-yellow-800',
+    high: 'bg-red-100 text-red-800',
+  };
+
+  const taskStatusColors: Record<TaskStatus, string> = {
+    todo: 'bg-gray-100 text-gray-800',
+    in_progress: 'bg-blue-100 text-blue-800',
+    completed: 'bg-green-100 text-green-800',
+  };
 
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault();
@@ -504,6 +587,173 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Tasks */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Tasks ({tasks.length})</h2>
+          {isMember && (
+            <button
+              onClick={() => setShowTaskForm(true)}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              + Add Task
+            </button>
+          )}
+        </div>
+
+        {tasks.length === 0 ? (
+          <p className="text-gray-500 text-center py-4">No tasks yet</p>
+        ) : (
+          <div className="divide-y">
+            {tasks.map((task) => (
+              <div key={task.id} className="py-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className={`font-medium ${task.status === 'completed' ? 'line-through text-gray-400' : ''}`}>
+                        {task.title}
+                      </h3>
+                      <span className={`text-xs px-2 py-0.5 rounded ${taskStatusColors[task.status]}`}>
+                        {task.status.replace('_', ' ')}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded ${priorityColors[task.priority]}`}>
+                        {task.priority}
+                      </span>
+                    </div>
+                    {task.description && (
+                      <p className="text-sm text-gray-600 mb-2">{task.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                      {task.assigned_to && (
+                        <span>Assigned to: <span className="font-medium">{task.assigned_to.first_name} {task.assigned_to.last_name}</span></span>
+                      )}
+                      {task.due_date && (
+                        <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
+                      )}
+                      {task.created_by && (
+                        <span>Created by: {task.created_by.first_name} {task.created_by.last_name}</span>
+                      )}
+                    </div>
+                  </div>
+                  {isMember && (
+                    <div className="flex gap-2 ml-4">
+                      {task.status !== 'completed' && (
+                        <select
+                          value={task.status}
+                          onChange={(e) => handleUpdateTask(task.id, { status: e.target.value as TaskStatus })}
+                          className="text-xs border rounded px-2 py-1"
+                        >
+                          <option value="todo">To Do</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      )}
+                      {task.status === 'completed' && (
+                        <button
+                          onClick={() => handleUpdateTask(task.id, { status: 'todo' })}
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          Reopen
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="text-xs text-red-600 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Add Task Modal */}
+      {showTaskForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add Task</h2>
+            <form onSubmit={handleCreateTask} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Title *</label>
+                <input
+                  type="text"
+                  value={taskFormData.title}
+                  onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={taskFormData.description}
+                  onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Priority</label>
+                  <select
+                    value={taskFormData.priority}
+                    onChange={(e) => setTaskFormData({ ...taskFormData, priority: e.target.value as TaskPriority })}
+                    className="w-full border rounded-lg px-3 py-2"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={taskFormData.due_date}
+                    onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Assign To</label>
+                <select
+                  value={taskFormData.assigned_to_id}
+                  onChange={(e) => setTaskFormData({ ...taskFormData, assigned_to_id: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="">Unassigned</option>
+                  {project?.members.map((member) => (
+                    <option key={member.user_id} value={member.user_id}>
+                      {member.user.first_name} {member.user.last_name} ({member.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowTaskForm(false); resetTaskForm(); }}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create Task
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Add Member Modal */}
       {showAddMember && (

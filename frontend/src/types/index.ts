@@ -183,7 +183,7 @@ export interface UserWithProjects {
   }[];
 }
 
-// Legacy types (for existing features)
+// Task types
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
@@ -195,6 +195,10 @@ export interface Task {
   priority: TaskPriority;
   due_date: string | null;
   project_id: number | null;
+  assigned_to_id: number | null;
+  created_by_id: number | null;
+  assigned_to: UserBrief | null;
+  created_by: UserBrief | null;
   created_at: string;
   updated_at: string | null;
 }

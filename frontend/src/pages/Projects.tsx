@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getProjects, createProject, deleteProject, createJoinRequest } from '../services/api';
+import { getProjects, createProject, deleteProject, createJoinRequest, getInstitutions, getDepartments } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import type { ProjectWithLead, ProjectClassification, ProjectStatus } from '../types';
+import type { ProjectWithLead, ProjectClassification, ProjectStatus, Institution, Department } from '../types';
 
 const classificationColors: Record<ProjectClassification, string> = {
   education: 'bg-purple-100 text-purple-800',
@@ -35,6 +35,8 @@ const statusLabels: Record<ProjectStatus, string> = {
 export default function Projects() {
   const { user } = useAuth();
   const [projects, setProjects] = useState<ProjectWithLead[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -50,7 +52,15 @@ export default function Projects() {
     classification?: ProjectClassification;
     status?: ProjectStatus;
     open_to_participants?: boolean;
+    institution_id?: number;
+    department_id?: number;
   }>({});
+
+  useEffect(() => {
+    // Load institutions and departments once
+    getInstitutions().then(res => setInstitutions(res.data)).catch(console.error);
+    getDepartments().then(res => setDepartments(res.data)).catch(console.error);
+  }, []);
 
   useEffect(() => {
     fetchProjects();
@@ -58,14 +68,33 @@ export default function Projects() {
 
   async function fetchProjects() {
     try {
-      const response = await getProjects(filter);
-      setProjects(response.data);
+      const response = await getProjects({
+        classification: filter.classification,
+        status: filter.status,
+        open_to_participants: filter.open_to_participants,
+      });
+      // Client-side filtering for institution/department
+      let filtered = response.data;
+      if (filter.institution_id) {
+        filtered = filtered.filter(p => p.institution_id === filter.institution_id);
+      }
+      if (filter.department_id) {
+        // Filter by lead's department - need to check lead info
+        // Projects don't have department_id directly, so filter by lead's department
+        filtered = filtered.filter(p => p.lead?.department_id === filter.department_id);
+      }
+      setProjects(filtered);
     } catch (error) {
       console.error('Error fetching projects:', error);
     } finally {
       setLoading(false);
     }
   }
+
+  // Filter departments by selected institution
+  const filteredDepartments = filter.institution_id
+    ? departments.filter(d => d.institution_id === filter.institution_id)
+    : departments;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -125,6 +154,34 @@ export default function Projects() {
 
       {/* Filters */}
       <div className="flex gap-4 flex-wrap">
+        <select
+          value={filter.institution_id || ''}
+          onChange={(e) => setFilter({
+            ...filter,
+            institution_id: e.target.value ? Number(e.target.value) : undefined,
+            department_id: undefined // Reset department when institution changes
+          })}
+          className="border rounded-lg px-3 py-2"
+        >
+          <option value="">All Institutions</option>
+          {institutions.map((inst) => (
+            <option key={inst.id} value={inst.id}>{inst.name}</option>
+          ))}
+        </select>
+        <select
+          value={filter.department_id || ''}
+          onChange={(e) => setFilter({
+            ...filter,
+            department_id: e.target.value ? Number(e.target.value) : undefined
+          })}
+          className="border rounded-lg px-3 py-2"
+          disabled={!filter.institution_id}
+        >
+          <option value="">All Departments</option>
+          {filteredDepartments.map((dept) => (
+            <option key={dept.id} value={dept.id}>{dept.name}</option>
+          ))}
+        </select>
         <select
           value={filter.classification || ''}
           onChange={(e) => setFilter({ ...filter, classification: e.target.value as ProjectClassification || undefined })}

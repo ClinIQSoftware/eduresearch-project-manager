@@ -235,12 +235,35 @@ export const updateMemberRole = (projectId: number, userId: number, role: string
 export const leaveProject = (projectId: number) =>
   api.post(`/projects/${projectId}/leave`);
 
-// Legacy - Tasks (keeping for backwards compatibility)
-export const getTasks = (params?: { status?: string; priority?: string; project_id?: number }) =>
+// Tasks
+import type { TaskStatus, TaskPriority } from '../types';
+
+export const getTasks = (params?: { status?: string; priority?: string; project_id?: number; assigned_to_id?: number }) =>
   api.get<Task[]>('/tasks', { params });
-export const createTask = (data: any) => api.post<Task>('/tasks', data);
-export const updateTask = (id: number, data: any) => api.put<Task>(`/tasks/${id}`, data);
-export const deleteTask = (id: number) => api.delete(`/tasks/${id}`);
+
+export const getProjectTasks = (projectId: number) =>
+  api.get<Task[]>('/tasks', { params: { project_id: projectId } });
+
+export const createTask = (data: {
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  due_date?: string;
+  project_id?: number;
+  assigned_to_id?: number;
+}) => api.post<Task>('/tasks', data);
+
+export const updateTask = (taskId: number, data: {
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  due_date?: string | null;
+  assigned_to_id?: number | null;
+}) => api.put<Task>(`/tasks/${taskId}`, data);
+
+export const deleteTask = (taskId: number) => api.delete(`/tasks/${taskId}`);
 
 // Legacy - Time Entries
 export const getTimeEntries = (params?: { task_id?: number }) =>

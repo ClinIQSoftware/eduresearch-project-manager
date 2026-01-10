@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getProjectsWithLeads, getLeadsWithProjects, getUsersWithProjects } from '../services/api';
 import type { ProjectWithLeadReport, LeadWithProjects, UserWithProjects } from '../types';
 
@@ -10,6 +11,7 @@ export default function Reports() {
   const [leads, setLeads] = useState<LeadWithProjects[]>([]);
   const [users, setUsers] = useState<UserWithProjects[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -155,33 +157,75 @@ export default function Reports() {
                 <p className="text-center text-gray-500 py-8">No users found</p>
               ) : (
                 users.map((u) => (
-                  <div key={u.id} className="bg-white rounded-lg shadow p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-semibold text-lg">{u.name}</h3>
-                        <p className="text-gray-500">{u.email}</p>
-                      </div>
-                      <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm">
-                        {u.projects.length} projects
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {u.projects.map((project) => (
-                        <span
-                          key={project.id}
-                          className={`px-3 py-1 rounded text-sm ${
-                            project.role === 'lead'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {project.title}
-                          <span className="ml-1">
-                            ({project.role === 'lead' ? 'Lead' : 'Participant'})
+                  <div key={u.id} className="bg-white rounded-lg shadow overflow-hidden">
+                    <div
+                      className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => setExpandedUserId(expandedUserId === u.id ? null : u.id)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <span className={`transform transition-transform ${expandedUserId === u.id ? 'rotate-90' : ''}`}>
+                            &#9654;
                           </span>
+                          <div>
+                            <h3 className="font-semibold text-lg">{u.name}</h3>
+                            <p className="text-gray-500 text-sm">{u.email}</p>
+                          </div>
+                        </div>
+                        <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm">
+                          {u.projects.length} projects
                         </span>
-                      ))}
+                      </div>
                     </div>
+
+                    {/* Expanded Project Details */}
+                    {expandedUserId === u.id && u.projects.length > 0 && (
+                      <div className="border-t bg-gray-50 p-4">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="pb-2">Project</th>
+                              <th className="pb-2">Role</th>
+                              <th className="pb-2">Status</th>
+                              <th className="pb-2">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {u.projects.map((project) => (
+                              <tr key={project.id}>
+                                <td className="py-2 font-medium">{project.title}</td>
+                                <td className="py-2">
+                                  <span className={`px-2 py-1 rounded text-xs ${
+                                    project.role === 'lead'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {project.role === 'lead' ? 'Lead' : 'Participant'}
+                                  </span>
+                                </td>
+                                <td className="py-2 text-sm text-gray-600 capitalize">
+                                  {project.status?.replace('_', ' ') || '-'}
+                                </td>
+                                <td className="py-2">
+                                  <Link
+                                    to={`/projects/${project.id}`}
+                                    className="text-blue-600 hover:text-blue-800 text-sm"
+                                  >
+                                    View Project
+                                  </Link>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {expandedUserId === u.id && u.projects.length === 0 && (
+                      <div className="border-t bg-gray-50 p-4 text-center text-gray-500 text-sm">
+                        No projects assigned
+                      </div>
+                    )}
                   </div>
                 ))
               )}
