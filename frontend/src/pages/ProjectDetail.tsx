@@ -6,7 +6,7 @@ import {
   getProject, updateProject, deleteProject, getProjectFiles, uploadFile, downloadFile,
   deleteFile, removeProjectMember, getAdminUsers, addProjectMember,
   updateMemberRole, leaveProject, getProjectTasks, createTask, updateTask, deleteTask,
-  getInstitutions, getDepartments
+  getInstitutions, getDepartments, createJoinRequest
 } from '../services/api';
 import type { ProjectDetail, ProjectFile, ProjectClassification, ProjectStatus, User, Task, TaskStatus, TaskPriority, Institution, Department } from '../types';
 
@@ -330,6 +330,15 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function handleJoinRequest() {
+    try {
+      await createJoinRequest(Number(id));
+      alert('Join request sent! You will be notified when a project lead responds.');
+    } catch (error: any) {
+      alert(error.response?.data?.detail || 'Failed to send join request');
+    }
+  }
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -346,6 +355,14 @@ export default function ProjectDetailPage() {
           &larr; Back to Projects
         </button>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          {canEdit && !currentUserMember && project.open_to_participants && (
+            <button
+              onClick={handleJoinRequest}
+              className="flex-1 sm:flex-none px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 active:bg-green-800 text-sm"
+            >
+              Request to Join
+            </button>
+          )}
           {canEdit && currentUserMember && (
             <button
               onClick={handleLeaveProject}
