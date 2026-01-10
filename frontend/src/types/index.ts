@@ -92,6 +92,7 @@ export interface Project {
   start_date: string | null;
   last_status_change: string | null;
   institution_id: number | null;
+  department_id: number | null;
   lead_id: number | null;
   created_at: string;
   updated_at: string | null;

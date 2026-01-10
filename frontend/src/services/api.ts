@@ -112,6 +112,8 @@ export const createProject = (data: {
   open_to_participants?: boolean;
   start_date?: string;
   color?: string;
+  institution_id?: number;
+  department_id?: number;
 }) => api.post<Project>('/projects', data);
 
 export const updateProject = (id: number, data: {
@@ -122,6 +124,8 @@ export const updateProject = (id: number, data: {
   open_to_participants?: boolean;
   start_date?: string;
   color?: string;
+  institution_id?: number | null;
+  department_id?: number | null;
 }) => api.put<Project>(`/projects/${id}`, data);
 
 export const deleteProject = (id: number) => api.delete(`/projects/${id}`);

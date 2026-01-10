@@ -4,9 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   getProject, updateProject, deleteProject, getProjectFiles, uploadFile, downloadFile,
   deleteFile, removeProjectMember, getAdminUsers, addProjectMember,
-  updateMemberRole, leaveProject, getProjectTasks, createTask, updateTask, deleteTask
+  updateMemberRole, leaveProject, getProjectTasks, createTask, updateTask, deleteTask,
+  getInstitutions, getDepartments
 } from '../services/api';
-import type { ProjectDetail, ProjectFile, ProjectClassification, ProjectStatus, User, Task, TaskStatus, TaskPriority } from '../types';
+import type { ProjectDetail, ProjectFile, ProjectClassification, ProjectStatus, User, Task, TaskStatus, TaskPriority, Institution, Department } from '../types';
 
 const statusLabels: Record<ProjectStatus, string> = {
   preparation: 'Preparation',
@@ -39,6 +40,10 @@ export default function ProjectDetailPage() {
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('participant');
 
+  // Institution/Department state for editing
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+
   // Tasks state
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -67,6 +72,19 @@ export default function ProjectDetailPage() {
       fetchTasks();
     }
   }, [id]);
+
+  // Fetch institutions and departments when entering edit mode
+  useEffect(() => {
+    if (editing) {
+      getInstitutions().then(res => setInstitutions(res.data)).catch(console.error);
+      getDepartments().then(res => setDepartments(res.data)).catch(console.error);
+    }
+  }, [editing]);
+
+  // Filter departments by selected institution for the edit form
+  const editDepartments = editData.institution_id
+    ? departments.filter(d => d.institution_id === editData.institution_id)
+    : departments;
 
   async function fetchProject() {
     try {
@@ -176,6 +194,8 @@ export default function ProjectDetailPage() {
         open_to_participants: editData.open_to_participants,
         start_date: editData.start_date ?? undefined,
         color: editData.color,
+        institution_id: editData.institution_id ?? null,
+        department_id: editData.department_id ?? null,
       });
       setEditing(false);
       fetchProject();
@@ -401,6 +421,42 @@ export default function ProjectDetailPage() {
                 >
                   {Object.entries(statusLabels).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Institution</label>
+                <select
+                  value={editData.institution_id || ''}
+                  onChange={(e) => setEditData({
+                    ...editData,
+                    institution_id: e.target.value ? Number(e.target.value) : undefined,
+                    department_id: undefined // Reset department when institution changes
+                  })}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="">No Institution</option>
+                  {institutions.map((inst) => (
+                    <option key={inst.id} value={inst.id}>{inst.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Department</label>
+                <select
+                  value={editData.department_id || ''}
+                  onChange={(e) => setEditData({
+                    ...editData,
+                    department_id: e.target.value ? Number(e.target.value) : undefined
+                  })}
+                  className="w-full border rounded-lg px-3 py-2"
+                  disabled={!editData.institution_id}
+                >
+                  <option value="">No Department</option>
+                  {editDepartments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
                   ))}
                 </select>
               </div>

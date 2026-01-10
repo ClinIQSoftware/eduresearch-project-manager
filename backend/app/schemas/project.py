@@ -17,6 +17,7 @@ class ProjectBase(BaseModel):
 
 class ProjectCreate(ProjectBase):
     institution_id: Optional[int] = None
+    department_id: Optional[int] = None
 
 
 class ProjectUpdate(BaseModel):
@@ -27,11 +28,14 @@ class ProjectUpdate(BaseModel):
     status: Optional[ProjectStatus] = None
     open_to_participants: Optional[bool] = None
     start_date: Optional[date] = None
+    institution_id: Optional[int] = None
+    department_id: Optional[int] = None
 
 
 class ProjectResponse(ProjectBase):
     id: int
     institution_id: Optional[int] = None
+    department_id: Optional[int] = None
     lead_id: Optional[int] = None
     last_status_change: Optional[datetime] = None
     created_at: datetime

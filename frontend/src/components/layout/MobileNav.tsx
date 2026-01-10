@@ -5,7 +5,6 @@ import { useAuth } from '../../contexts/AuthContext';
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/projects', label: 'Projects', icon: '📁' },
-  { to: '/join-requests', label: 'Join Requests', icon: '📨' },
   { to: '/reports', label: 'Reports', icon: '📋' },
   { to: '/tasks', label: 'Tasks', icon: '✓' },
   { to: '/time', label: 'Time Tracking', icon: '⏱' },
@@ -119,23 +118,40 @@ export default function MobileNav() {
                 </li>
               ))}
 
-              {/* Admin link - only for superusers */}
+              {/* Admin section - only for superusers */}
               {user?.is_superuser && (
-                <li className="pt-4 border-t border-gray-700 mt-4">
-                  <NavLink
-                    to="/admin"
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                        isActive
-                          ? 'bg-purple-600 text-white'
-                          : 'text-gray-300 hover:bg-gray-800 active:bg-gray-700'
-                      }`
-                    }
-                  >
-                    <span className="text-lg">🔧</span>
-                    <span>Admin</span>
-                  </NavLink>
-                </li>
+                <>
+                  <li className="pt-4 border-t border-gray-700 mt-4">
+                    <NavLink
+                      to="/join-requests"
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                          isActive
+                            ? 'bg-purple-600 text-white'
+                            : 'text-gray-300 hover:bg-gray-800 active:bg-gray-700'
+                        }`
+                      }
+                    >
+                      <span className="text-lg">📨</span>
+                      <span>Join Requests</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/admin"
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                          isActive
+                            ? 'bg-purple-600 text-white'
+                            : 'text-gray-300 hover:bg-gray-800 active:bg-gray-700'
+                        }`
+                      }
+                    >
+                      <span className="text-lg">🔧</span>
+                      <span>Admin</span>
+                    </NavLink>
+                  </li>
+                </>
               )}
             </ul>
           </nav>

@@ -47,6 +47,8 @@ export default function Projects() {
     open_to_participants: true,
     start_date: '',
     color: '#3B82F6',
+    institution_id: user?.institution_id || null as number | null,
+    department_id: user?.department_id || null as number | null,
   });
   const [filter, setFilter] = useState<{
     classification?: ProjectClassification;
@@ -79,9 +81,7 @@ export default function Projects() {
         filtered = filtered.filter(p => p.institution_id === filter.institution_id);
       }
       if (filter.department_id) {
-        // Filter by lead's department - need to check lead info
-        // Projects don't have department_id directly, so filter by lead's department
-        filtered = filtered.filter(p => p.lead?.department_id === filter.department_id);
+        filtered = filtered.filter(p => p.department_id === filter.department_id);
       }
       setProjects(filtered);
     } catch (error) {
@@ -91,9 +91,14 @@ export default function Projects() {
     }
   }
 
-  // Filter departments by selected institution
+  // Filter departments by selected institution (for filters)
   const filteredDepartments = filter.institution_id
     ? departments.filter(d => d.institution_id === filter.institution_id)
+    : departments;
+
+  // Filter departments for the form (by form's institution_id)
+  const formDepartments = formData.institution_id
+    ? departments.filter(d => d.institution_id === formData.institution_id)
     : departments;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -102,6 +107,8 @@ export default function Projects() {
       await createProject({
         ...formData,
         start_date: formData.start_date || undefined,
+        institution_id: formData.institution_id || undefined,
+        department_id: formData.department_id || undefined,
       });
       setShowForm(false);
       setFormData({
@@ -112,6 +119,8 @@ export default function Projects() {
         open_to_participants: true,
         start_date: '',
         color: '#3B82F6',
+        institution_id: user?.institution_id || null,
+        department_id: user?.department_id || null,
       });
       fetchProjects();
     } catch (error) {
@@ -341,6 +350,42 @@ export default function Projects() {
                   >
                     {Object.entries(statusLabels).map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Institution</label>
+                  <select
+                    value={formData.institution_id || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      institution_id: e.target.value ? Number(e.target.value) : null,
+                      department_id: null // Reset department when institution changes
+                    })}
+                    className="w-full border rounded-lg px-3 py-2"
+                  >
+                    <option value="">No Institution</option>
+                    {institutions.map((inst) => (
+                      <option key={inst.id} value={inst.id}>{inst.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Department</label>
+                  <select
+                    value={formData.department_id || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      department_id: e.target.value ? Number(e.target.value) : null
+                    })}
+                    className="w-full border rounded-lg px-3 py-2"
+                    disabled={!formData.institution_id}
+                  >
+                    <option value="">No Department</option>
+                    {formDepartments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
                     ))}
                   </select>
                 </div>
