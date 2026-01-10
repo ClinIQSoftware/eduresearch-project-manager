@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
 from app.models.task import Task, TaskStatus, TaskPriority
-from app.models.project import ProjectMember
+from app.models.project_member import ProjectMember
 from app.models.user import User
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from app.dependencies import get_current_user

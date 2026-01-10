@@ -1,25 +1,11 @@
-import sys
-print("Starting application import...", flush=True)
-
-try:
-    from fastapi import FastAPI
-    from fastapi.middleware.cors import CORSMiddleware
-    from starlette.middleware.sessions import SessionMiddleware
-    print("Core imports successful", flush=True)
-
-    from app.api.routes import (
-        auth, institutions, departments, projects, tasks, timetracking,
-        analytics, join_requests, files, reports, admin
-    )
-    print("Route imports successful", flush=True)
-
-    from app.config import settings
-    print("Config import successful", flush=True)
-except Exception as e:
-    print(f"IMPORT ERROR: {type(e).__name__}: {e}", flush=True)
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
+from app.api.routes import (
+    auth, institutions, departments, projects, tasks, timetracking,
+    analytics, join_requests, files, reports, admin
+)
+from app.config import settings
 
 # Note: Database tables are created via Alembic migrations
 # Run: alembic upgrade head
