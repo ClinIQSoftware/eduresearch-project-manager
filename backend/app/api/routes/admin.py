@@ -243,14 +243,14 @@ def get_email_settings(
             raise HTTPException(status_code=403, detail="Superuser access required")
 
     settings = db.query(EmailSettings).filter(
-        EmailSettings.institution_id == institution_id
+        EmailSettings.organization_id == institution_id
     ).first()
 
     if not settings:
         # Return default settings
         return EmailSettingsResponse(
             id=0,
-            institution_id=institution_id,
+            organization_id=institution_id,
             smtp_host="smtp.gmail.com",
             smtp_port=587,
             from_name="EduResearch Project Manager",
@@ -277,12 +277,12 @@ def update_email_settings(
             raise HTTPException(status_code=403, detail="Superuser access required")
 
     settings = db.query(EmailSettings).filter(
-        EmailSettings.institution_id == institution_id
+        EmailSettings.organization_id == institution_id
     ).first()
 
     if not settings:
         # Create new settings
-        settings = EmailSettings(institution_id=institution_id)
+        settings = EmailSettings(organization_id=institution_id)
         db.add(settings)
 
     update_data = settings_data.model_dump(exclude_unset=True)
