@@ -103,17 +103,11 @@ export default function Projects() {
     ? departments.filter(d => d.institution_id === formData.institution_id)
     : departments;
 
-  // Determine what institution/department info to show based on filters
+  // Get institution and department info for display
   const getLocationInfo = (project: ProjectWithLead) => {
     const parts: string[] = [];
-    // If no institution filter, show institution
-    if (!filter.institution_id && project.institution?.name) {
-      parts.push(project.institution.name);
-    }
-    // If no department filter, show department
-    if (!filter.department_id && project.department?.name) {
-      parts.push(project.department.name);
-    }
+    if (project.institution?.name) parts.push(project.institution.name);
+    if (project.department?.name) parts.push(project.department.name);
     return parts.length > 0 ? parts.join(' • ') : null;
   };
 

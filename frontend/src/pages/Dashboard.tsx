@@ -175,25 +175,11 @@ export default function Dashboard() {
     administrative: 'bg-gray-100 text-gray-800',
   };
 
-  // Determine what institution/department info to show based on active view
+  // Get institution and department info for display
   const getLocationInfo = (project: ProjectWithLead) => {
     const parts: string[] = [];
-    switch (activeView) {
-      case 'personal':
-      case 'global':
-        // Show both
-        if (project.institution?.name) parts.push(project.institution.name);
-        if (project.department?.name) parts.push(project.department.name);
-        break;
-      case 'institution':
-        // Show department only (user already knows the institution)
-        if (project.department?.name) parts.push(project.department.name);
-        break;
-      case 'department':
-        // Show institution only (user already knows the department)
-        if (project.institution?.name) parts.push(project.institution.name);
-        break;
-    }
+    if (project.institution?.name) parts.push(project.institution.name);
+    if (project.department?.name) parts.push(project.department.name);
     return parts.length > 0 ? parts.join(' • ') : null;
   };
 
