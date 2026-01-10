@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getTasks, createTask, updateTask, deleteTask, getProjects } from '../services/api';
+import { useCanEdit } from '../components/ui/PendingApprovalBanner';
 import type { Task, Project, TaskStatus, TaskPriority } from '../types';
 
 const statusColors: Record<TaskStatus, string> = {
@@ -15,6 +16,7 @@ const priorityColors: Record<TaskPriority, string> = {
 };
 
 export default function Tasks() {
+  const canEdit = useCanEdit();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,12 +115,14 @@ export default function Tasks() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Tasks</h1>
-        <button
-          onClick={() => { setShowForm(true); setEditingTask(null); setFormData({ title: '', description: '', status: 'todo', priority: 'medium', project_id: '', due_date: '' }); }}
-          className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800"
-        >
-          + New Task
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => { setShowForm(true); setEditingTask(null); setFormData({ title: '', description: '', status: 'todo', priority: 'medium', project_id: '', due_date: '' }); }}
+            className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800"
+          >
+            + New Task
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -153,12 +157,16 @@ export default function Tasks() {
           tasks.map((task) => (
             <div key={task.id} className="bg-white p-3 md:p-4 rounded-lg shadow">
               <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={task.status === 'completed'}
-                  onChange={() => handleStatusChange(task, task.status === 'completed' ? 'todo' : 'completed')}
-                  className="w-5 h-5 mt-0.5 flex-shrink-0"
-                />
+                {canEdit ? (
+                  <input
+                    type="checkbox"
+                    checked={task.status === 'completed'}
+                    onChange={() => handleStatusChange(task, task.status === 'completed' ? 'todo' : 'completed')}
+                    className="w-5 h-5 mt-0.5 flex-shrink-0"
+                  />
+                ) : (
+                  <div className={`w-5 h-5 mt-0.5 flex-shrink-0 rounded border ${task.status === 'completed' ? 'bg-green-100 border-green-300' : 'bg-gray-100 border-gray-300'}`} />
+                )}
                 <div className="flex-1 min-w-0">
                   <h3 className={`font-medium text-sm md:text-base ${task.status === 'completed' ? 'line-through text-gray-400' : ''}`}>
                     {task.title}
@@ -180,10 +188,12 @@ export default function Tasks() {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2 text-xs md:text-sm flex-shrink-0">
-                  <button onClick={() => openEdit(task)} className="text-blue-600 hover:text-blue-800">Edit</button>
-                  <button onClick={() => handleDelete(task.id)} className="text-red-600 hover:text-red-800">Delete</button>
-                </div>
+                {canEdit && (
+                  <div className="flex gap-2 text-xs md:text-sm flex-shrink-0">
+                    <button onClick={() => openEdit(task)} className="text-blue-600 hover:text-blue-800">Edit</button>
+                    <button onClick={() => handleDelete(task.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                  </div>
+                )}
               </div>
             </div>
           ))

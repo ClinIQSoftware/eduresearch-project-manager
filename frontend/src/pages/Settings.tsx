@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCanEdit } from '../components/ui/PendingApprovalBanner';
 import { updateProfile, changePassword, getInstitutions, getDepartments } from '../services/api';
 import type { Institution, Department } from '../types';
 
 export default function Settings() {
   const { user, refreshUser } = useAuth();
+  const canEdit = useCanEdit();
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
@@ -261,8 +263,9 @@ export default function Settings() {
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            disabled={loading || !canEdit}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!canEdit ? 'Profile updates are available after your account is approved' : ''}
           >
             {loading ? 'Saving...' : 'Save Profile'}
           </button>
@@ -328,8 +331,9 @@ export default function Settings() {
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              disabled={loading || !canEdit}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!canEdit ? 'Password changes are available after your account is approved' : ''}
             >
               {loading ? 'Changing...' : 'Change Password'}
             </button>

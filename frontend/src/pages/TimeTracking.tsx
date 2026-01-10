@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { getTimeEntries, getActiveTimer, startTimer, stopTimer, deleteTimeEntry, getTasks } from '../services/api';
+import { useCanEdit } from '../components/ui/PendingApprovalBanner';
 import type { TimeEntry, Task } from '../types';
 
 export default function TimeTracking() {
+  const canEdit = useCanEdit();
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
@@ -113,7 +115,9 @@ export default function TimeTracking() {
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold mb-4">Timer</h2>
 
-        {activeEntry ? (
+        {!canEdit ? (
+          <p className="text-center text-gray-500 py-4">Time tracking is available after your account is approved.</p>
+        ) : activeEntry ? (
           <div className="text-center">
             <p className="text-5xl font-mono font-bold mb-4">{formatDuration(elapsedTime)}</p>
             <p className="text-gray-500 mb-2">Working on: {getTaskTitle(activeEntry.task_id)}</p>
@@ -185,7 +189,7 @@ export default function TimeTracking() {
                   <span className="font-mono text-lg">
                     {entry.end_time ? formatMinutes(entry.duration) : 'Running...'}
                   </span>
-                  {entry.end_time && (
+                  {canEdit && entry.end_time && (
                     <button
                       onClick={() => handleDelete(entry.id)}
                       className="text-red-600 hover:text-red-800"

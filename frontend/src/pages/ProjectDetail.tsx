@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useCanEdit } from '../components/ui/PendingApprovalBanner';
 import {
   getProject, updateProject, deleteProject, getProjectFiles, uploadFile, downloadFile,
   deleteFile, removeProjectMember, getAdminUsers, addProjectMember,
@@ -57,9 +58,10 @@ export default function ProjectDetailPage() {
   const [_editingTaskId, setEditingTaskId] = useState<number | null>(null);
 
   // Determine if current user is a lead (check ProjectMember role)
+  const canEdit = useCanEdit();
   const currentUserMember = project?.members.find(m => m.user_id === user?.id);
-  const isLead = currentUserMember?.role === 'lead' || user?.is_superuser;
-  const isMember = !!currentUserMember;
+  const isLead = canEdit && (currentUserMember?.role === 'lead' || user?.is_superuser);
+  const isMember = canEdit && !!currentUserMember;
 
   // Count leads for validation
   const leadCount = project?.members.filter(m => m.role === 'lead').length || 0;
@@ -344,7 +346,7 @@ export default function ProjectDetailPage() {
           &larr; Back to Projects
         </button>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          {isMember && (
+          {canEdit && currentUserMember && (
             <button
               onClick={handleLeaveProject}
               disabled={!canLeave}
@@ -596,21 +598,23 @@ export default function ProjectDetailPage() {
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-base sm:text-lg font-semibold">Files ({files.length})</h2>
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              onChange={handleFileUpload}
-              className="hidden"
-              id="file-upload"
-            />
-            <label
-              htmlFor="file-upload"
-              className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm sm:text-base"
-            >
-              {uploading ? 'Uploading...' : '+ Upload'}
-            </label>
-          </div>
+          {canEdit && (
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="file-upload"
+              />
+              <label
+                htmlFor="file-upload"
+                className="cursor-pointer text-blue-600 hover:text-blue-800 text-sm sm:text-base"
+              >
+                {uploading ? 'Uploading...' : '+ Upload'}
+              </label>
+            </div>
+          )}
         </div>
         {files.length === 0 ? (
           <p className="text-gray-500 text-center py-4 text-sm">No files uploaded yet</p>
@@ -632,7 +636,7 @@ export default function ProjectDetailPage() {
                   >
                     Download
                   </button>
-                  {(isLead || file.uploaded_by_id === user?.id) && (
+                  {canEdit && (isLead || file.uploaded_by_id === user?.id) && (
                     <button
                       onClick={() => handleDeleteFile(file.id)}
                       className="text-red-600 hover:text-red-800"

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getProjects, createProject, deleteProject, createJoinRequest, getInstitutions, getDepartments } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useCanEdit } from '../components/ui/PendingApprovalBanner';
 import type { ProjectWithLead, ProjectClassification, ProjectStatus, Institution, Department } from '../types';
 
 const classificationColors: Record<ProjectClassification, string> = {
@@ -34,6 +35,7 @@ const statusLabels: Record<ProjectStatus, string> = {
 
 export default function Projects() {
   const { user } = useAuth();
+  const canEdit = useCanEdit();
   const [projects, setProjects] = useState<ProjectWithLead[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -153,12 +155,14 @@ export default function Projects() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Projects</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800"
-        >
-          + New Project
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800"
+          >
+            + New Project
+          </button>
+        )}
       </div>
 
       {/* Filters - scrollable on mobile */}
@@ -280,7 +284,7 @@ export default function Projects() {
                   >
                     View
                   </Link>
-                  {project.lead_id === user?.id && (
+                  {canEdit && project.lead_id === user?.id && (
                     <button
                       onClick={() => handleDelete(project.id)}
                       className="text-red-600 hover:text-red-800 text-sm"
@@ -288,7 +292,7 @@ export default function Projects() {
                       Delete
                     </button>
                   )}
-                  {project.open_to_participants && project.lead_id !== user?.id && (
+                  {canEdit && project.open_to_participants && project.lead_id !== user?.id && (
                     <button
                       onClick={() => handleJoinRequest(project.id)}
                       className="text-green-600 hover:text-green-800 text-sm"
