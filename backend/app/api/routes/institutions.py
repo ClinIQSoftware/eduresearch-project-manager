@@ -33,6 +33,12 @@ def get_institutions(
     return []
 
 
+@router.get("/public", response_model=List[InstitutionResponse])
+def get_institutions_public(db: Session = Depends(get_db)):
+    """Get all institutions (public endpoint for registration)."""
+    return db.query(Institution).all()
+
+
 @router.post("/", response_model=InstitutionResponse)
 def create_institution(
     inst_data: InstitutionCreate,

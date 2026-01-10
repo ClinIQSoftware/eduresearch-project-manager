@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { register as registerApi, login as loginApi, getInstitutions, getDepartments } from '../services/api';
+import { register as registerApi, login as loginApi, getInstitutionsPublic, getDepartmentsPublic } from '../services/api';
 import type { Institution, Department } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -26,12 +26,12 @@ export default function Register() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch institutions and departments for dropdowns
+    // Fetch institutions and departments for dropdowns (public endpoints)
     async function fetchData() {
       try {
         const [instsRes, deptsRes] = await Promise.all([
-          getInstitutions(),
-          getDepartments()
+          getInstitutionsPublic(),
+          getDepartmentsPublic()
         ]);
         setInstitutions(instsRes.data);
         setDepartments(deptsRes.data);

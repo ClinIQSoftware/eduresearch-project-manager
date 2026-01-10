@@ -69,6 +69,7 @@ export const changePassword = (data: {
 
 // Institutions
 export const getInstitutions = () => api.get<Institution[]>('/institutions');
+export const getInstitutionsPublic = () => api.get<Institution[]>('/institutions/public');
 export const getInstitution = (id: number) => api.get<Institution>(`/institutions/${id}`);
 export const createInstitution = (data: { name: string; description?: string }) =>
   api.post<Institution>('/institutions', data);
@@ -79,6 +80,8 @@ export const deleteInstitution = (id: number) => api.delete(`/institutions/${id}
 // Departments
 export const getDepartments = (institutionId?: number) =>
   api.get<Department[]>('/departments', { params: { institution_id: institutionId } });
+export const getDepartmentsPublic = (institutionId?: number) =>
+  api.get<Department[]>('/departments/public', { params: { institution_id: institutionId } });
 export const getDepartment = (id: number) => api.get<DepartmentWithMembers>(`/departments/${id}`);
 export const createDepartment = (data: { name: string; description?: string; institution_id: number }) =>
   api.post<Department>('/departments', data);

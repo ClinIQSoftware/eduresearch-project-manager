@@ -33,6 +33,18 @@ def get_departments(
     return query.all()
 
 
+@router.get("/public", response_model=List[DepartmentResponse])
+def get_departments_public(
+    institution_id: int = None,
+    db: Session = Depends(get_db)
+):
+    """Get all departments (public endpoint for registration)."""
+    query = db.query(Department)
+    if institution_id:
+        query = query.filter(Department.institution_id == institution_id)
+    return query.all()
+
+
 @router.post("/", response_model=DepartmentResponse)
 def create_department(
     dept_data: DepartmentCreate,
