@@ -76,6 +76,47 @@ def require_superuser(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
+def check_admin_access(
+    db: Session,
+    current_user: User,
+    institution_id: Optional[int] = None
+) -> bool:
+    """
+    Check if user has admin access.
+    - Superusers always have access
+    - Institution admins have access to their institution
+    - Non-superusers without institution_id are denied
+    """
+    if current_user.is_superuser:
+        return True
+    if institution_id:
+        return is_institution_admin(db, current_user.id, institution_id)
+    return False
+
+
+def require_admin_access_check(
+    institution_id: Optional[int],
+    current_user: User,
+    db: Session
+) -> User:
+    """
+    Verify admin access and return user or raise 403.
+    Use this helper in routes that need admin access.
+    """
+    if not check_admin_access(db, current_user, institution_id):
+        if institution_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Superuser access required"
+            )
+    return current_user
+
+
 def is_organization_admin(db: Session, user_id: int, organization_id: int) -> bool:
     """Check if user is an admin of the organization/institution."""
     result = db.execute(

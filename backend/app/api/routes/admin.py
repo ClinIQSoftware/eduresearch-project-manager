@@ -24,7 +24,7 @@ from app.schemas.email_template import (
 from app.schemas.system_settings import (
     SystemSettingsResponse, SystemSettingsUpdate, BulkUploadResult
 )
-from app.dependencies import get_current_user, require_superuser, is_institution_admin, is_institution_admin
+from app.dependencies import get_current_user, require_superuser, is_institution_admin, require_admin_access_check
 from app.services.auth import create_user, get_password_hash
 from app.services.email import email_service
 
@@ -234,23 +234,17 @@ def get_email_settings(
     db: Session = Depends(get_db)
 ):
     """Get email settings."""
-    # Check admin access
-    if not current_user.is_superuser:
-        if institution_id:
-            if not is_institution_admin(db, current_user.id, institution_id):
-                raise HTTPException(status_code=403, detail="Admin access required")
-        else:
-            raise HTTPException(status_code=403, detail="Superuser access required")
+    require_admin_access_check(institution_id, current_user, db)
 
     settings = db.query(EmailSettings).filter(
-        EmailSettings.organization_id == institution_id
+        EmailSettings.institution_id == institution_id
     ).first()
 
     if not settings:
         # Return default settings
         return EmailSettingsResponse(
             id=0,
-            organization_id=institution_id,
+            institution_id=institution_id,
             smtp_host="smtp.gmail.com",
             smtp_port=587,
             from_name="EduResearch Project Manager",
@@ -268,21 +262,15 @@ def update_email_settings(
     db: Session = Depends(get_db)
 ):
     """Update email settings."""
-    # Check admin access
-    if not current_user.is_superuser:
-        if institution_id:
-            if not is_institution_admin(db, current_user.id, institution_id):
-                raise HTTPException(status_code=403, detail="Admin access required")
-        else:
-            raise HTTPException(status_code=403, detail="Superuser access required")
+    require_admin_access_check(institution_id, current_user, db)
 
     settings = db.query(EmailSettings).filter(
-        EmailSettings.organization_id == institution_id
+        EmailSettings.institution_id == institution_id
     ).first()
 
     if not settings:
         # Create new settings
-        settings = EmailSettings(organization_id=institution_id)
+        settings = EmailSettings(institution_id=institution_id)
         db.add(settings)
 
     update_data = settings_data.model_dump(exclude_unset=True)
@@ -665,13 +653,7 @@ def get_email_templates(
     db: Session = Depends(get_db)
 ):
     """Get all email templates."""
-    # Check admin access
-    if not current_user.is_superuser:
-        if institution_id:
-            if not is_institution_admin(db, current_user.id, institution_id):
-                raise HTTPException(status_code=403, detail="Admin access required")
-        else:
-            raise HTTPException(status_code=403, detail="Superuser access required")
+    require_admin_access_check(institution_id, current_user, db)
 
     # Get institution-specific templates first, then fall back to global
     templates = db.query(EmailTemplate).filter(
@@ -695,13 +677,7 @@ def get_email_template(
     db: Session = Depends(get_db)
 ):
     """Get a specific email template by type."""
-    # Check admin access
-    if not current_user.is_superuser:
-        if institution_id:
-            if not is_institution_admin(db, current_user.id, institution_id):
-                raise HTTPException(status_code=403, detail="Admin access required")
-        else:
-            raise HTTPException(status_code=403, detail="Superuser access required")
+    require_admin_access_check(institution_id, current_user, db)
 
     # Try institution-specific first
     template = db.query(EmailTemplate).filter(
@@ -731,13 +707,7 @@ def update_email_template(
     db: Session = Depends(get_db)
 ):
     """Update an email template."""
-    # Check admin access
-    if not current_user.is_superuser:
-        if institution_id:
-            if not is_institution_admin(db, current_user.id, institution_id):
-                raise HTTPException(status_code=403, detail="Admin access required")
-        else:
-            raise HTTPException(status_code=403, detail="Superuser access required")
+    require_admin_access_check(institution_id, current_user, db)
 
     # Try to get existing template for this institution
     template = db.query(EmailTemplate).filter(
@@ -784,13 +754,7 @@ async def send_test_email(
     db: Session = Depends(get_db)
 ):
     """Send a test email using a specific template."""
-    # Check admin access
-    if not current_user.is_superuser:
-        if institution_id:
-            if not is_institution_admin(db, current_user.id, institution_id):
-                raise HTTPException(status_code=403, detail="Admin access required")
-        else:
-            raise HTTPException(status_code=403, detail="Superuser access required")
+    require_admin_access_check(institution_id, current_user, db)
 
     # Get the template
     template = db.query(EmailTemplate).filter(

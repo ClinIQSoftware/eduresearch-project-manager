@@ -21,6 +21,31 @@ A collaborative research project management platform for educational institution
 
 ---
 
+## One-Click Deploy
+
+Deploy instantly to your preferred platform:
+
+| Platform | Deploy | Docs |
+|----------|--------|------|
+| **Render** | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/YOUR_ORG/eduresearch-project-manager) | [Guide](deploy/render/) |
+| **Railway** | [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template) | [Guide](deploy/railway/) |
+| **Heroku** | [![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/YOUR_ORG/eduresearch-project-manager) | [Guide](deploy/heroku/) |
+| **Fly.io** | `flyctl launch` | [Guide](deploy/flyio/) |
+
+### Self-Hosted Options
+
+| Platform | Command | Docs |
+|----------|---------|------|
+| **Docker Compose** | `docker-compose -f deploy/docker/docker-compose.prod.yml up` | [Guide](deploy/docker/) |
+| **Kubernetes** | `kubectl apply -k deploy/k8s/` | [Guide](deploy/k8s/) |
+| **AWS** | CloudFormation template | [Guide](deploy/aws/) |
+| **GCP** | Cloud Run + Cloud SQL | [Guide](deploy/gcp/) |
+| **Azure** | Container Apps + PostgreSQL | [Guide](deploy/azure/) |
+
+> See the [`deploy/`](deploy/) directory for detailed configuration guides for each platform.
+
+---
+
 ## Quick Start (Local Development)
 
 ### Prerequisites
@@ -242,6 +267,17 @@ eduresearch-project-manager/
 │   │   └── types/           # TypeScript types
 │   ├── package.json
 │   └── vite.config.ts
+├── deploy/
+│   ├── render/              # Render blueprint
+│   ├── railway/             # Railway config
+│   ├── flyio/               # Fly.io config
+│   ├── heroku/              # Heroku config
+│   ├── docker/              # Docker Compose production
+│   ├── k8s/                 # Kubernetes manifests
+│   ├── aws/                 # AWS CloudFormation
+│   ├── gcp/                 # GCP Cloud Run
+│   └── azure/               # Azure Container Apps
+├── .github/workflows/       # CI/CD pipelines
 ├── docker-compose.yml       # Local development
 ├── render.yaml              # Render deployment
 └── README.md

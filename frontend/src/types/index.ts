@@ -233,7 +233,7 @@ export interface EmailSettings {
   from_email: string | null;
   from_name: string;
   is_active: boolean;
-  organization_id: number | null;
+  institution_id: number | null;
 }
 
 export interface EmailTemplate {

@@ -1,0 +1,19 @@
+# Railway Configuration
+# https://docs.railway.app/reference/config-as-code
+# Deploy: railway init && railway up
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "backend/Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on-failure"
+restartPolicyMaxRetries = 5
+
+# Environment variables set via Railway dashboard or CLI:
+# railway variables set DATABASE_URL=...
+# railway variables set SECRET_KEY=...
+# railway variables set FRONTEND_URL=...
+# railway variables set BACKEND_URL=...

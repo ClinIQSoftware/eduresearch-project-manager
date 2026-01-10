@@ -1,0 +1,62 @@
+{
+  "name": "EduResearch Project Manager",
+  "description": "A collaborative platform for managing education and research projects",
+  "repository": "https://github.com/YOUR_ORG/eduresearch-project-manager",
+  "logo": "https://raw.githubusercontent.com/YOUR_ORG/eduresearch-project-manager/main/frontend/public/logo.png",
+  "keywords": ["python", "fastapi", "react", "education", "research"],
+  "stack": "container",
+  "addons": [
+    {
+      "plan": "heroku-postgresql:essential-0"
+    }
+  ],
+  "env": {
+    "SECRET_KEY": {
+      "description": "JWT signing key for authentication",
+      "generator": "secret"
+    },
+    "FRONTEND_URL": {
+      "description": "URL where frontend is hosted",
+      "required": true
+    },
+    "BACKEND_URL": {
+      "description": "URL where backend API is hosted",
+      "required": true
+    },
+    "GOOGLE_CLIENT_ID": {
+      "description": "Google OAuth Client ID (optional)",
+      "required": false
+    },
+    "GOOGLE_CLIENT_SECRET": {
+      "description": "Google OAuth Client Secret (optional)",
+      "required": false
+    },
+    "MICROSOFT_CLIENT_ID": {
+      "description": "Microsoft OAuth Client ID (optional)",
+      "required": false
+    },
+    "MICROSOFT_CLIENT_SECRET": {
+      "description": "Microsoft OAuth Client Secret (optional)",
+      "required": false
+    },
+    "SMTP_HOST": {
+      "description": "SMTP server hostname",
+      "value": "smtp.gmail.com",
+      "required": false
+    },
+    "SMTP_PORT": {
+      "description": "SMTP server port",
+      "value": "587",
+      "required": false
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "scripts": {
+    "postdeploy": "cd backend && alembic upgrade head"
+  }
+}

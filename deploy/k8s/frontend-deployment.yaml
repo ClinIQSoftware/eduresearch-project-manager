@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eduresearch-frontend
+  namespace: eduresearch
+  labels:
+    app: eduresearch-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: eduresearch-frontend
+  template:
+    metadata:
+      labels:
+        app: eduresearch-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/YOUR_ORG/eduresearch-frontend:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5

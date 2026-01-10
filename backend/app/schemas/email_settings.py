@@ -13,7 +13,7 @@ class EmailSettingsBase(BaseModel):
 
 class EmailSettingsCreate(EmailSettingsBase):
     smtp_password: Optional[str] = None
-    organization_id: Optional[int] = None
+    institution_id: Optional[int] = None
 
 
 class EmailSettingsUpdate(BaseModel):
@@ -28,7 +28,7 @@ class EmailSettingsUpdate(BaseModel):
 
 class EmailSettingsResponse(EmailSettingsBase):
     id: int
-    organization_id: Optional[int] = None
+    institution_id: Optional[int] = None
 
     class Config:
         from_attributes = True

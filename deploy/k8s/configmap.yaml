@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eduresearch-config
+  namespace: eduresearch
+data:
+  ENVIRONMENT: "production"
+  SMTP_HOST: "smtp.gmail.com"
+  SMTP_PORT: "587"

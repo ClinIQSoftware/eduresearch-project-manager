@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eduresearch-backend
+  namespace: eduresearch
+  labels:
+    app: eduresearch-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: eduresearch-backend
+  template:
+    metadata:
+      labels:
+        app: eduresearch-backend
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/YOUR_ORG/eduresearch-backend:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: eduresearch-config
+            - secretRef:
+                name: eduresearch-secrets
+          env:
+            - name: FRONTEND_URL
+              value: "https://app.yourdomain.com"
+            - name: BACKEND_URL
+              value: "https://api.yourdomain.com"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
