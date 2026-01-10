@@ -1,4 +1,4 @@
-export type DashboardView = 'personal' | 'institution' | 'global';
+export type DashboardView = 'personal' | 'department' | 'institution' | 'global';
 
 interface DashboardTabsProps {
   activeView: DashboardView;
@@ -7,6 +7,7 @@ interface DashboardTabsProps {
 
 const tabs: { id: DashboardView; label: string; description: string }[] = [
   { id: 'personal', label: 'Personal', description: 'Projects you are part of' },
+  { id: 'department', label: 'Department', description: 'All projects in your department' },
   { id: 'institution', label: 'Institution', description: 'All projects in your institution' },
   { id: 'global', label: 'Global', description: 'All projects across institutions' },
 ];

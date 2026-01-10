@@ -1,19 +1,24 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getProjects, getMyProjects, getInstitutions } from '../services/api';
+import { getProjects, getMyProjects, getInstitutions, getDepartments } from '../services/api';
 import { DashboardTabs, type DashboardView } from '../components/dashboard/DashboardTabs';
 import { useAuth } from '../contexts/AuthContext';
-import type { ProjectWithLead, Institution } from '../types';
+import type { ProjectWithLead, Institution, Department } from '../types';
 
 const VIEW_STORAGE_KEY = 'dashboardView';
 const INST_STORAGE_KEY = 'dashboardInstitution';
+const DEPT_STORAGE_KEY = 'dashboardDepartment';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [projects, setProjects] = useState<ProjectWithLead[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedInstId, setSelectedInstId] = useState<string>(() => {
     return localStorage.getItem(INST_STORAGE_KEY) || '';
+  });
+  const [selectedDeptId, setSelectedDeptId] = useState<string>(() => {
+    return localStorage.getItem(DEPT_STORAGE_KEY) || '';
   });
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<DashboardView>(() => {
@@ -21,12 +26,15 @@ export default function Dashboard() {
     return (saved as DashboardView) || 'personal';
   });
 
-  // Fetch institutions for the dropdown (only if user is superuser)
+  // Fetch institutions and departments for the dropdowns (only if user is superuser)
   useEffect(() => {
     if (user?.is_superuser) {
       getInstitutions()
         .then((res) => setInstitutions(res.data))
         .catch((err) => console.error('Error fetching institutions:', err));
+      getDepartments()
+        .then((res) => setDepartments(res.data))
+        .catch((err) => console.error('Error fetching departments:', err));
     }
   }, [user]);
 
@@ -40,6 +48,21 @@ export default function Dashboard() {
           break;
         case 'global':
           response = await getProjects({ view: 'global' });
+          break;
+        case 'department':
+          // Filter by department
+          response = await getProjects({ view: 'global' });
+          if (user?.is_superuser && selectedDeptId) {
+            // Superuser with selected department
+            response.data = response.data.filter(
+              (p) => p.department_id === Number(selectedDeptId)
+            );
+          } else if (user?.department_id) {
+            // Regular user - filter by their department
+            response.data = response.data.filter(
+              (p) => p.department_id === user.department_id
+            );
+          }
           break;
         case 'institution':
         default:
@@ -61,7 +84,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [activeView, selectedInstId, user]);
+  }, [activeView, selectedInstId, selectedDeptId, user]);
 
   useEffect(() => {
     fetchProjects();
@@ -77,10 +100,21 @@ export default function Dashboard() {
     localStorage.setItem(INST_STORAGE_KEY, instId);
   };
 
+  const handleDeptChange = (deptId: string) => {
+    setSelectedDeptId(deptId);
+    localStorage.setItem(DEPT_STORAGE_KEY, deptId);
+  };
+
   const getViewTitle = () => {
     switch (activeView) {
       case 'personal':
         return 'My Projects';
+      case 'department':
+        if (user?.is_superuser && selectedDeptId) {
+          const dept = departments.find((d) => d.id === Number(selectedDeptId));
+          return dept ? `${dept.name} Projects` : 'Department Projects';
+        }
+        return 'Department Projects';
       case 'institution':
         if (user?.is_superuser && selectedInstId) {
           const inst = institutions.find((i) => i.id === Number(selectedInstId));
@@ -148,6 +182,23 @@ export default function Dashboard() {
       </div>
 
       <DashboardTabs activeView={activeView} onViewChange={handleViewChange} />
+
+      {/* Department Filter (only for superusers on Department view) */}
+      {user?.is_superuser && activeView === 'department' && departments.length > 0 && (
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-gray-700">Filter by Department:</label>
+          <select
+            value={selectedDeptId}
+            onChange={(e) => handleDeptChange(e.target.value)}
+            className="border rounded-lg px-3 py-2 text-sm min-w-[200px]"
+          >
+            <option value="">All Departments</option>
+            {departments.map((dept) => (
+              <option key={dept.id} value={dept.id}>{dept.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Institution Filter (only for superusers on Institution view) */}
       {user?.is_superuser && activeView === 'institution' && institutions.length > 0 && (
