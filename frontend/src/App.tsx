@@ -11,6 +11,7 @@ import ProjectDetail from './pages/ProjectDetail';
 import JoinRequests from './pages/JoinRequests';
 import Reports from './pages/Reports';
 import AdminDashboard from './pages/AdminDashboard';
+import PendingUsers from './pages/PendingUsers';
 import Tasks from './pages/Tasks';
 import TimeTracking from './pages/TimeTracking';
 import Settings from './pages/Settings';
@@ -107,6 +108,16 @@ function App() {
         />
 
         {/* Admin routes */}
+        <Route
+          path="/pending-users"
+          element={
+            <ProtectedRoute requireSuperuser>
+              <Layout>
+                <PendingUsers />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin"
           element={

@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/projects', label: 'Projects', icon: '📁' },
+  { to: '/join-requests', label: 'Join Requests', icon: '📨' },
   { to: '/reports', label: 'Reports', icon: '📋' },
   { to: '/tasks', label: 'Tasks', icon: '✓' },
   { to: '/time', label: 'Time Tracking', icon: '⏱' },
@@ -50,7 +51,7 @@ export default function Sidebar() {
             <>
               <li className="pt-4 border-t border-gray-700 mt-4">
                 <NavLink
-                  to="/join-requests"
+                  to="/pending-users"
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
                       isActive
@@ -59,8 +60,8 @@ export default function Sidebar() {
                     }`
                   }
                 >
-                  <span>📨</span>
-                  <span>Join Requests</span>
+                  <span>👤</span>
+                  <span>Pending Users</span>
                 </NavLink>
               </li>
               <li>
