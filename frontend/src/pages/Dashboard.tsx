@@ -1,14 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { getInstitutions, getDepartments } from '../services/api';
+import { getProjects, getMyProjects, getInstitutions, getDepartments } from '../services/api';
 import { DashboardTabs, type DashboardView } from '../components/dashboard/DashboardTabs';
 import { useAuth } from '../contexts/AuthContext';
 import type { ProjectWithLead, Institution, Department } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
-
-const VIEW_STORAGE_KEY = 'dashboardView_v2';
+const VIEW_STORAGE_KEY = 'dashboardView';
 const INST_STORAGE_KEY = 'dashboardInstitution';
 const DEPT_STORAGE_KEY = 'dashboardDepartment';
 
@@ -24,8 +21,6 @@ export default function Dashboard() {
     return localStorage.getItem(DEPT_STORAGE_KEY) || '';
   });
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<string>('');
   const [activeView, setActiveView] = useState<DashboardView>(() => {
     const saved = localStorage.getItem(VIEW_STORAGE_KEY);
     return (saved as DashboardView) || 'global';
@@ -45,72 +40,44 @@ export default function Dashboard() {
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
-    const token = localStorage.getItem('token');
-    console.log('Dashboard fetch - Token exists:', !!token, 'Token length:', token?.length);
     try {
       let response;
-
-      // Direct axios call with explicit headers to debug auth issue
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const url = `${API_URL}/projects`;
-      console.log('Making request to:', url, 'with token:', token?.substring(0, 20) + '...');
-
-      // TEST: Use reports endpoint which works on mobile
-      try {
-        const testResponse = await axios.get(`${API_URL}/reports/projects-with-leads`, { headers });
-        setTestResult(`Reports OK: ${testResponse.data?.length} projects`);
-      } catch (testErr: any) {
-        setTestResult(`Reports FAILED: ${testErr?.response?.status} ${testErr?.response?.data?.detail}`);
-      }
-
       switch (activeView) {
         case 'personal':
-          // Use direct axios call with explicit auth header
-          response = await axios.get(`${API_URL}/projects/my-projects`, { headers });
+          response = await getMyProjects();
           break;
         case 'global':
-          response = await axios.get(`${API_URL}/projects`, { headers, params: { view: 'global' } });
+          response = await getProjects({ view: 'global' });
           break;
         case 'department':
-          // Fetch all projects and filter by department client-side
-          response = await axios.get(`${API_URL}/projects`, { headers, params: { view: 'global' } });
+          response = await getProjects({ view: 'global' });
           if (user?.is_superuser && selectedDeptId) {
-            // Superuser with selected department
             response.data = response.data.filter(
-              (p: ProjectWithLead) => p.department_id === Number(selectedDeptId)
+              (p) => p.department_id === Number(selectedDeptId)
             );
           } else if (user?.department_id) {
-            // Regular user - filter by their department
             response.data = response.data.filter(
-              (p: ProjectWithLead) => p.department_id === user.department_id
+              (p) => p.department_id === user.department_id
             );
           }
-          // If user has no department, show all projects (no filter)
           break;
         case 'institution':
         default:
-          // Fetch all projects and filter client-side
-          response = await axios.get(`${API_URL}/projects`, { headers, params: { view: 'global' } });
+          response = await getProjects({ view: 'global' });
           if (user?.is_superuser && selectedInstId) {
-            // Superuser with selected institution
             response.data = response.data.filter(
-              (p: ProjectWithLead) => p.institution_id === Number(selectedInstId)
+              (p) => p.institution_id === Number(selectedInstId)
             );
           } else if (user?.institution_id) {
-            // Regular user - filter by their institution
             response.data = response.data.filter(
-              (p: ProjectWithLead) => p.institution_id === user.institution_id
+              (p) => p.institution_id === user.institution_id
             );
           }
           break;
       }
-      console.log('Dashboard API response:', { view: activeView, count: response.data?.length, data: response.data });
-      setProjects(response.data || []);
-      setFetchError(null);
-    } catch (error: any) {
+      setProjects(response.data);
+    } catch (error) {
       console.error('Error fetching projects:', error);
-      const detail = error?.response?.data?.detail || error?.message || 'Failed to fetch projects';
-      setFetchError(`${error?.response?.status || 'Error'}: ${detail}`);
     } finally {
       setLoading(false);
     }
@@ -161,30 +128,6 @@ export default function Dashboard() {
   if (loading) {
     return <div className="text-center py-8">Loading...</div>;
   }
-
-  if (fetchError) {
-    const errorToken = localStorage.getItem('token');
-    return (
-      <div className="text-center py-8">
-        <p className="text-red-600 font-medium">Error loading projects</p>
-        <p className="text-sm text-gray-500 mt-2">{fetchError}</p>
-        <p className="text-xs text-gray-400 mt-2">View: {activeView} | User: {user?.email}</p>
-        <p className="text-xs text-gray-400">Token: {errorToken ? `yes (${errorToken.length} chars)` : 'NO TOKEN'}</p>
-        <p className="text-xs text-gray-400">API: {API_URL}</p>
-        <p className="text-xs font-medium mt-2 text-blue-600">{testResult}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  // Debug info - remove after fixing
-  const token = localStorage.getItem('token');
-  const debugInfo = `View: ${activeView} | Projects: ${projects.length} | User: ${user?.email} | Token: ${token ? 'yes' : 'NO'}`;
 
   // Calculate statistics
   const stats = {
@@ -239,9 +182,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Debug info - remove after fixing */}
-      <div className="bg-yellow-100 p-2 text-xs rounded">{debugInfo}</div>
-
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">{getViewTitle()}</h1>
       </div>
