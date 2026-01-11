@@ -14,13 +14,16 @@ const tabs: { id: DashboardView; label: string; description: string }[] = [
 
 export function DashboardTabs({ activeView, onViewChange }: DashboardTabsProps) {
   return (
-    <div className="border-b border-gray-200 mb-6">
-      <nav className="flex space-x-8" aria-label="Dashboard views">
+    <div className="border-b border-gray-200 mb-6 -mx-4 px-4 md:mx-0 md:px-0">
+      <nav
+        className="flex space-x-4 md:space-x-8 overflow-x-auto scrollbar-hide"
+        aria-label="Dashboard views"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onViewChange(tab.id)}
-            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+            className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex-shrink-0 ${
               activeView === tab.id
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

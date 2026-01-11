@@ -193,12 +193,12 @@ export default function Dashboard() {
 
       {/* Department Filter (only for superusers on Department view) */}
       {user?.is_superuser && activeView === 'department' && departments.length > 0 && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
           <label className="text-sm font-medium text-gray-700">Filter by Department:</label>
           <select
             value={selectedDeptId}
             onChange={(e) => handleDeptChange(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm min-w-[200px]"
+            className="border rounded-lg px-3 py-2 text-sm w-full sm:w-auto sm:min-w-[200px]"
           >
             <option value="">All Departments</option>
             {departments.map((dept) => (
@@ -210,12 +210,12 @@ export default function Dashboard() {
 
       {/* Institution Filter (only for superusers on Institution view) */}
       {user?.is_superuser && activeView === 'institution' && institutions.length > 0 && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
           <label className="text-sm font-medium text-gray-700">Filter by Institution:</label>
           <select
             value={selectedInstId}
             onChange={(e) => handleInstChange(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm min-w-[200px]"
+            className="border rounded-lg px-3 py-2 text-sm w-full sm:w-auto sm:min-w-[200px]"
           >
             <option value="">All Institutions</option>
             {institutions.map((inst) => (
