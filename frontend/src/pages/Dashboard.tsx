@@ -88,7 +88,8 @@ export default function Dashboard() {
       setFetchError(null);
     } catch (error: any) {
       console.error('Error fetching projects:', error);
-      setFetchError(error?.message || 'Failed to fetch projects');
+      const detail = error?.response?.data?.detail || error?.message || 'Failed to fetch projects';
+      setFetchError(`${error?.response?.status || 'Error'}: ${detail}`);
     } finally {
       setLoading(false);
     }
