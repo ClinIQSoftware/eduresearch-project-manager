@@ -23,7 +23,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<DashboardView>(() => {
     const saved = localStorage.getItem(VIEW_STORAGE_KEY);
-    return (saved as DashboardView) || 'personal';
+    return (saved as DashboardView) || 'global';
   });
 
   // Fetch institutions and departments for the dropdowns (only if user is superuser)
