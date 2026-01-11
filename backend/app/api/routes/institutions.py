@@ -14,7 +14,7 @@ from app.dependencies import get_current_user, require_superuser, is_institution
 router = APIRouter()
 
 
-@router.get("/", response_model=List[InstitutionResponse])
+@router.get("", response_model=List[InstitutionResponse])
 def get_institutions(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -39,7 +39,7 @@ def get_institutions_public(db: Session = Depends(get_db)):
     return db.query(Institution).all()
 
 
-@router.post("/", response_model=InstitutionResponse)
+@router.post("", response_model=InstitutionResponse)
 def create_institution(
     inst_data: InstitutionCreate,
     current_user: User = Depends(require_superuser),

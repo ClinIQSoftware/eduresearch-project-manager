@@ -18,7 +18,7 @@ from app.services.email import email_service
 router = APIRouter()
 
 
-@router.get("/", response_model=List[ProjectWithLead])
+@router.get("", response_model=List[ProjectWithLead])
 def get_projects(
     view: Optional[str] = None,
     classification: Optional[ProjectClassification] = None,
@@ -90,7 +90,7 @@ def get_my_projects(
     return projects
 
 
-@router.post("/", response_model=ProjectResponse)
+@router.post("", response_model=ProjectResponse)
 def create_project(
     project_data: ProjectCreate,
     current_user: User = Depends(get_current_user),

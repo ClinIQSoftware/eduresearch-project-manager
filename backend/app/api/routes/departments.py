@@ -15,7 +15,7 @@ from app.dependencies import get_current_user, require_superuser, is_institution
 router = APIRouter()
 
 
-@router.get("/", response_model=List[DepartmentResponse])
+@router.get("", response_model=List[DepartmentResponse])
 def get_departments(
     institution_id: int = None,
     current_user: User = Depends(get_current_user),
@@ -45,7 +45,7 @@ def get_departments_public(
     return query.all()
 
 
-@router.post("/", response_model=DepartmentResponse)
+@router.post("", response_model=DepartmentResponse)
 def create_department(
     dept_data: DepartmentCreate,
     current_user: User = Depends(get_current_user),
