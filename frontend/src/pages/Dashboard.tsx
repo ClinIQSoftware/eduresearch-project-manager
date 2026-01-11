@@ -83,7 +83,8 @@ export default function Dashboard() {
           }
           break;
       }
-      setProjects(response.data);
+      console.log('Dashboard API response:', { view: activeView, count: response.data?.length, data: response.data });
+      setProjects(response.data || []);
       setFetchError(null);
     } catch (error: any) {
       console.error('Error fetching projects:', error);
@@ -155,6 +156,9 @@ export default function Dashboard() {
     );
   }
 
+  // Debug info - remove after fixing
+  const debugInfo = `View: ${activeView} | Projects: ${projects.length} | User: ${user?.email} | Inst: ${user?.institution_id || 'none'}`;
+
   // Calculate statistics
   const stats = {
     total: projects.length,
@@ -208,6 +212,9 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Debug info - remove after fixing */}
+      <div className="bg-yellow-100 p-2 text-xs rounded">{debugInfo}</div>
+
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">{getViewTitle()}</h1>
       </div>
