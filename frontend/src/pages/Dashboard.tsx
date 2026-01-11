@@ -21,6 +21,7 @@ export default function Dashboard() {
     return localStorage.getItem(DEPT_STORAGE_KEY) || '';
   });
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<DashboardView>(() => {
     const saved = localStorage.getItem(VIEW_STORAGE_KEY);
     return (saved as DashboardView) || 'global';
@@ -83,8 +84,10 @@ export default function Dashboard() {
           break;
       }
       setProjects(response.data);
-    } catch (error) {
+      setFetchError(null);
+    } catch (error: any) {
       console.error('Error fetching projects:', error);
+      setFetchError(error?.message || 'Failed to fetch projects');
     } finally {
       setLoading(false);
     }
@@ -134,6 +137,22 @@ export default function Dashboard() {
 
   if (loading) {
     return <div className="text-center py-8">Loading...</div>;
+  }
+
+  if (fetchError) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600 font-medium">Error loading projects</p>
+        <p className="text-sm text-gray-500 mt-2">{fetchError}</p>
+        <p className="text-xs text-gray-400 mt-4">View: {activeView} | User: {user?.email}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   // Calculate statistics

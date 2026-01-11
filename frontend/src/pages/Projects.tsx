@@ -40,6 +40,7 @@ export default function Projects() {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -87,8 +88,10 @@ export default function Projects() {
         filtered = filtered.filter(p => p.department_id === filter.department_id);
       }
       setProjects(filtered);
-    } catch (error) {
+      setFetchError(null);
+    } catch (error: any) {
       console.error('Error fetching projects:', error);
+      setFetchError(error?.message || 'Failed to fetch projects');
     } finally {
       setLoading(false);
     }
@@ -159,6 +162,22 @@ export default function Projects() {
   }
 
   if (loading) return <div className="text-center py-8">Loading...</div>;
+
+  if (fetchError) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600 font-medium">Error loading projects</p>
+        <p className="text-sm text-gray-500 mt-2">{fetchError}</p>
+        <p className="text-xs text-gray-400 mt-4">User: {user?.email}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6 pb-6">
