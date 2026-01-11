@@ -5,7 +5,7 @@ import { DashboardTabs, type DashboardView } from '../components/dashboard/Dashb
 import { useAuth } from '../contexts/AuthContext';
 import type { ProjectWithLead, Institution, Department } from '../types';
 
-const VIEW_STORAGE_KEY = 'dashboardView';
+const VIEW_STORAGE_KEY = 'dashboardView_v2';
 const INST_STORAGE_KEY = 'dashboardInstitution';
 const DEPT_STORAGE_KEY = 'dashboardDepartment';
 
