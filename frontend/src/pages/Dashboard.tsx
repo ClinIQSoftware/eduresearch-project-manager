@@ -1,9 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { getProjects, getMyProjects, getInstitutions, getDepartments } from '../services/api';
 import { DashboardTabs, type DashboardView } from '../components/dashboard/DashboardTabs';
 import { useAuth } from '../contexts/AuthContext';
 import type { ProjectWithLead, Institution, Department } from '../types';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const VIEW_STORAGE_KEY = 'dashboardView_v2';
 const INST_STORAGE_KEY = 'dashboardInstitution';
@@ -45,25 +48,31 @@ export default function Dashboard() {
     console.log('Dashboard fetch - Token exists:', !!token, 'Token length:', token?.length);
     try {
       let response;
+
+      // Direct axios call with explicit headers to debug auth issue
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      console.log('Making request with headers:', headers);
+
       switch (activeView) {
         case 'personal':
-          response = await getMyProjects();
+          // Use direct axios call with explicit auth header
+          response = await axios.get(`${API_URL}/projects/my-projects`, { headers });
           break;
         case 'global':
-          response = await getProjects({ view: 'global' });
+          response = await axios.get(`${API_URL}/projects`, { headers, params: { view: 'global' } });
           break;
         case 'department':
           // Fetch all projects and filter by department client-side
-          response = await getProjects({ view: 'global' });
+          response = await axios.get(`${API_URL}/projects`, { headers, params: { view: 'global' } });
           if (user?.is_superuser && selectedDeptId) {
             // Superuser with selected department
             response.data = response.data.filter(
-              (p) => p.department_id === Number(selectedDeptId)
+              (p: ProjectWithLead) => p.department_id === Number(selectedDeptId)
             );
           } else if (user?.department_id) {
             // Regular user - filter by their department
             response.data = response.data.filter(
-              (p) => p.department_id === user.department_id
+              (p: ProjectWithLead) => p.department_id === user.department_id
             );
           }
           // If user has no department, show all projects (no filter)
@@ -71,16 +80,16 @@ export default function Dashboard() {
         case 'institution':
         default:
           // Fetch all projects and filter client-side
-          response = await getProjects({ view: 'global' });
+          response = await axios.get(`${API_URL}/projects`, { headers, params: { view: 'global' } });
           if (user?.is_superuser && selectedInstId) {
             // Superuser with selected institution
             response.data = response.data.filter(
-              (p) => p.institution_id === Number(selectedInstId)
+              (p: ProjectWithLead) => p.institution_id === Number(selectedInstId)
             );
           } else if (user?.institution_id) {
             // Regular user - filter by their institution
             response.data = response.data.filter(
-              (p) => p.institution_id === user.institution_id
+              (p: ProjectWithLead) => p.institution_id === user.institution_id
             );
           }
           break;
