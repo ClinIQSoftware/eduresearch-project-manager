@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { getProjects, getMyProjects, getInstitutions, getDepartments } from '../services/api';
+import { getInstitutions, getDepartments } from '../services/api';
 import { DashboardTabs, type DashboardView } from '../components/dashboard/DashboardTabs';
 import { useAuth } from '../contexts/AuthContext';
 import type { ProjectWithLead, Institution, Department } from '../types';
