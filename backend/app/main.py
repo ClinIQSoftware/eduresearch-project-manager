@@ -13,7 +13,8 @@ from app.config import settings
 app = FastAPI(
     title="EduResearch Project Manager API",
     description="API for managing research projects, collaboration, and time tracking",
-    version="2.0.0"
+    version="2.0.0",
+    redirect_slashes=False  # Prevent 307 redirects that drop auth headers on mobile
 )
 
 # Session middleware for OAuth
