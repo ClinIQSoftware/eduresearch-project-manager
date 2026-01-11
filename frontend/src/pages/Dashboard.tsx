@@ -51,7 +51,8 @@ export default function Dashboard() {
 
       // Direct axios call with explicit headers to debug auth issue
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      console.log('Making request with headers:', headers);
+      const url = `${API_URL}/projects`;
+      console.log('Making request to:', url, 'with token:', token?.substring(0, 20) + '...');
 
       switch (activeView) {
         case 'personal':
@@ -158,7 +159,9 @@ export default function Dashboard() {
       <div className="text-center py-8">
         <p className="text-red-600 font-medium">Error loading projects</p>
         <p className="text-sm text-gray-500 mt-2">{fetchError}</p>
-        <p className="text-xs text-gray-400 mt-4">View: {activeView} | User: {user?.email} | Token: {errorToken ? `yes (${errorToken.length} chars)` : 'NO TOKEN'}</p>
+        <p className="text-xs text-gray-400 mt-2">View: {activeView} | User: {user?.email}</p>
+        <p className="text-xs text-gray-400">Token: {errorToken ? `yes (${errorToken.length} chars)` : 'NO TOKEN'}</p>
+        <p className="text-xs text-gray-400">API: {API_URL}</p>
         <button
           onClick={() => window.location.reload()}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
