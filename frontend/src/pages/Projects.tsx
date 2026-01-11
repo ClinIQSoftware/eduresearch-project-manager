@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getProjects, createProject, deleteProject, createJoinRequest, getInstitutions, getDepartments } from '../services/api';
+import { getProjects, createProject, deleteProject, createJoinRequest, getInstitutionsPublic, getDepartmentsPublic } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCanEdit } from '../components/ui/PendingApprovalBanner';
 import type { ProjectWithLead, ProjectClassification, ProjectStatus, Institution, Department } from '../types';
@@ -61,9 +61,9 @@ export default function Projects() {
   }>({});
 
   useEffect(() => {
-    // Load institutions and departments once
-    getInstitutions().then(res => setInstitutions(res.data)).catch(console.error);
-    getDepartments().then(res => setDepartments(res.data)).catch(console.error);
+    // Load all institutions and departments for filters
+    getInstitutionsPublic().then(res => setInstitutions(res.data)).catch(console.error);
+    getDepartmentsPublic().then(res => setDepartments(res.data)).catch(console.error);
   }, []);
 
   useEffect(() => {
