@@ -50,7 +50,7 @@ export default function Dashboard() {
           response = await getProjects({ view: 'global' });
           break;
         case 'department':
-          // Filter by department
+          // Fetch all projects and filter by department client-side
           response = await getProjects({ view: 'global' });
           if (user?.is_superuser && selectedDeptId) {
             // Superuser with selected department
@@ -63,18 +63,22 @@ export default function Dashboard() {
               (p) => p.department_id === user.department_id
             );
           }
+          // If user has no department, show all projects (no filter)
           break;
         case 'institution':
         default:
-          // If superuser and institution selected, filter by institution
+          // Fetch all projects and filter client-side
+          response = await getProjects({ view: 'global' });
           if (user?.is_superuser && selectedInstId) {
-            response = await getProjects({ view: 'global' });
-            // Filter client-side by selected institution
+            // Superuser with selected institution
             response.data = response.data.filter(
               (p) => p.institution_id === Number(selectedInstId)
             );
-          } else {
-            response = await getProjects();
+          } else if (user?.institution_id) {
+            // Regular user - filter by their institution
+            response.data = response.data.filter(
+              (p) => p.institution_id === user.institution_id
+            );
           }
           break;
       }
