@@ -1,179 +1,91 @@
-# GCP Cloud Run Deployment
-
-Deploy EduResearch Project Manager on Google Cloud Platform using Cloud Run.
-
-## Architecture
-
-- **Cloud Run**: Backend API and frontend (serverless)
-- **Cloud SQL**: PostgreSQL database
-- **Secret Manager**: Secure credential storage
-- **Cloud Build**: CI/CD pipeline
+# Google Cloud Platform Deployment
 
 ## Prerequisites
 
 1. GCP account with billing enabled
-2. `gcloud` CLI installed and authenticated
-3. Enable required APIs:
-
-```bash
-gcloud services enable \
-  run.googleapis.com \
-  cloudbuild.googleapis.com \
-  sqladmin.googleapis.com \
-  secretmanager.googleapis.com \
-  containerregistry.googleapis.com
-```
+2. gcloud CLI installed and configured
+3. Cloud Run, Cloud SQL, and Cloud Build APIs enabled
 
 ## Quick Start
 
-### 1. Set Variables
+### 1. Set Up Project
 
 ```bash
-export PROJECT_ID=$(gcloud config get-value project)
-export REGION=us-central1
+# Set project
+gcloud config set project YOUR_PROJECT_ID
+
+# Enable APIs
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com sqladmin.googleapis.com secretmanager.googleapis.com
 ```
 
-### 2. Create Cloud SQL Instance
+### 2. Create Cloud SQL PostgreSQL
 
 ```bash
-# Create PostgreSQL instance
 gcloud sql instances create eduresearch-db \
   --database-version=POSTGRES_15 \
   --tier=db-f1-micro \
-  --region=$REGION \
-  --root-password=YOUR_DB_PASSWORD
+  --region=us-central1
 
-# Create database
-gcloud sql databases create eduresearch \
-  --instance=eduresearch-db
+gcloud sql databases create eduresearch --instance=eduresearch-db
+
+gcloud sql users set-password postgres \
+  --instance=eduresearch-db \
+  --password=YOUR_PASSWORD
 ```
 
-### 3. Store Secrets
+### 3. Create Secrets
 
 ```bash
-# Database URL
-echo -n "postgresql://postgres:YOUR_DB_PASSWORD@/eduresearch?host=/cloudsql/$PROJECT_ID:$REGION:eduresearch-db" | \
-  gcloud secrets create database-url --data-file=-
+echo -n "your-secret-key-min-32-chars" | \
+  gcloud secrets create eduresearch-secret-key --data-file=-
 
-# Secret key
-echo -n "your-secret-key-at-least-32-characters" | \
-  gcloud secrets create secret-key --data-file=-
+echo -n "postgresql://postgres:PASSWORD@/eduresearch?host=/cloudsql/PROJECT:REGION:eduresearch-db" | \
+  gcloud secrets create eduresearch-db-url --data-file=-
 ```
 
-### 4. Create Service Account
+### 4. Create Frontend Bucket
 
 ```bash
-# Create service account
-gcloud iam service-accounts create eduresearch-sa
-
-# Grant permissions
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-  --member="serviceAccount:eduresearch-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/cloudsql.client"
-
-gcloud secrets add-iam-policy-binding database-url \
-  --member="serviceAccount:eduresearch-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor"
-
-gcloud secrets add-iam-policy-binding secret-key \
-  --member="serviceAccount:eduresearch-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor"
+gsutil mb -l us-central1 gs://eduresearch-frontend
+gsutil web set -m index.html -e index.html gs://eduresearch-frontend
 ```
 
-### 5. Build and Deploy
+### 5. Deploy
 
 ```bash
-# Submit build
+# Trigger Cloud Build
 gcloud builds submit --config=deploy/gcp/cloudbuild.yaml
-
-# Or deploy manually:
-
-# Build and push backend
-docker build -t gcr.io/$PROJECT_ID/eduresearch-backend:latest -f backend/Dockerfile backend/
-docker push gcr.io/$PROJECT_ID/eduresearch-backend:latest
-
-# Deploy backend
-gcloud run deploy eduresearch-backend \
-  --image gcr.io/$PROJECT_ID/eduresearch-backend:latest \
-  --region $REGION \
-  --platform managed \
-  --allow-unauthenticated \
-  --set-secrets DATABASE_URL=database-url:latest,SECRET_KEY=secret-key:latest \
-  --add-cloudsql-instances $PROJECT_ID:$REGION:eduresearch-db \
-  --service-account eduresearch-sa@$PROJECT_ID.iam.gserviceaccount.com \
-  --memory 512Mi \
-  --cpu 1 \
-  --min-instances 1
-
-# Get backend URL
-BACKEND_URL=$(gcloud run services describe eduresearch-backend --region $REGION --format='value(status.url)')
-
-# Build and push frontend
-docker build -t gcr.io/$PROJECT_ID/eduresearch-frontend:latest \
-  --build-arg VITE_API_URL=$BACKEND_URL \
-  -f frontend/Dockerfile frontend/
-docker push gcr.io/$PROJECT_ID/eduresearch-frontend:latest
-
-# Deploy frontend
-gcloud run deploy eduresearch-frontend \
-  --image gcr.io/$PROJECT_ID/eduresearch-frontend:latest \
-  --region $REGION \
-  --platform managed \
-  --allow-unauthenticated \
-  --memory 256Mi
 ```
 
-### 6. Run Migrations
+Or deploy manually:
 
 ```bash
-# Create a Cloud Run job for migrations
-gcloud run jobs create eduresearch-migrations \
-  --image gcr.io/$PROJECT_ID/eduresearch-backend:latest \
-  --region $REGION \
-  --set-secrets DATABASE_URL=database-url:latest \
-  --add-cloudsql-instances $PROJECT_ID:$REGION:eduresearch-db \
-  --service-account eduresearch-sa@$PROJECT_ID.iam.gserviceaccount.com \
-  --command "alembic" \
-  --args "upgrade,head"
+# Build and push
+docker build -t gcr.io/YOUR_PROJECT/eduresearch-backend ./backend
+docker push gcr.io/YOUR_PROJECT/eduresearch-backend
 
-# Execute the job
-gcloud run jobs execute eduresearch-migrations --region $REGION --wait
+# Deploy to Cloud Run
+gcloud run deploy eduresearch-api \
+  --image gcr.io/YOUR_PROJECT/eduresearch-backend \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --add-cloudsql-instances YOUR_PROJECT:us-central1:eduresearch-db \
+  --set-secrets SECRET_KEY=eduresearch-secret-key:latest,DATABASE_URL=eduresearch-db-url:latest
 ```
 
-## Cost Estimate
+## Architecture
 
-Monthly cost (us-central1, low traffic):
-- Cloud Run: ~$5-20 (pay per use)
-- Cloud SQL db-f1-micro: ~$10
-- Secret Manager: ~$0.06
-- Cloud Build: Free tier
+- **Backend**: Cloud Run (serverless containers)
+- **Database**: Cloud SQL PostgreSQL
+- **Frontend**: Cloud Storage + Cloud CDN
+- **Secrets**: Secret Manager
 
-**Total: ~$15-30/month**
+## Costs (Estimated)
 
-## Auto-Deploy with Cloud Build
+- Cloud Run: ~$10/month (low traffic, scales to zero)
+- Cloud SQL db-f1-micro: ~$10/month
+- Cloud Storage: < $1/month
+- Cloud CDN: < $5/month
 
-Connect your GitHub repository:
-
-1. Go to Cloud Build > Triggers
-2. Create trigger from GitHub
-3. Set build configuration to `deploy/gcp/cloudbuild.yaml`
-4. Select branch pattern (e.g., `^main$`)
-
-## Cleanup
-
-```bash
-# Delete Cloud Run services
-gcloud run services delete eduresearch-backend --region $REGION -q
-gcloud run services delete eduresearch-frontend --region $REGION -q
-
-# Delete Cloud SQL
-gcloud sql instances delete eduresearch-db -q
-
-# Delete secrets
-gcloud secrets delete database-url -q
-gcloud secrets delete secret-key -q
-
-# Delete images
-gcloud container images delete gcr.io/$PROJECT_ID/eduresearch-backend -q
-gcloud container images delete gcr.io/$PROJECT_ID/eduresearch-frontend -q
-```
+Total: ~$25/month for small deployment

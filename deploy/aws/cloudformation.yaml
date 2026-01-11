@@ -1,52 +1,29 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'EduResearch Project Manager - Full Stack on AWS (ECS Fargate, RDS, ALB, S3, CloudFront)'
+Description: 'EduResearch Project Manager - Full Stack Deployment'
 
 Parameters:
   Environment:
     Type: String
     Default: production
-    AllowedValues:
-      - production
-      - staging
-    Description: Deployment environment
+    AllowedValues: [production, staging]
 
-  DBUsername:
+  DomainName:
     Type: String
-    Default: eduresearch
-    Description: PostgreSQL master username
+    Description: Domain name for the application
+
+  SecretKey:
+    Type: String
+    NoEcho: true
+    Description: JWT secret key (min 32 characters)
 
   DBPassword:
     Type: String
     NoEcho: true
     MinLength: 8
-    Description: PostgreSQL master password
-
-  SecretKey:
-    Type: String
-    NoEcho: true
-    MinLength: 32
-    Description: Application secret key for JWT signing
-
-  DomainName:
-    Type: String
-    Default: ''
-    Description: Custom domain name (optional)
-
-  BackendImage:
-    Type: String
-    Default: ghcr.io/YOUR_ORG/eduresearch-backend:latest
-    Description: Backend container image
-
-  FrontendImage:
-    Type: String
-    Default: ghcr.io/YOUR_ORG/eduresearch-frontend:latest
-    Description: Frontend container image
-
-Conditions:
-  HasCustomDomain: !Not [!Equals [!Ref DomainName, '']]
+    Description: PostgreSQL database password
 
 Resources:
-  # VPC Configuration
+  # VPC
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -57,19 +34,6 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}-vpc
 
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-igw
-
-  InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC
-
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -77,9 +41,6 @@ Resources:
       AvailabilityZone: !Select [0, !GetAZs '']
       CidrBlock: 10.0.1.0/24
       MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-public-1
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -88,99 +49,85 @@ Resources:
       AvailabilityZone: !Select [1, !GetAZs '']
       CidrBlock: 10.0.2.0/24
       MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-public-2
 
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [0, !GetAZs '']
-      CidrBlock: 10.0.10.0/24
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-private-1
+      CidrBlock: 10.0.3.0/24
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [1, !GetAZs '']
-      CidrBlock: 10.0.11.0/24
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-private-2
+      CidrBlock: 10.0.4.0/24
 
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-public-rt
+      InternetGatewayId: !Ref InternetGateway
 
-  DefaultPublicRoute:
-    Type: AWS::EC2::Route
-    DependsOn: InternetGatewayAttachment
+  # RDS PostgreSQL
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
     Properties:
-      RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
+      DBSubnetGroupDescription: Subnet group for RDS
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
 
-  PublicSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet1
-
-  PublicSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet2
-
-  # NAT Gateway for private subnets
-  NatGatewayEIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-
-  NatGateway:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGatewayEIP.AllocationId
-      SubnetId: !Ref PublicSubnet1
-
-  PrivateRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
+      GroupDescription: Security group for RDS
       VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-private-rt
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ECSSecurityGroup
 
-  DefaultPrivateRoute:
-    Type: AWS::EC2::Route
+  Database:
+    Type: AWS::RDS::DBInstance
     Properties:
-      RouteTableId: !Ref PrivateRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGateway
+      DBInstanceIdentifier: !Sub ${AWS::StackName}-db
+      DBInstanceClass: db.t3.micro
+      Engine: postgres
+      EngineVersion: '15'
+      MasterUsername: eduresearch
+      MasterUserPassword: !Ref DBPassword
+      DBName: eduresearch
+      AllocatedStorage: 20
+      StorageType: gp2
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
 
-  PrivateSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+  # ECS Cluster
+  ECSCluster:
+    Type: AWS::ECS::Cluster
     Properties:
-      RouteTableId: !Ref PrivateRouteTable
-      SubnetId: !Ref PrivateSubnet1
+      ClusterName: !Sub ${AWS::StackName}-cluster
 
-  PrivateSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      RouteTableId: !Ref PrivateRouteTable
-      SubnetId: !Ref PrivateSubnet2
+      GroupDescription: Security group for ECS tasks
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
 
-  # Security Groups
+  # Application Load Balancer
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -196,299 +143,76 @@ Resources:
           ToPort: 443
           CidrIp: 0.0.0.0/0
 
-  ECSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for ECS tasks
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 8000
-          ToPort: 8000
-          SourceSecurityGroupId: !Ref ALBSecurityGroup
-
-  DBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for RDS
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 5432
-          ToPort: 5432
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
-
-  # RDS PostgreSQL
-  DBSubnetGroup:
-    Type: AWS::RDS::DBSubnetGroup
-    Properties:
-      DBSubnetGroupDescription: Subnet group for RDS
-      SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
-
-  Database:
-    Type: AWS::RDS::DBInstance
-    Properties:
-      DBInstanceIdentifier: !Sub ${AWS::StackName}-db
-      DBInstanceClass: db.t3.micro
-      Engine: postgres
-      EngineVersion: '15'
-      MasterUsername: !Ref DBUsername
-      MasterUserPassword: !Ref DBPassword
-      DBName: eduresearch
-      AllocatedStorage: 20
-      StorageType: gp2
-      VPCSecurityGroups:
-        - !Ref DBSecurityGroup
-      DBSubnetGroup: !Ref DBSubnetGroup
-      PubliclyAccessible: false
-      BackupRetentionPeriod: 7
-      DeletionProtection: false
-      Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-database
-
-  # ECS Cluster
-  ECSCluster:
-    Type: AWS::ECS::Cluster
-    Properties:
-      ClusterName: !Sub ${AWS::StackName}-cluster
-      CapacityProviders:
-        - FARGATE
-        - FARGATE_SPOT
-      DefaultCapacityProviderStrategy:
-        - CapacityProvider: FARGATE
-          Weight: 1
-
-  # IAM Roles
-  ECSTaskExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-
-  ECSTaskRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-            Action: sts:AssumeRole
-
-  # CloudWatch Log Groups
-  BackendLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub /ecs/${AWS::StackName}/backend
-      RetentionInDays: 30
-
-  # ECS Task Definition - Backend
-  BackendTaskDefinition:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      Family: !Sub ${AWS::StackName}-backend
-      Cpu: 256
-      Memory: 512
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - FARGATE
-      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
-      TaskRoleArn: !GetAtt ECSTaskRole.Arn
-      ContainerDefinitions:
-        - Name: backend
-          Image: !Ref BackendImage
-          PortMappings:
-            - ContainerPort: 8000
-          Environment:
-            - Name: DATABASE_URL
-              Value: !Sub postgresql://${DBUsername}:${DBPassword}@${Database.Endpoint.Address}:5432/eduresearch
-            - Name: SECRET_KEY
-              Value: !Ref SecretKey
-            - Name: ENVIRONMENT
-              Value: !Ref Environment
-            - Name: FRONTEND_URL
-              Value: !If [HasCustomDomain, !Sub 'https://${DomainName}', !Sub 'https://${FrontendDistribution.DomainName}']
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Ref BackendLogGroup
-              awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: ecs
-          HealthCheck:
-            Command:
-              - CMD-SHELL
-              - curl -f http://localhost:8000/health || exit 1
-            Interval: 30
-            Timeout: 5
-            Retries: 3
-            StartPeriod: 60
-
-  # Application Load Balancer
-  ApplicationLoadBalancer:
+  ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Name: !Sub ${AWS::StackName}-alb
-      Scheme: internet-facing
-      SecurityGroups:
-        - !Ref ALBSecurityGroup
       Subnets:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
 
   ALBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Name: !Sub ${AWS::StackName}-backend-tg
+      HealthCheckPath: /health
       Port: 8000
       Protocol: HTTP
-      VpcId: !Ref VPC
       TargetType: ip
-      HealthCheckPath: /health
-      HealthCheckIntervalSeconds: 30
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 2
-      UnhealthyThresholdCount: 3
+      VpcId: !Ref VPC
 
-  ALBListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
+  # Secrets Manager
+  AppSecrets:
+    Type: AWS::SecretsManager::Secret
     Properties:
-      LoadBalancerArn: !Ref ApplicationLoadBalancer
-      Port: 80
-      Protocol: HTTP
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref ALBTargetGroup
+      Name: !Sub ${AWS::StackName}/app-secrets
+      SecretString: !Sub |
+        {
+          "SECRET_KEY": "${SecretKey}",
+          "DATABASE_URL": "postgresql://eduresearch:${DBPassword}@${Database.Endpoint.Address}:5432/eduresearch"
+        }
 
-  # ECS Service - Backend
-  BackendService:
-    Type: AWS::ECS::Service
-    DependsOn: ALBListener
-    Properties:
-      ServiceName: !Sub ${AWS::StackName}-backend
-      Cluster: !Ref ECSCluster
-      TaskDefinition: !Ref BackendTaskDefinition
-      DesiredCount: 2
-      LaunchType: FARGATE
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          AssignPublicIp: DISABLED
-          SecurityGroups:
-            - !Ref ECSSecurityGroup
-          Subnets:
-            - !Ref PrivateSubnet1
-            - !Ref PrivateSubnet2
-      LoadBalancers:
-        - ContainerName: backend
-          ContainerPort: 8000
-          TargetGroupArn: !Ref ALBTargetGroup
-
-  # S3 Bucket for Frontend
+  # S3 for Frontend
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${AWS::StackName}-frontend-${AWS::AccountId}
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+      BucketName: !Sub ${AWS::StackName}-frontend
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: index.html
 
-  FrontendBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref FrontendBucket
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: cloudfront.amazonaws.com
-            Action: s3:GetObject
-            Resource: !Sub ${FrontendBucket.Arn}/*
-            Condition:
-              StringEquals:
-                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${FrontendDistribution}
-
-  # CloudFront Distribution for Frontend
-  FrontendOriginAccessControl:
-    Type: AWS::CloudFront::OriginAccessControl
-    Properties:
-      OriginAccessControlConfig:
-        Name: !Sub ${AWS::StackName}-frontend-oac
-        OriginAccessControlOriginType: s3
-        SigningBehavior: always
-        SigningProtocol: sigv4
-
-  FrontendDistribution:
+  # CloudFront Distribution
+  CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
-        Enabled: true
-        DefaultRootObject: index.html
         Origins:
-          - Id: S3Origin
-            DomainName: !GetAtt FrontendBucket.RegionalDomainName
-            OriginAccessControlId: !Ref FrontendOriginAccessControl
+          - DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            Id: S3Origin
             S3OriginConfig:
               OriginAccessIdentity: ''
+        Enabled: true
+        DefaultRootObject: index.html
         DefaultCacheBehavior:
           TargetOriginId: S3Origin
           ViewerProtocolPolicy: redirect-to-https
-          AllowedMethods:
-            - GET
-            - HEAD
-            - OPTIONS
-          CachedMethods:
-            - GET
-            - HEAD
           ForwardedValues:
             QueryString: false
-            Cookies:
-              Forward: none
-          Compress: true
         CustomErrorResponses:
           - ErrorCode: 404
             ResponseCode: 200
             ResponsePagePath: /index.html
-          - ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /index.html
-        PriceClass: PriceClass_100
 
 Outputs:
-  VPCId:
-    Description: VPC ID
-    Value: !Ref VPC
-
   BackendURL:
     Description: Backend API URL
-    Value: !Sub http://${ApplicationLoadBalancer.DNSName}
+    Value: !Sub https://${ALB.DNSName}
 
   FrontendURL:
-    Description: Frontend URL (CloudFront)
-    Value: !Sub https://${FrontendDistribution.DomainName}
-
-  FrontendBucketName:
-    Description: S3 bucket for frontend deployment
-    Value: !Ref FrontendBucket
+    Description: Frontend CloudFront URL
+    Value: !Sub https://${CloudFrontDistribution.DomainName}
 
   DatabaseEndpoint:
-    Description: RDS PostgreSQL endpoint
+    Description: RDS Endpoint
     Value: !GetAtt Database.Endpoint.Address
-
-  ECSClusterName:
-    Description: ECS Cluster name
-    Value: !Ref ECSCluster

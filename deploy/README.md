@@ -1,111 +1,140 @@
-# Deployment Guide
+# EduResearch Deployment Guide
 
-EduResearch Project Manager supports one-click deployment to multiple platforms.
+Choose your preferred deployment platform from the options below.
 
-## Quick Deploy
+## One-Click Deploy Buttons
 
-| Platform | Deploy Button |
-|----------|--------------|
-| Render | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/YOUR_ORG/eduresearch-project-manager) |
-| Railway | [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/eduresearch) |
-| Heroku | [![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/YOUR_ORG/eduresearch-project-manager) |
+| Platform | Deploy | Notes |
+|----------|--------|-------|
+| **Render** | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ClinIQSoftware/eduresearch-project-manager) | Recommended for getting started |
+| **Heroku** | [![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/ClinIQSoftware/eduresearch-project-manager) | Requires Heroku account |
+| **Azure** | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FClinIQSoftware%2Feduresearch-project-manager%2Fmain%2Fdeploy%2Fazure%2Fazuredeploy.json) | Enterprise ready |
 
-## Platform-Specific Guides
+## Platform Comparison
 
-- [Render](render/README.md) - Recommended for beginners
-- [Railway](railway/README.md) - Fast deployment with auto-scaling
-- [Fly.io](flyio/README.md) - Edge deployment with global regions
-- [Heroku](heroku/README.md) - Classic PaaS with add-ons
-- [Docker](docker/README.md) - Self-hosted with docker-compose
-- [Kubernetes](k8s/README.md) - Production-grade orchestration
-- [AWS](aws/README.md) - CloudFormation stack (ECS Fargate + RDS)
-- [GCP](gcp/README.md) - Cloud Run deployment
-- [Azure](azure/README.md) - Container Instances + Azure DB
+| Platform | Difficulty | Cost/Month | Scale | Best For |
+|----------|------------|------------|-------|----------|
+| **Render** | Easy | $0-25 | Auto | Quick start, small teams |
+| **Railway** | Easy | $5-20 | Auto | Developers, startups |
+| **Fly.io** | Medium | $5-30 | Manual | Global edge, performance |
+| **Heroku** | Easy | $7-50 | Auto | Enterprise, support |
+| **Docker** | Medium | Self-hosted | Manual | Full control, on-premise |
+| **AWS** | Hard | $50+ | Auto | Enterprise, compliance |
+| **GCP** | Medium | $25+ | Auto | Google ecosystem |
+| **Azure** | Medium | $30+ | Auto | Microsoft ecosystem |
 
-## Environment Variables
+## Environment Variables Reference
 
-All platforms require these environment variables:
+### Required Variables
 
-### Required
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
-| `SECRET_KEY` | JWT signing key (min 32 chars) | `your-super-secret-key-here` |
-| `FRONTEND_URL` | Frontend app URL | `https://your-app.onrender.com` |
-| `BACKEND_URL` | Backend API URL | `https://your-api.onrender.com` |
-
-### Optional - OAuth
 | Variable | Description |
 |----------|-------------|
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth secret |
-| `MICROSOFT_CLIENT_ID` | Microsoft OAuth client ID |
-| `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth secret |
-| `MICROSOFT_TENANT_ID` | Microsoft tenant ID |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SECRET_KEY` | JWT secret (min 32 characters) |
+| `FRONTEND_URL` | Frontend URL for CORS |
+| `BACKEND_URL` | Backend URL for OAuth callbacks |
 
-### Optional - Email (SMTP)
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SMTP_HOST` | SMTP server host | `smtp.gmail.com` |
-| `SMTP_PORT` | SMTP server port | `587` |
-| `SMTP_USER` | SMTP username | - |
-| `SMTP_PASSWORD` | SMTP password | - |
-| `FROM_EMAIL` | Sender email address | - |
-| `FROM_NAME` | Sender display name | `EduResearch` |
+### Optional Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENVIRONMENT` | `development` | Set to `production` for prod |
+| `GOOGLE_CLIENT_ID` | - | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | - | Google OAuth client secret |
+| `MICROSOFT_CLIENT_ID` | - | Microsoft OAuth client ID |
+| `MICROSOFT_CLIENT_SECRET` | - | Microsoft OAuth client secret |
+| `SMTP_HOST` | `smtp.gmail.com` | Email server host |
+| `SMTP_PORT` | `587` | Email server port |
+| `SMTP_USER` | - | Email username |
+| `SMTP_PASSWORD` | - | Email password |
+| `FROM_EMAIL` | - | Sender email address |
+| `FROM_NAME` | `EduResearch` | Sender display name |
+
+## Quick Start by Platform
+
+### Render (Recommended)
+```bash
+# Just click the deploy button above!
+# Or connect your GitHub repo in the Render dashboard
+```
+
+### Railway
+```bash
+railway login
+railway init
+railway add -d postgres
+railway up
+```
+
+### Fly.io
+```bash
+fly launch --config deploy/flyio/fly.toml
+fly postgres create --name eduresearch-db
+fly postgres attach eduresearch-db
+fly secrets set SECRET_KEY="your-secret-key"
+fly deploy
+```
+
+### Docker Compose
+```bash
+cd deploy/docker
+cp .env.example .env
+# Edit .env with your values
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### AWS
+```bash
+aws cloudformation create-stack \
+  --stack-name eduresearch \
+  --template-body file://deploy/aws/cloudformation.yaml \
+  --parameters ParameterKey=SecretKey,ParameterValue=your-key
+```
+
+## Post-Deployment Checklist
+
+- [ ] Verify `/health` endpoint returns `{"status": "healthy"}`
+- [ ] Run database migrations (most platforms do this automatically)
+- [ ] Set up OAuth credentials (Google/Microsoft) if needed
+- [ ] Configure SMTP for email notifications
+- [ ] Create first superuser account
+- [ ] Test login flow
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      Load Balancer                       │
-│                    (HTTPS termination)                   │
-└─────────────────────────┬───────────────────────────────┘
-                          │
-        ┌─────────────────┴─────────────────┐
-        │                                   │
-        ▼                                   ▼
-┌───────────────┐                   ┌───────────────┐
-│   Frontend    │                   │   Backend     │
-│  (Static/CDN) │                   │  (FastAPI)    │
-│   React SPA   │                   │   Gunicorn    │
-└───────────────┘                   └───────┬───────┘
-                                            │
-                                            ▼
-                                    ┌───────────────┐
-                                    │  PostgreSQL   │
-                                    │   Database    │
-                                    └───────────────┘
+                    ┌─────────────────┐
+                    │   Load Balancer │
+                    │    (Traefik/    │
+                    │    Platform)    │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+              ▼              ▼              ▼
+       ┌──────────┐   ┌──────────┐   ┌──────────┐
+       │ Frontend │   │ Backend  │   │ Backend  │
+       │  (Nginx) │   │ (Gunicorn│   │ (replica)│
+       │          │   │ +Uvicorn)│   │          │
+       └──────────┘   └────┬─────┘   └────┬─────┘
+                           │              │
+                           └──────┬───────┘
+                                  │
+                                  ▼
+                         ┌───────────────┐
+                         │  PostgreSQL   │
+                         │   Database    │
+                         └───────────────┘
 ```
-
-## Database Migrations
-
-All platforms automatically run migrations on startup via:
-```bash
-alembic upgrade head
-```
-
-For manual migration:
-```bash
-cd backend
-alembic upgrade head
-```
-
-## SSL/TLS
-
-- **PaaS platforms** (Render, Railway, Heroku, Fly.io): Automatic HTTPS
-- **Docker/K8s**: Configure Traefik, nginx-ingress, or cert-manager
-- **Cloud providers**: Use managed load balancers with ACM/Cloud Armor
 
 ## Scaling Recommendations
 
-| Users | Backend Instances | Database Plan |
-|-------|-------------------|---------------|
-| < 100 | 1 | 256MB |
-| 100-500 | 2 | 1GB |
-| 500-2000 | 4 | 4GB |
-| 2000+ | 8+ with autoscaling | 16GB+ |
+| Users | Backend Instances | DB Size | Notes |
+|-------|-------------------|---------|-------|
+| 1-50 | 1 | 1GB | Free tier works |
+| 50-500 | 2 | 4GB | Add caching |
+| 500-5000 | 3-5 | 16GB+ | Add CDN, read replicas |
 
 ## Support
 
-- [GitHub Issues](https://github.com/YOUR_ORG/eduresearch-project-manager/issues)
-- [Documentation](https://github.com/YOUR_ORG/eduresearch-project-manager#readme)
+For deployment issues, open an issue on GitHub or check the platform-specific README in each subdirectory.

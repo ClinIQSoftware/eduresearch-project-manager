@@ -1,132 +1,70 @@
-# AWS Deployment
-
-Deploy EduResearch Project Manager on AWS using CloudFormation.
-
-## Architecture
-
-- **ECS Fargate**: Backend API (2 tasks)
-- **RDS PostgreSQL**: Database (db.t3.micro)
-- **S3 + CloudFront**: Frontend static hosting
-- **ALB**: Load balancer for backend
-- **VPC**: Isolated network with public/private subnets
+# AWS CloudFormation Deployment
 
 ## Prerequisites
 
 1. AWS CLI installed and configured
-2. Docker images pushed to a container registry (ECR or GHCR)
+2. Docker installed (for building images)
+3. An ECR repository for the backend image
 
 ## Quick Start
 
-### 1. Deploy the Stack
+### 1. Build and Push Docker Image
+
+```bash
+# Create ECR repository
+aws ecr create-repository --repository-name eduresearch-backend
+
+# Login to ECR
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+
+# Build and push
+docker build -t eduresearch-backend ./backend
+docker tag eduresearch-backend:latest YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/eduresearch-backend:latest
+docker push YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/eduresearch-backend:latest
+```
+
+### 2. Deploy CloudFormation Stack
 
 ```bash
 aws cloudformation create-stack \
   --stack-name eduresearch \
-  --template-body file://cloudformation.yaml \
-  --capabilities CAPABILITY_IAM \
+  --template-body file://deploy/aws/cloudformation.yaml \
   --parameters \
-    ParameterKey=DBPassword,ParameterValue=YOUR_DB_PASSWORD \
-    ParameterKey=SecretKey,ParameterValue=YOUR_SECRET_KEY_32_CHARS_MIN \
-    ParameterKey=BackendImage,ParameterValue=ghcr.io/yourorg/eduresearch-backend:latest
+    ParameterKey=DomainName,ParameterValue=eduresearch.yourdomain.com \
+    ParameterKey=SecretKey,ParameterValue=your-secret-key-min-32-chars \
+    ParameterKey=DBPassword,ParameterValue=your-db-password \
+  --capabilities CAPABILITY_IAM
 ```
 
-### 2. Deploy Frontend to S3
-
-After the stack is created, upload the frontend build:
+### 3. Deploy Frontend
 
 ```bash
 # Build frontend
 cd frontend
-npm run build
-
-# Get bucket name from CloudFormation outputs
-BUCKET=$(aws cloudformation describe-stacks \
-  --stack-name eduresearch \
-  --query 'Stacks[0].Outputs[?OutputKey==`FrontendBucketName`].OutputValue' \
-  --output text)
+npm install
+VITE_API_URL=https://your-alb-url.amazonaws.com/api npm run build
 
 # Upload to S3
-aws s3 sync dist/ s3://$BUCKET/ --delete
-
-# Invalidate CloudFront cache
-DIST_ID=$(aws cloudfront list-distributions \
-  --query "DistributionList.Items[?Origins.Items[?DomainName=='${BUCKET}.s3.amazonaws.com']].Id" \
-  --output text)
-aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"
+aws s3 sync dist/ s3://eduresearch-frontend/
 ```
 
-### 3. Run Database Migrations
+## Architecture
 
-Connect to the ECS task and run migrations:
+- **VPC**: 2 public + 2 private subnets across 2 AZs
+- **Backend**: ECS Fargate with Application Load Balancer
+- **Database**: RDS PostgreSQL (db.t3.micro)
+- **Frontend**: S3 + CloudFront CDN
+- **Secrets**: AWS Secrets Manager
 
-```bash
-# Get task ARN
-TASK=$(aws ecs list-tasks \
-  --cluster eduresearch-cluster \
-  --service-name eduresearch-backend \
-  --query 'taskArns[0]' \
-  --output text)
+## Costs (Estimated)
 
-# Execute migration
-aws ecs execute-command \
-  --cluster eduresearch-cluster \
-  --task $TASK \
-  --container backend \
-  --interactive \
-  --command "alembic upgrade head"
-```
+- ECS Fargate: ~$30/month (1 task, 0.25 vCPU, 512MB)
+- RDS db.t3.micro: ~$15/month
+- CloudFront: ~$1/month (low traffic)
+- S3: < $1/month
 
-## Parameters
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `Environment` | No | `production` or `staging` (default: production) |
-| `DBUsername` | No | Database username (default: eduresearch) |
-| `DBPassword` | Yes | Database password (min 8 chars) |
-| `SecretKey` | Yes | JWT signing key (min 32 chars) |
-| `DomainName` | No | Custom domain for HTTPS |
-| `BackendImage` | No | Backend container image |
-| `FrontendImage` | No | Frontend container image |
-
-## Outputs
-
-After deployment, get the URLs:
-
-```bash
-aws cloudformation describe-stacks \
-  --stack-name eduresearch \
-  --query 'Stacks[0].Outputs'
-```
-
-## Cost Estimate
-
-Monthly cost (us-east-1):
-- ECS Fargate (2 tasks): ~$30
-- RDS db.t3.micro: ~$15
-- NAT Gateway: ~$32
-- ALB: ~$20
-- CloudFront: ~$1 (low traffic)
-- S3: ~$1
-
-**Total: ~$100/month**
+Total: ~$50/month for small deployment
 
 ## Scaling
 
-Adjust the `DesiredCount` in the ECS service for horizontal scaling:
-
-```bash
-aws ecs update-service \
-  --cluster eduresearch-cluster \
-  --service eduresearch-backend \
-  --desired-count 4
-```
-
-## Cleanup
-
-```bash
-# Empty the S3 bucket first
-aws s3 rm s3://$BUCKET --recursive
-
-# Delete the stack
-aws cloudformation delete-stack --stack-name eduresearch
-```
+Modify the ECS service desired count in the template or use auto-scaling.
