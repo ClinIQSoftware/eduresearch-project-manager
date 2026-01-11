@@ -175,8 +175,8 @@ export default function Projects() {
       </div>
 
       {/* Filters - scrollable on mobile */}
-      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 pb-2">
-        <div className="flex gap-2 md:gap-4 flex-nowrap md:flex-wrap">
+      <div className="overflow-x-auto pb-2">
+        <div className="flex gap-2 md:gap-4 flex-nowrap md:flex-wrap min-w-max md:min-w-0">
           <select
             value={filter.institution_id || ''}
             onChange={(e) => setFilter({
