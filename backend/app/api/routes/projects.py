@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
 from typing import List, Optional
 from datetime import datetime
 from app.database import get_db
@@ -88,6 +89,39 @@ def get_my_projects(
     ).order_by(Project.created_at.desc()).all()
 
     return projects
+
+
+@router.get("/search", response_model=List[ProjectWithLead])
+def search_projects(
+    q: str = Query(..., min_length=1, max_length=200, description="Search query"),
+    classification: Optional[ProjectClassification] = None,
+    status: Optional[ProjectStatus] = None,
+    open_to_participants: Optional[bool] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Search projects by keyword in title or description."""
+    pattern = f"%{q}%"
+
+    query = db.query(Project).options(
+        joinedload(Project.lead),
+        joinedload(Project.institution),
+        joinedload(Project.department)
+    ).filter(
+        or_(
+            Project.title.ilike(pattern),
+            Project.description.ilike(pattern)
+        )
+    )
+
+    if classification:
+        query = query.filter(Project.classification == classification)
+    if status:
+        query = query.filter(Project.status == status)
+    if open_to_participants is not None:
+        query = query.filter(Project.open_to_participants == open_to_participants)
+
+    return query.order_by(Project.created_at.desc()).limit(50).all()
 
 
 @router.post("", response_model=ProjectResponse)

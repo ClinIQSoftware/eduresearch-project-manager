@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getProjects, getMyProjects, getInstitutions, getDepartments } from '../services/api';
+import { getProjects, getMyProjects, getInstitutions, getDepartments, getNewMatchedProjects } from '../services/api';
 import { DashboardTabs, type DashboardView } from '../components/dashboard/DashboardTabs';
 import { useAuth } from '../contexts/AuthContext';
-import type { ProjectWithLead, Institution, Department } from '../types';
+import type { ProjectWithLead, Institution, Department, MatchedProject } from '../types';
 
 const VIEW_STORAGE_KEY = 'dashboardView';
 const INST_STORAGE_KEY = 'dashboardInstitution';
@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [projects, setProjects] = useState<ProjectWithLead[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [newMatchedProjects, setNewMatchedProjects] = useState<MatchedProject[]>([]);
   const [selectedInstId, setSelectedInstId] = useState<string>(() => {
     return localStorage.getItem(INST_STORAGE_KEY) || '';
   });
@@ -37,6 +38,13 @@ export default function Dashboard() {
         .catch((err) => console.error('Error fetching departments:', err));
     }
   }, [user]);
+
+  // Fetch new matched projects based on user's keywords
+  useEffect(() => {
+    getNewMatchedProjects()
+      .then((res) => setNewMatchedProjects(res.data))
+      .catch((err) => console.error('Error fetching matched projects:', err));
+  }, []);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -241,6 +249,76 @@ export default function Dashboard() {
           <p className="text-xl md:text-2xl font-bold text-purple-600">{stats.byClassification.research}</p>
         </div>
       </div>
+
+      {/* New Studies Matching Your Interests */}
+      {newMatchedProjects.length > 0 && (
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+              <h2 className="text-lg font-semibold text-green-800">New Studies Matching Your Interests</h2>
+            </div>
+            <Link
+              to="/settings"
+              className="text-sm text-green-600 hover:text-green-800"
+            >
+              Manage keywords
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {newMatchedProjects.slice(0, 6).map((project) => {
+              const locationInfo = getLocationInfo(project);
+              return (
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}`}
+                  className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="font-medium text-sm">{project.title}</p>
+                    <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">New</span>
+                  </div>
+                  {locationInfo && (
+                    <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
+                  )}
+                  {project.description && (
+                    <p className="text-xs text-gray-500 line-clamp-2 mb-2">{project.description}</p>
+                  )}
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
+                      {project.status}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${classificationColors[project.classification]}`}>
+                      {project.classification.replace('_', ' ')}
+                    </span>
+                  </div>
+                  {project.matched_keywords && project.matched_keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {project.matched_keywords.slice(0, 3).map((kw, idx) => (
+                        <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                          {kw}
+                        </span>
+                      ))}
+                      {project.matched_keywords.length > 3 && (
+                        <span className="text-xs text-gray-400">+{project.matched_keywords.length - 3} more</span>
+                      )}
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+          {newMatchedProjects.length > 6 && (
+            <div className="text-center mt-4">
+              <Link to="/projects" className="text-sm text-green-600 hover:text-green-800">
+                View all {newMatchedProjects.length} matching projects
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Status Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

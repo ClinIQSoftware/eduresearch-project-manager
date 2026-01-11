@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCanEdit } from '../components/ui/PendingApprovalBanner';
 import { updateProfile, changePassword, getInstitutions, getDepartments } from '../services/api';
 import type { Institution, Department } from '../types';
+import KeywordPreferences from '../components/settings/KeywordPreferences';
 
 export default function Settings() {
   const { user, refreshUser } = useAuth();
@@ -350,6 +351,9 @@ export default function Settings() {
           </p>
         </div>
       )}
+
+      {/* Keyword Preferences for tracking studies of interest */}
+      <KeywordPreferences />
     </div>
   );
 }

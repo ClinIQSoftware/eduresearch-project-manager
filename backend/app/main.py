@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from app.api.routes import (
     auth, institutions, departments, projects, tasks, timetracking,
-    analytics, join_requests, files, reports, admin
+    analytics, join_requests, files, reports, admin, keywords
 )
 from app.config import settings
 
@@ -64,6 +64,9 @@ app.include_router(timetracking.router, prefix="/api/time-entries", tags=["Time 
 
 # Analytics routes (existing)
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
+
+# Keywords routes (user interest tracking)
+app.include_router(keywords.router, prefix="/api/keywords", tags=["Keywords"])
 
 
 @app.get("/")

@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "development"
 
+    # Cron job authentication for scheduled tasks
+    cron_secret: Optional[str] = None
+
     class Config:
         env_file = ".env"
         extra = "ignore"

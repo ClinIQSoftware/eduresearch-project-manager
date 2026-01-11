@@ -10,6 +10,8 @@ from app.models.email_template import EmailTemplate
 from app.models.system_settings import SystemSettings
 from app.models.task import Task, TaskStatus, TaskPriority
 from app.models.time_entry import TimeEntry
+from app.models.user_keyword import UserKeyword
+from app.models.user_alert_preference import UserAlertPreference, AlertFrequency
 
 __all__ = [
     "Institution", "organization_admins",
@@ -24,4 +26,6 @@ __all__ = [
     "SystemSettings",
     "Task", "TaskStatus", "TaskPriority",
     "TimeEntry",
+    "UserKeyword",
+    "UserAlertPreference", "AlertFrequency",
 ]

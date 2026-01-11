@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getProjects, createProject, deleteProject, createJoinRequest, getInstitutionsPublic, getDepartmentsPublic } from '../services/api';
+import { getProjects, createProject, deleteProject, createJoinRequest, getInstitutionsPublic, getDepartmentsPublic, searchProjects, getMatchedProjects } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCanEdit } from '../components/ui/PendingApprovalBanner';
-import type { ProjectWithLead, ProjectClassification, ProjectStatus, Institution, Department } from '../types';
+import type { ProjectWithLead, ProjectClassification, ProjectStatus, Institution, Department, MatchedProject } from '../types';
 
 const classificationColors: Record<ProjectClassification, string> = {
   education: 'bg-purple-100 text-purple-800',
@@ -41,6 +41,15 @@ export default function Projects() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ProjectWithLead[] | null>(null);
+  const [searching, setSearching] = useState(false);
+
+  // Matched projects state (based on user's keywords)
+  const [matchedProjects, setMatchedProjects] = useState<MatchedProject[]>([]);
+  const [showMatchedSection, setShowMatchedSection] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -64,6 +73,8 @@ export default function Projects() {
     // Load all institutions and departments for filters
     getInstitutionsPublic().then(res => setInstitutions(res.data)).catch(console.error);
     getDepartmentsPublic().then(res => setDepartments(res.data)).catch(console.error);
+    // Load matched projects based on user's keywords
+    getMatchedProjects(10).then(res => setMatchedProjects(res.data)).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -158,6 +169,29 @@ export default function Projects() {
     }
   }
 
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!searchQuery.trim()) {
+      setSearchResults(null);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const res = await searchProjects(searchQuery.trim());
+      setSearchResults(res.data);
+    } catch (error) {
+      console.error('Error searching projects:', error);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function clearSearch() {
+    setSearchQuery('');
+    setSearchResults(null);
+  }
+
   if (loading) return <div className="text-center py-8">Loading...</div>;
 
   return (
@@ -173,6 +207,141 @@ export default function Projects() {
           </button>
         )}
       </div>
+
+      {/* Search Bar */}
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search projects by keyword..."
+            className="w-full border rounded-lg px-4 py-2 pl-10"
+          />
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <button
+          type="submit"
+          disabled={searching}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          {searching ? 'Searching...' : 'Search'}
+        </button>
+        {searchResults !== null && (
+          <button
+            type="button"
+            onClick={clearSearch}
+            className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+          >
+            Clear
+          </button>
+        )}
+      </form>
+
+      {/* Search Results */}
+      {searchResults !== null && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="font-semibold text-blue-800">
+              Search Results ({searchResults.length})
+            </h2>
+          </div>
+          {searchResults.length === 0 ? (
+            <p className="text-blue-600 text-sm">No projects found matching "{searchQuery}"</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {searchResults.map((project) => (
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}`}
+                  className="bg-white rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow"
+                >
+                  <div className="font-medium text-sm mb-1">{project.title}</div>
+                  {project.description && (
+                    <p className="text-xs text-gray-500 line-clamp-2 mb-2">{project.description}</p>
+                  )}
+                  <div className="flex flex-wrap gap-1">
+                    <span className={`text-xs px-2 py-0.5 rounded ${classificationColors[project.classification]}`}>
+                      {classificationLabels[project.classification]}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
+                      {statusLabels[project.status]}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Studies Matching Your Interests */}
+      {matchedProjects.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg">
+          <button
+            onClick={() => setShowMatchedSection(!showMatchedSection)}
+            className="w-full p-4 flex justify-between items-center text-left"
+          >
+            <div>
+              <h2 className="font-semibold text-green-800">
+                Studies Matching Your Interests ({matchedProjects.length})
+              </h2>
+              <p className="text-xs text-green-600 mt-1">Based on your saved keywords</p>
+            </div>
+            <svg
+              className={`w-5 h-5 text-green-600 transition-transform ${showMatchedSection ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {showMatchedSection && (
+            <div className="px-4 pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {matchedProjects.map((project) => (
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="bg-white rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow"
+                  >
+                    <div className="font-medium text-sm mb-1">{project.title}</div>
+                    {project.description && (
+                      <p className="text-xs text-gray-500 line-clamp-2 mb-2">{project.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      <span className={`text-xs px-2 py-0.5 rounded ${classificationColors[project.classification]}`}>
+                        {classificationLabels[project.classification]}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
+                        {statusLabels[project.status]}
+                      </span>
+                    </div>
+                    {project.matched_keywords && project.matched_keywords.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {project.matched_keywords.map((kw, idx) => (
+                          <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </Link>
+                ))}
+              </div>
+              <Link
+                to="/settings"
+                className="inline-block mt-3 text-sm text-green-600 hover:text-green-800"
+              >
+                Manage keywords in Settings
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filters - scrollable on mobile */}
       <div className="overflow-x-auto pb-2">

@@ -55,3 +55,7 @@ class User(Base):
     join_requests = relationship("JoinRequest", back_populates="user", cascade="all, delete-orphan")
     uploaded_files = relationship("ProjectFile", back_populates="uploaded_by", cascade="all, delete-orphan")
     approved_by = relationship("User", remote_side=[id], foreign_keys=[approved_by_id])
+
+    # Keyword tracking relationships
+    keywords = relationship("UserKeyword", back_populates="user", cascade="all, delete-orphan")
+    alert_preference = relationship("UserAlertPreference", back_populates="user", uselist=False, cascade="all, delete-orphan")

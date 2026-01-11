@@ -259,3 +259,23 @@ export interface EmailTemplate {
   created_at: string | null;
   updated_at: string | null;
 }
+
+// Keyword types for interest tracking
+export interface UserKeyword {
+  id: number;
+  keyword: string;
+  created_at: string;
+}
+
+export type AlertFrequency = 'disabled' | 'daily' | 'weekly' | 'monthly';
+
+export interface AlertPreference {
+  id: number;
+  alert_frequency: AlertFrequency;
+  dashboard_new_weeks: number;
+  last_alert_sent_at: string | null;
+}
+
+export interface MatchedProject extends ProjectWithLead {
+  matched_keywords: string[];
+}

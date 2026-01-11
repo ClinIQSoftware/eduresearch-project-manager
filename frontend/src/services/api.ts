@@ -5,7 +5,8 @@ import type {
   LeadWithProjects, UserWithProjects, Task, TimeEntry, AnalyticsSummary,
   ProjectClassification, ProjectStatus, RequestStatus,
   SystemSettings, BulkUploadResult, UserBrief,
-  EmailSettings, EmailTemplate
+  EmailSettings, EmailTemplate,
+  UserKeyword, AlertPreference, MatchedProject
 } from '../types';
 
 // Use environment variable for API URL, fallback to /api for local dev with proxy
@@ -310,5 +311,37 @@ export const updateEmailTemplate = (templateType: string, data: { subject?: stri
 
 export const sendTestEmail = (templateType: string, recipientEmail: string, institutionId?: number) =>
   api.post('/admin/email-templates/test', { template_type: templateType, recipient_email: recipientEmail }, { params: { institution_id: institutionId } });
+
+// Keywords (User Interest Tracking)
+export const getUserKeywords = () =>
+  api.get<{ keywords: UserKeyword[] }>('/keywords');
+
+export const addKeyword = (keyword: string) =>
+  api.post<UserKeyword>('/keywords', { keyword });
+
+export const deleteKeyword = (keywordId: number) =>
+  api.delete(`/keywords/${keywordId}`);
+
+export const bulkUpdateKeywords = (keywords: string[]) =>
+  api.put<{ keywords: UserKeyword[] }>('/keywords/bulk', { keywords });
+
+export const getAlertPreferences = () =>
+  api.get<AlertPreference>('/keywords/preferences');
+
+export const updateAlertPreferences = (data: { alert_frequency?: string; dashboard_new_weeks?: number }) =>
+  api.put<AlertPreference>('/keywords/preferences', data);
+
+export const getMatchedProjects = (limit?: number, offset?: number) =>
+  api.get<MatchedProject[]>('/keywords/matched-projects', { params: { limit, offset } });
+
+export const getNewMatchedProjects = () =>
+  api.get<MatchedProject[]>('/keywords/matched-projects/new');
+
+// Project Search
+export const searchProjects = (query: string, filters?: {
+  classification?: ProjectClassification;
+  status?: ProjectStatus;
+  open_to_participants?: boolean;
+}) => api.get<ProjectWithLead[]>('/projects/search', { params: { q: query, ...filters } });
 
 export default api;

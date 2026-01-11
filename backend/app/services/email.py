@@ -392,6 +392,103 @@ EduResearch Project Manager
         """
         return await self.send_email(to_email, subject, body, html_body)
 
+    async def send_keyword_alert(
+        self,
+        to_email: str,
+        user_name: str,
+        projects: List[dict],
+        frequency: str
+    ):
+        """Send keyword match alert email with new matching projects.
+
+        Args:
+            to_email: Recipient email
+            user_name: User's display name
+            projects: List of dicts with 'project' and 'matched_keywords' keys
+            frequency: Alert frequency (daily/weekly/monthly) for display
+        """
+        frequency_label = {
+            "daily": "Daily",
+            "weekly": "Weekly",
+            "monthly": "Monthly"
+        }.get(frequency, frequency.capitalize())
+
+        subject = f"[EduResearch] {frequency_label} Digest: New Projects Matching Your Interests"
+
+        # Build project list for email
+        project_list_text = ""
+        project_list_html = ""
+
+        for item in projects:
+            p = item["project"]
+            matched = item.get("matched_keywords", [])
+            keywords_str = ", ".join(matched) if matched else "your keywords"
+
+            # Plain text version
+            project_list_text += f"\n- {p.title}"
+            if p.description:
+                desc_preview = p.description[:100] + "..." if len(p.description) > 100 else p.description
+                project_list_text += f"\n  {desc_preview}"
+            project_list_text += f"\n  Matched: {keywords_str}\n"
+
+            # HTML version
+            project_list_html += f"""
+            <div style="border: 1px solid #e5e7eb; padding: 16px; margin-bottom: 16px; border-radius: 8px;">
+                <h3 style="margin: 0 0 8px 0; color: #1f2937;">{p.title}</h3>
+                <p style="color: #6b7280; margin: 8px 0; font-size: 14px;">
+                    {(p.description[:150] + '...') if p.description and len(p.description) > 150 else (p.description or 'No description')}
+                </p>
+                <p style="font-size: 12px; color: #9ca3af; margin: 8px 0;">
+                    <strong>Matched keywords:</strong> {keywords_str}
+                </p>
+                <a href="{settings.frontend_url}/projects/{p.id}"
+                   style="display: inline-block; background: #3B82F6; color: white; padding: 8px 16px;
+                          text-decoration: none; border-radius: 4px; font-size: 14px;">
+                    View Project
+                </a>
+            </div>
+            """
+
+        body = f"""
+Hello {user_name},
+
+Here are new projects matching your interests ({frequency_label.lower()} digest):
+{project_list_text}
+
+View all matching projects: {settings.frontend_url}/projects
+
+To manage your keyword preferences, visit: {settings.frontend_url}/settings
+
+Best regards,
+EduResearch Project Manager
+        """
+
+        html_body = f"""
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #1f2937; margin-bottom: 24px;">New Projects Matching Your Interests</h2>
+    <p style="color: #4b5563; margin-bottom: 20px;">
+        Hello {user_name},<br><br>
+        Here are new projects that match your keyword preferences ({frequency_label.lower()} digest):
+    </p>
+
+    {project_list_html}
+
+    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+        <p style="color: #6b7280; font-size: 14px;">
+            <a href="{settings.frontend_url}/projects" style="color: #3B82F6;">View all matching projects</a> |
+            <a href="{settings.frontend_url}/settings" style="color: #3B82F6;">Manage keyword preferences</a>
+        </p>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+    <p style="color: #9ca3af; font-size: 12px;">EduResearch Project Manager</p>
+</body>
+</html>
+        """
+
+        return await self.send_email(to_email, subject, body, html_body)
+
 
 # Default email service instance
 email_service = EmailService()
