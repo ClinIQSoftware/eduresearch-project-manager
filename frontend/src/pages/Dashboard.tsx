@@ -41,6 +41,8 @@ export default function Dashboard() {
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
+    const token = localStorage.getItem('token');
+    console.log('Dashboard fetch - Token exists:', !!token, 'Token length:', token?.length);
     try {
       let response;
       switch (activeView) {
@@ -142,11 +144,12 @@ export default function Dashboard() {
   }
 
   if (fetchError) {
+    const errorToken = localStorage.getItem('token');
     return (
       <div className="text-center py-8">
         <p className="text-red-600 font-medium">Error loading projects</p>
         <p className="text-sm text-gray-500 mt-2">{fetchError}</p>
-        <p className="text-xs text-gray-400 mt-4">View: {activeView} | User: {user?.email}</p>
+        <p className="text-xs text-gray-400 mt-4">View: {activeView} | User: {user?.email} | Token: {errorToken ? `yes (${errorToken.length} chars)` : 'NO TOKEN'}</p>
         <button
           onClick={() => window.location.reload()}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -158,7 +161,8 @@ export default function Dashboard() {
   }
 
   // Debug info - remove after fixing
-  const debugInfo = `View: ${activeView} | Projects: ${projects.length} | User: ${user?.email} | Inst: ${user?.institution_id || 'none'}`;
+  const token = localStorage.getItem('token');
+  const debugInfo = `View: ${activeView} | Projects: ${projects.length} | User: ${user?.email} | Token: ${token ? 'yes' : 'NO'}`;
 
   // Calculate statistics
   const stats = {
