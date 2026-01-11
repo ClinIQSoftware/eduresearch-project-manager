@@ -73,6 +73,7 @@ export default function Projects() {
   async function fetchProjects() {
     try {
       const response = await getProjects({
+        view: 'global',  // Fetch all projects, filter client-side
         classification: filter.classification,
         status: filter.status,
         open_to_participants: filter.open_to_participants,
@@ -160,7 +161,7 @@ export default function Projects() {
   if (loading) return <div className="text-center py-8">Loading...</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 pb-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Projects</h1>
         {canEdit && (
@@ -174,8 +175,8 @@ export default function Projects() {
       </div>
 
       {/* Filters - scrollable on mobile */}
-      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-        <div className="flex gap-2 md:gap-4 flex-nowrap md:flex-wrap min-w-max md:min-w-0">
+      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 pb-2">
+        <div className="flex gap-2 md:gap-4 flex-nowrap md:flex-wrap">
           <select
             value={filter.institution_id || ''}
             onChange={(e) => setFilter({
