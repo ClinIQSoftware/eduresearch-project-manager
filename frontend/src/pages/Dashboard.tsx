@@ -25,6 +25,7 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<string>('');
   const [activeView, setActiveView] = useState<DashboardView>(() => {
     const saved = localStorage.getItem(VIEW_STORAGE_KEY);
     return (saved as DashboardView) || 'global';
@@ -53,6 +54,14 @@ export default function Dashboard() {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const url = `${API_URL}/projects`;
       console.log('Making request to:', url, 'with token:', token?.substring(0, 20) + '...');
+
+      // TEST: Use reports endpoint which works on mobile
+      try {
+        const testResponse = await axios.get(`${API_URL}/reports/projects-with-leads`, { headers });
+        setTestResult(`Reports OK: ${testResponse.data?.length} projects`);
+      } catch (testErr: any) {
+        setTestResult(`Reports FAILED: ${testErr?.response?.status} ${testErr?.response?.data?.detail}`);
+      }
 
       switch (activeView) {
         case 'personal':
@@ -162,6 +171,7 @@ export default function Dashboard() {
         <p className="text-xs text-gray-400 mt-2">View: {activeView} | User: {user?.email}</p>
         <p className="text-xs text-gray-400">Token: {errorToken ? `yes (${errorToken.length} chars)` : 'NO TOKEN'}</p>
         <p className="text-xs text-gray-400">API: {API_URL}</p>
+        <p className="text-xs font-medium mt-2 text-blue-600">{testResult}</p>
         <button
           onClick={() => window.location.reload()}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
