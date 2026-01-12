@@ -268,87 +268,83 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* New Projects Matching Your Interests */}
-      {newMatchedProjects.length > 0 && (
+      {/* New Projects Matching Interests & Upcoming Deadlines - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* New Projects Matching Your Interests */}
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
-              <h2 className="text-lg font-semibold text-green-800">New Projects Matching Your Interests</h2>
+              <h2 className="text-lg font-semibold text-green-800">Matching Your Interests</h2>
             </div>
             <Link
               to="/settings"
-              className="text-sm text-green-600 hover:text-green-800"
+              className="text-xs text-green-600 hover:text-green-800"
             >
               Manage keywords
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {newMatchedProjects.slice(0, 6).map((project) => {
-              const locationInfo = getLocationInfo(project);
-              return (
-                <Link
-                  key={project.id}
-                  to={`/projects/${project.id}`}
-                  className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <p className="font-medium text-sm">{project.title}</p>
-                    <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">New</span>
-                  </div>
-                  {locationInfo && (
-                    <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
-                  )}
-                  {project.description && (
-                    <p className="text-xs text-gray-500 line-clamp-2 mb-2">{project.description}</p>
-                  )}
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
-                      {project.status}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${classificationColors[project.classification]}`}>
-                      {project.classification.replace('_', ' ')}
-                    </span>
-                  </div>
-                  {project.matched_keywords && project.matched_keywords.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {project.matched_keywords.slice(0, 3).map((kw, idx) => (
-                        <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                          {kw}
-                        </span>
-                      ))}
-                      {project.matched_keywords.length > 3 && (
-                        <span className="text-xs text-gray-400">+{project.matched_keywords.length - 3} more</span>
-                      )}
-                    </div>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-          {newMatchedProjects.length > 6 && (
-            <div className="text-center mt-4">
-              <Link to="/projects" className="text-sm text-green-600 hover:text-green-800">
-                View all {newMatchedProjects.length} matching projects
+          {newMatchedProjects.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-green-600 text-sm mb-2">No new matching projects</p>
+              <Link to="/settings" className="text-xs text-green-500 hover:text-green-700">
+                Add keywords to track projects of interest
               </Link>
             </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {newMatchedProjects.slice(0, 4).map((project) => {
+                  const locationInfo = getLocationInfo(project);
+                  return (
+                    <Link
+                      key={project.id}
+                      to={`/projects/${project.id}`}
+                      className="block bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <p className="font-medium text-sm">{project.title}</p>
+                        <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">New</span>
+                      </div>
+                      {locationInfo && (
+                        <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
+                      )}
+                      <div className="flex flex-wrap gap-1">
+                        <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
+                          {project.status}
+                        </span>
+                        {project.matched_keywords && project.matched_keywords.slice(0, 2).map((kw, idx) => (
+                          <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+              {newMatchedProjects.length > 4 && (
+                <div className="text-center mt-3">
+                  <Link to="/projects" className="text-sm text-green-600 hover:text-green-800">
+                    View all {newMatchedProjects.length} matching projects
+                  </Link>
+                </div>
+              )}
+            </>
           )}
         </div>
-      )}
 
-      {/* Upcoming Deadlines */}
-      <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h2 className="text-lg font-semibold text-orange-800">Upcoming Deadlines</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-orange-700">Show deadlines within:</label>
+        {/* Upcoming Deadlines */}
+        <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h2 className="text-lg font-semibold text-orange-800">Upcoming Deadlines</h2>
+            </div>
             <select
               value={deadlineWeeks}
               onChange={(e) => handleDeadlineWeeksChange(Number(e.target.value))}
@@ -361,52 +357,49 @@ export default function Dashboard() {
               <option value={12}>12 weeks</option>
             </select>
           </div>
+          {upcomingDeadlineProjects.length === 0 ? (
+            <p className="text-center text-orange-600 py-6">
+              No deadlines within {deadlineWeeks} week{deadlineWeeks !== 1 ? 's' : ''}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {upcomingDeadlineProjects.slice(0, 4).map((project) => {
+                const locationInfo = getLocationInfo(project);
+                const daysUntil = Math.ceil(
+                  (new Date(project.end_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                );
+                const isUrgent = daysUntil <= 7;
+                return (
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="block bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <p className="font-medium text-sm">{project.title}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        isUrgent ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
+                      </span>
+                    </div>
+                    {locationInfo && (
+                      <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1">
+                      <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
+                        {project.status}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(project.end_date!).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
-        {upcomingDeadlineProjects.length === 0 ? (
-          <p className="text-center text-orange-600 py-4">
-            No upcoming deadlines within {deadlineWeeks} week{deadlineWeeks !== 1 ? 's' : ''} for your projects
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {upcomingDeadlineProjects.map((project) => {
-              const locationInfo = getLocationInfo(project);
-              const daysUntil = Math.ceil(
-                (new Date(project.end_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-              );
-              const isUrgent = daysUntil <= 7;
-              return (
-                <Link
-                  key={project.id}
-                  to={`/projects/${project.id}`}
-                  className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <p className="font-medium text-sm">{project.title}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      isUrgent ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                    }`}>
-                      {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
-                    </span>
-                  </div>
-                  {locationInfo && (
-                    <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mb-2">
-                    Deadline: {new Date(project.end_date!).toLocaleDateString()}
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
-                      {project.status}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${classificationColors[project.classification]}`}>
-                      {project.classification.replace('_', ' ')}
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* Status Distribution */}
@@ -539,54 +532,6 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Projects Open to Participants */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Projects Open to Participants</h2>
-        {projects.filter(p => p.open_to_participants).length === 0 ? (
-          <p className="text-center text-gray-500 py-4">No projects currently open</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-            {projects
-              .filter(p => p.open_to_participants)
-              .slice(0, 6)
-              .map((project) => {
-                const locationInfo = getLocationInfo(project);
-                return (
-                  <Link
-                    key={project.id}
-                    to={`/projects/${project.id}`}
-                    className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <p className="font-medium">{project.title}</p>
-                      <span className="text-green-600 text-xs">Open</span>
-                    </div>
-                    {locationInfo && (
-                      <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
-                    )}
-                    <p className="text-sm text-gray-500 mb-2 line-clamp-2">{project.description}</p>
-                    <div className="flex gap-2">
-                      <span className={`text-xs px-2 py-1 rounded ${statusColors[project.status]}`}>
-                        {project.status}
-                      </span>
-                      <span className={`text-xs px-2 py-1 rounded ${classificationColors[project.classification]}`}>
-                        {project.classification.replace('_', ' ')}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-          </div>
-        )}
-        {projects.filter(p => p.open_to_participants).length > 6 && (
-          <div className="text-center mt-4">
-            <Link to="/projects" className="text-blue-600 hover:underline text-sm">
-              View all open projects
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );
