@@ -339,8 +339,8 @@ export const updateAlertPreferences = (data: { alert_frequency?: string; dashboa
 export const getMatchedProjects = (limit?: number, offset?: number) =>
   api.get<MatchedProject[]>('/keywords/matched-projects', { params: { limit, offset } });
 
-export const getNewMatchedProjects = () =>
-  api.get<MatchedProject[]>('/keywords/matched-projects/new');
+export const getNewMatchedProjects = (weeks?: number) =>
+  api.get<MatchedProject[]>('/keywords/matched-projects/new', { params: { weeks } });
 
 // Project Search
 export const searchProjects = (query: string, filters?: {

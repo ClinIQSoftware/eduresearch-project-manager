@@ -271,16 +271,17 @@ def get_matched_projects(
 
 @router.get("/matched-projects/new", response_model=List[MatchedProjectResponse])
 def get_new_matched_projects(
+    weeks: Optional[int] = Query(default=None, ge=1, le=52, description="Number of weeks to look back (overrides user preference)"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get new matched projects for dashboard (within user's configured week range)."""
-    # Get user's preferences
-    pref = db.query(UserAlertPreference).filter(
-        UserAlertPreference.user_id == current_user.id
-    ).first()
-
-    weeks = pref.dashboard_new_weeks if pref else 2
+    """Get new matched projects for dashboard (within specified or user's configured week range)."""
+    # Use provided weeks or fall back to user's preferences
+    if weeks is None:
+        pref = db.query(UserAlertPreference).filter(
+            UserAlertPreference.user_id == current_user.id
+        ).first()
+        weeks = pref.dashboard_new_weeks if pref else 2
     cutoff_date = datetime.utcnow() - timedelta(weeks=weeks)
 
     # Get user's keywords
