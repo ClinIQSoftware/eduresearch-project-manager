@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getProjects, createProject, deleteProject, createJoinRequest, getInstitutionsPublic, getDepartmentsPublic, searchProjects, getMatchedProjects } from '../services/api';
+import { getProjects, createProject, deleteProject, createJoinRequest, getInstitutionsPublic, getDepartmentsPublic, searchProjects, getMatchedProjects, getUserKeywords, addKeyword, deleteKeyword } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCanEdit } from '../components/ui/PendingApprovalBanner';
-import type { ProjectWithLead, ProjectClassification, ProjectStatus, Institution, Department, MatchedProject } from '../types';
+import type { ProjectWithLead, ProjectClassification, ProjectStatus, Institution, Department, MatchedProject, UserKeyword } from '../types';
 
 const classificationColors: Record<ProjectClassification, string> = {
   education: 'bg-purple-100 text-purple-800',
@@ -50,6 +50,11 @@ export default function Projects() {
   // Matched projects state (based on user's keywords)
   const [matchedProjects, setMatchedProjects] = useState<MatchedProject[]>([]);
   const [showMatchedSection, setShowMatchedSection] = useState(true);
+
+  // User keywords state
+  const [userKeywords, setUserKeywords] = useState<UserKeyword[]>([]);
+  const [newKeyword, setNewKeyword] = useState('');
+  const [addingKeyword, setAddingKeyword] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -73,9 +78,62 @@ export default function Projects() {
     // Load all institutions and departments for filters
     getInstitutionsPublic().then(res => setInstitutions(res.data)).catch(console.error);
     getDepartmentsPublic().then(res => setDepartments(res.data)).catch(console.error);
-    // Load matched projects based on user's keywords
-    getMatchedProjects(10).then(res => setMatchedProjects(res.data)).catch(console.error);
+    // Load user's keywords and matched projects
+    loadKeywordsAndMatches();
   }, []);
+
+  async function loadKeywordsAndMatches() {
+    try {
+      const [keywordsRes, matchedRes] = await Promise.all([
+        getUserKeywords(),
+        getMatchedProjects(10)
+      ]);
+      setUserKeywords(keywordsRes.data.keywords);
+      setMatchedProjects(matchedRes.data);
+    } catch (err) {
+      console.error('Error loading keywords/matches:', err);
+    }
+  }
+
+  async function handleAddKeyword(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = newKeyword.trim();
+    if (!trimmed || addingKeyword) return;
+
+    if (userKeywords.length >= 20) {
+      alert('Maximum of 20 keywords allowed');
+      return;
+    }
+
+    if (userKeywords.some(k => k.keyword.toLowerCase() === trimmed.toLowerCase())) {
+      alert('Keyword already exists');
+      return;
+    }
+
+    setAddingKeyword(true);
+    try {
+      const res = await addKeyword(trimmed);
+      setUserKeywords([res.data, ...userKeywords]);
+      setNewKeyword('');
+      // Reload matched projects with new keyword
+      getMatchedProjects(10).then(res => setMatchedProjects(res.data)).catch(console.error);
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to add keyword');
+    } finally {
+      setAddingKeyword(false);
+    }
+  }
+
+  async function handleDeleteKeyword(keywordId: number) {
+    try {
+      await deleteKeyword(keywordId);
+      setUserKeywords(userKeywords.filter(k => k.id !== keywordId));
+      // Reload matched projects
+      getMatchedProjects(10).then(res => setMatchedProjects(res.data)).catch(console.error);
+    } catch (err) {
+      console.error('Error deleting keyword:', err);
+    }
+  }
 
   useEffect(() => {
     fetchProjects();
@@ -278,29 +336,87 @@ export default function Projects() {
       )}
 
       {/* Studies Matching Your Interests */}
-      {matchedProjects.length > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg">
-          <button
-            onClick={() => setShowMatchedSection(!showMatchedSection)}
-            className="w-full p-4 flex justify-between items-center text-left"
+      <div className="bg-green-50 border border-green-200 rounded-lg">
+        <button
+          onClick={() => setShowMatchedSection(!showMatchedSection)}
+          className="w-full p-4 flex justify-between items-center text-left"
+        >
+          <div>
+            <h2 className="font-semibold text-green-800">
+              Studies Matching Your Interests {matchedProjects.length > 0 && `(${matchedProjects.length})`}
+            </h2>
+            <p className="text-xs text-green-600 mt-1">
+              {userKeywords.length > 0
+                ? `Tracking ${userKeywords.length} keyword${userKeywords.length !== 1 ? 's' : ''}`
+                : 'Add keywords to track studies of interest'}
+            </p>
+          </div>
+          <svg
+            className={`w-5 h-5 text-green-600 transition-transform ${showMatchedSection ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <div>
-              <h2 className="font-semibold text-green-800">
-                Studies Matching Your Interests ({matchedProjects.length})
-              </h2>
-              <p className="text-xs text-green-600 mt-1">Based on your saved keywords</p>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showMatchedSection && (
+          <div className="px-4 pb-4 space-y-4">
+            {/* Keywords Management */}
+            <div className="bg-white rounded-lg p-3 border border-green-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Your Keywords</span>
+                <span className="text-xs text-gray-400">{userKeywords.length}/20</span>
+              </div>
+
+              {/* Add Keyword Form */}
+              <form onSubmit={handleAddKeyword} className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={newKeyword}
+                  onChange={(e) => setNewKeyword(e.target.value)}
+                  placeholder="Add keyword (e.g., clinical trials)"
+                  maxLength={100}
+                  className="flex-1 px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  disabled={addingKeyword || userKeywords.length >= 20}
+                />
+                <button
+                  type="submit"
+                  disabled={addingKeyword || !newKeyword.trim() || userKeywords.length >= 20}
+                  className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {addingKeyword ? '...' : 'Add'}
+                </button>
+              </form>
+
+              {/* Keywords Tags */}
+              {userKeywords.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">No keywords yet. Add keywords above to track matching studies.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {userKeywords.map((kw) => (
+                    <span
+                      key={kw.id}
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs"
+                    >
+                      {kw.keyword}
+                      <button
+                        onClick={() => handleDeleteKeyword(kw.id)}
+                        className="text-green-600 hover:text-green-800 hover:bg-green-200 rounded-full p-0.5"
+                        title="Remove keyword"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-            <svg
-              className={`w-5 h-5 text-green-600 transition-transform ${showMatchedSection ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {showMatchedSection && (
-            <div className="px-4 pb-4">
+
+            {/* Matched Projects */}
+            {matchedProjects.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {matchedProjects.map((project) => (
                   <Link
@@ -332,16 +448,21 @@ export default function Projects() {
                   </Link>
                 ))}
               </div>
+            ) : userKeywords.length > 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No projects match your keywords yet.</p>
+            ) : null}
+
+            <div className="text-right">
               <Link
                 to="/settings"
-                className="inline-block mt-3 text-sm text-green-600 hover:text-green-800"
+                className="text-xs text-green-600 hover:text-green-800"
               >
-                Manage keywords in Settings
+                More options in Settings
               </Link>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* Filters - scrollable on mobile */}
       <div className="overflow-x-auto pb-2">
