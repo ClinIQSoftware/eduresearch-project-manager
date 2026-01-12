@@ -195,6 +195,7 @@ export default function ProjectDetailPage() {
         status: editData.status,
         open_to_participants: editData.open_to_participants,
         start_date: editData.start_date ?? undefined,
+        end_date: editData.end_date ?? undefined,
         color: editData.color,
         institution_id: editData.institution_id ?? null,
         department_id: editData.department_id ?? null,
@@ -480,6 +481,26 @@ export default function ProjectDetailPage() {
                 </select>
               </div>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={editData.start_date || ''}
+                  onChange={(e) => setEditData({ ...editData, start_date: e.target.value || undefined })}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Deadline</label>
+                <input
+                  type="date"
+                  value={editData.end_date || ''}
+                  onChange={(e) => setEditData({ ...editData, end_date: e.target.value || undefined })}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+            </div>
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -536,6 +557,12 @@ export default function ProjectDetailPage() {
                 <p className="text-sm text-gray-500">Start Date</p>
                 <p className="font-medium">
                   {project.start_date ? new Date(project.start_date).toLocaleDateString() : 'Not set'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Deadline</p>
+                <p className="font-medium">
+                  {project.end_date ? new Date(project.end_date).toLocaleDateString() : 'Not set'}
                 </p>
               </div>
             </div>

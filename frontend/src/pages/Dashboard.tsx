@@ -250,7 +250,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* New Studies Matching Your Interests */}
+      {/* New Projects Matching Your Interests */}
       {newMatchedProjects.length > 0 && (
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
@@ -258,7 +258,7 @@ export default function Dashboard() {
               <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
-              <h2 className="text-lg font-semibold text-green-800">New Studies Matching Your Interests</h2>
+              <h2 className="text-lg font-semibold text-green-800">New Projects Matching Your Interests</h2>
             </div>
             <Link
               to="/settings"

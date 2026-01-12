@@ -101,6 +101,7 @@ export interface Project {
   status: ProjectStatus;
   open_to_participants: boolean;
   start_date: string | null;
+  end_date: string | null;  // Deadline/target completion date
   last_status_change: string | null;
   institution_id: number | null;
   department_id: number | null;

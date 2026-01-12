@@ -62,6 +62,7 @@ export default function Projects() {
     status: 'preparation' as ProjectStatus,
     open_to_participants: true,
     start_date: '',
+    end_date: '',
     color: '#3B82F6',
     institution_id: user?.institution_id || null as number | null,
     department_id: user?.department_id || null as number | null,
@@ -187,6 +188,7 @@ export default function Projects() {
       await createProject({
         ...formData,
         start_date: formData.start_date || undefined,
+        end_date: formData.end_date || undefined,
         institution_id: formData.institution_id || undefined,
         department_id: formData.department_id || undefined,
       });
@@ -198,6 +200,7 @@ export default function Projects() {
         status: 'preparation',
         open_to_participants: true,
         start_date: '',
+        end_date: '',
         color: '#3B82F6',
         institution_id: user?.institution_id || null,
         department_id: user?.department_id || null,
@@ -343,12 +346,12 @@ export default function Projects() {
         >
           <div>
             <h2 className="font-semibold text-green-800">
-              Studies Matching Your Interests {matchedProjects.length > 0 && `(${matchedProjects.length})`}
+              Projects Matching Your Interests {matchedProjects.length > 0 && `(${matchedProjects.length})`}
             </h2>
             <p className="text-xs text-green-600 mt-1">
               {userKeywords.length > 0
                 ? `Tracking ${userKeywords.length} keyword${userKeywords.length !== 1 ? 's' : ''}`
-                : 'Add keywords to track studies of interest'}
+                : 'Add keywords to track projects of interest'}
             </p>
           </div>
           <svg
@@ -391,7 +394,7 @@ export default function Projects() {
 
               {/* Keywords Tags */}
               {userKeywords.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">No keywords yet. Add keywords above to track matching studies.</p>
+                <p className="text-xs text-gray-400 italic">No keywords yet. Add keywords above to track matching projects.</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {userKeywords.map((kw) => (
@@ -579,6 +582,7 @@ export default function Projects() {
 
                   <div className="text-xs text-gray-400">
                     {project.start_date && <p>Started: {new Date(project.start_date).toLocaleDateString()}</p>}
+                    {project.end_date && <p>Deadline: {new Date(project.end_date).toLocaleDateString()}</p>}
                     {project.last_status_change && (
                       <p>Last update: {new Date(project.last_status_change).toLocaleDateString()}</p>
                     )}
@@ -708,16 +712,25 @@ export default function Projects() {
                     className="w-full border rounded-lg px-3 py-2"
                   />
                 </div>
-                <div className="flex items-center sm:pt-6">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Deadline</label>
                   <input
-                    type="checkbox"
-                    id="open_to_participants"
-                    checked={formData.open_to_participants}
-                    onChange={(e) => setFormData({ ...formData, open_to_participants: e.target.checked })}
-                    className="mr-2 w-5 h-5"
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
                   />
-                  <label htmlFor="open_to_participants" className="text-sm">Open to participants</label>
                 </div>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="open_to_participants"
+                  checked={formData.open_to_participants}
+                  onChange={(e) => setFormData({ ...formData, open_to_participants: e.target.checked })}
+                  className="mr-2 w-5 h-5"
+                />
+                <label htmlFor="open_to_participants" className="text-sm">Open to participants</label>
               </div>
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
                 <button

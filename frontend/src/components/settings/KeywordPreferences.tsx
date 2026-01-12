@@ -126,7 +126,7 @@ export default function KeywordPreferences() {
       <div>
         <h2 className="text-lg font-semibold mb-2">Topics of Interest</h2>
         <p className="text-sm text-gray-600 mb-4">
-          Add keywords to track studies that match your interests. You'll see matching projects on your dashboard and can receive email alerts.
+          Add keywords to track projects that match your interests. You'll see matching projects on your dashboard and can receive email alerts.
         </p>
       </div>
 
@@ -171,7 +171,7 @@ export default function KeywordPreferences() {
 
         {keywords.length === 0 ? (
           <p className="text-gray-500 text-sm italic py-4 text-center border rounded-lg bg-gray-50">
-            No keywords added yet. Add keywords above to track matching studies.
+            No keywords added yet. Add keywords above to track matching projects.
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">

@@ -15,6 +15,7 @@ class ProjectBase(BaseModel):
     status: ProjectStatus = ProjectStatus.preparation
     open_to_participants: bool = True
     start_date: Optional[date] = None
+    end_date: Optional[date] = None  # Deadline/target completion date
 
 
 class ProjectCreate(ProjectBase):
@@ -30,6 +31,7 @@ class ProjectUpdate(BaseModel):
     status: Optional[ProjectStatus] = None
     open_to_participants: Optional[bool] = None
     start_date: Optional[date] = None
+    end_date: Optional[date] = None
     institution_id: Optional[int] = None
     department_id: Optional[int] = None
 

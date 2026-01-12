@@ -116,6 +116,7 @@ export const createProject = (data: {
   status?: ProjectStatus;
   open_to_participants?: boolean;
   start_date?: string;
+  end_date?: string;
   color?: string;
   institution_id?: number;
   department_id?: number;
@@ -128,6 +129,7 @@ export const updateProject = (id: number, data: {
   status?: ProjectStatus;
   open_to_participants?: boolean;
   start_date?: string;
+  end_date?: string;
   color?: string;
   institution_id?: number | null;
   department_id?: number | null;
