@@ -107,6 +107,9 @@ export const getProjects = (params?: {
 
 export const getMyProjects = () => api.get<ProjectWithLead[]>('/projects/my-projects');
 
+export const getUpcomingDeadlines = (weeks?: number) =>
+  api.get<ProjectWithLead[]>('/projects/upcoming-deadlines', { params: { weeks } });
+
 export const getProject = (id: number) => api.get<ProjectDetail>(`/projects/${id}`);
 
 export const createProject = (data: {

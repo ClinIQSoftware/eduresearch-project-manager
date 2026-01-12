@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getProjects, getMyProjects, getInstitutions, getDepartments, getNewMatchedProjects } from '../services/api';
+import { getProjects, getMyProjects, getInstitutions, getDepartments, getNewMatchedProjects, getUpcomingDeadlines } from '../services/api';
 import { DashboardTabs, type DashboardView } from '../components/dashboard/DashboardTabs';
 import { useAuth } from '../contexts/AuthContext';
 import type { ProjectWithLead, Institution, Department, MatchedProject } from '../types';
@@ -8,6 +8,7 @@ import type { ProjectWithLead, Institution, Department, MatchedProject } from '.
 const VIEW_STORAGE_KEY = 'dashboardView';
 const INST_STORAGE_KEY = 'dashboardInstitution';
 const DEPT_STORAGE_KEY = 'dashboardDepartment';
+const DEADLINE_WEEKS_KEY = 'dashboardDeadlineWeeks';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -15,6 +16,11 @@ export default function Dashboard() {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [newMatchedProjects, setNewMatchedProjects] = useState<MatchedProject[]>([]);
+  const [upcomingDeadlineProjects, setUpcomingDeadlineProjects] = useState<ProjectWithLead[]>([]);
+  const [deadlineWeeks, setDeadlineWeeks] = useState<number>(() => {
+    const saved = localStorage.getItem(DEADLINE_WEEKS_KEY);
+    return saved ? Number(saved) : 2;
+  });
   const [selectedInstId, setSelectedInstId] = useState<string>(() => {
     return localStorage.getItem(INST_STORAGE_KEY) || '';
   });
@@ -45,6 +51,18 @@ export default function Dashboard() {
       .then((res) => setNewMatchedProjects(res.data))
       .catch((err) => console.error('Error fetching matched projects:', err));
   }, []);
+
+  // Fetch projects with upcoming deadlines
+  useEffect(() => {
+    getUpcomingDeadlines(deadlineWeeks)
+      .then((res) => setUpcomingDeadlineProjects(res.data))
+      .catch((err) => console.error('Error fetching upcoming deadlines:', err));
+  }, [deadlineWeeks]);
+
+  const handleDeadlineWeeksChange = (weeks: number) => {
+    setDeadlineWeeks(weeks);
+    localStorage.setItem(DEADLINE_WEEKS_KEY, String(weeks));
+  };
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -319,6 +337,77 @@ export default function Dashboard() {
           )}
         </div>
       )}
+
+      {/* Upcoming Deadlines */}
+      <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h2 className="text-lg font-semibold text-orange-800">Upcoming Deadlines</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-orange-700">Show deadlines within:</label>
+            <select
+              value={deadlineWeeks}
+              onChange={(e) => handleDeadlineWeeksChange(Number(e.target.value))}
+              className="border border-orange-300 rounded-lg px-2 py-1 text-sm bg-white"
+            >
+              <option value={1}>1 week</option>
+              <option value={2}>2 weeks</option>
+              <option value={4}>4 weeks</option>
+              <option value={8}>8 weeks</option>
+              <option value={12}>12 weeks</option>
+            </select>
+          </div>
+        </div>
+        {upcomingDeadlineProjects.length === 0 ? (
+          <p className="text-center text-orange-600 py-4">
+            No upcoming deadlines within {deadlineWeeks} week{deadlineWeeks !== 1 ? 's' : ''} for your projects
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {upcomingDeadlineProjects.map((project) => {
+              const locationInfo = getLocationInfo(project);
+              const daysUntil = Math.ceil(
+                (new Date(project.end_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+              );
+              const isUrgent = daysUntil <= 7;
+              return (
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}`}
+                  className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="font-medium text-sm">{project.title}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      isUrgent ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                    }`}>
+                      {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
+                    </span>
+                  </div>
+                  {locationInfo && (
+                    <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mb-2">
+                    Deadline: {new Date(project.end_date!).toLocaleDateString()}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
+                      {project.status}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${classificationColors[project.classification]}`}>
+                      {project.classification.replace('_', ' ')}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Status Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
