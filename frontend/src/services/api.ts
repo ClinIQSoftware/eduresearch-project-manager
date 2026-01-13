@@ -110,6 +110,9 @@ export const getMyProjects = () => api.get<ProjectWithLead[]>('/projects/my-proj
 export const getUpcomingDeadlines = (weeks?: number) =>
   api.get<ProjectWithLead[]>('/projects/upcoming-deadlines', { params: { weeks } });
 
+export const getUpcomingMeetings = (weeks?: number) =>
+  api.get<ProjectWithLead[]>('/projects/upcoming-meetings', { params: { weeks } });
+
 export const getProject = (id: number) => api.get<ProjectDetail>(`/projects/${id}`);
 
 export const createProject = (data: {
@@ -120,6 +123,7 @@ export const createProject = (data: {
   open_to_participants?: boolean;
   start_date?: string;
   end_date?: string;
+  next_meeting_date?: string;
   color?: string;
   institution_id?: number;
   department_id?: number;
@@ -133,6 +137,7 @@ export const updateProject = (id: number, data: {
   open_to_participants?: boolean;
   start_date?: string;
   end_date?: string;
+  next_meeting_date?: string | null;
   color?: string;
   institution_id?: number | null;
   department_id?: number | null;

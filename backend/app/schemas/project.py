@@ -16,6 +16,7 @@ class ProjectBase(BaseModel):
     open_to_participants: bool = True
     start_date: Optional[date] = None
     end_date: Optional[date] = None  # Deadline/target completion date
+    next_meeting_date: Optional[date] = None  # Next project discussion meeting
 
 
 class ProjectCreate(ProjectBase):
@@ -32,6 +33,7 @@ class ProjectUpdate(BaseModel):
     open_to_participants: Optional[bool] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    next_meeting_date: Optional[date] = None
     institution_id: Optional[int] = None
     department_id: Optional[int] = None
 

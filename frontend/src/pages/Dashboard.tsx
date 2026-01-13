@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getProjects, getMyProjects, getInstitutions, getDepartments, getNewMatchedProjects, getUpcomingDeadlines } from '../services/api';
+import { getProjects, getMyProjects, getInstitutions, getDepartments, getNewMatchedProjects, getUpcomingDeadlines, getUpcomingMeetings } from '../services/api';
 import { DashboardTabs, type DashboardView } from '../components/dashboard/DashboardTabs';
 import { useAuth } from '../contexts/AuthContext';
 import type { ProjectWithLead, Institution, Department, MatchedProject } from '../types';
@@ -10,6 +10,7 @@ const INST_STORAGE_KEY = 'dashboardInstitution';
 const DEPT_STORAGE_KEY = 'dashboardDepartment';
 const DEADLINE_WEEKS_KEY = 'dashboardDeadlineWeeks';
 const INTERESTS_WEEKS_KEY = 'dashboardInterestsWeeks';
+const MEETINGS_WEEKS_KEY = 'dashboardMeetingsWeeks';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -18,12 +19,17 @@ export default function Dashboard() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [newMatchedProjects, setNewMatchedProjects] = useState<MatchedProject[]>([]);
   const [upcomingDeadlineProjects, setUpcomingDeadlineProjects] = useState<ProjectWithLead[]>([]);
+  const [upcomingMeetingProjects, setUpcomingMeetingProjects] = useState<ProjectWithLead[]>([]);
   const [deadlineWeeks, setDeadlineWeeks] = useState<number>(() => {
     const saved = localStorage.getItem(DEADLINE_WEEKS_KEY);
     return saved ? Number(saved) : 2;
   });
   const [interestsWeeks, setInterestsWeeks] = useState<number>(() => {
     const saved = localStorage.getItem(INTERESTS_WEEKS_KEY);
+    return saved ? Number(saved) : 2;
+  });
+  const [meetingsWeeks, setMeetingsWeeks] = useState<number>(() => {
+    const saved = localStorage.getItem(MEETINGS_WEEKS_KEY);
     return saved ? Number(saved) : 2;
   });
   const [selectedInstId, setSelectedInstId] = useState<string>(() => {
@@ -64,6 +70,13 @@ export default function Dashboard() {
       .catch((err) => console.error('Error fetching upcoming deadlines:', err));
   }, [deadlineWeeks]);
 
+  // Fetch projects with upcoming meetings
+  useEffect(() => {
+    getUpcomingMeetings(meetingsWeeks)
+      .then((res) => setUpcomingMeetingProjects(res.data))
+      .catch((err) => console.error('Error fetching upcoming meetings:', err));
+  }, [meetingsWeeks]);
+
   const handleDeadlineWeeksChange = (weeks: number) => {
     setDeadlineWeeks(weeks);
     localStorage.setItem(DEADLINE_WEEKS_KEY, String(weeks));
@@ -72,6 +85,11 @@ export default function Dashboard() {
   const handleInterestsWeeksChange = (weeks: number) => {
     setInterestsWeeks(weeks);
     localStorage.setItem(INTERESTS_WEEKS_KEY, String(weeks));
+  };
+
+  const handleMeetingsWeeksChange = (weeks: number) => {
+    setMeetingsWeeks(weeks);
+    localStorage.setItem(MEETINGS_WEEKS_KEY, String(weeks));
   };
 
   const fetchProjects = useCallback(async () => {
@@ -415,6 +433,71 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Upcoming Meetings */}
+      <div className="bg-white border border-gray-200 rounded-lg shadow p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h2 className="text-lg font-semibold text-gray-800">Upcoming Meetings</h2>
+          </div>
+          <select
+            value={meetingsWeeks}
+            onChange={(e) => handleMeetingsWeeksChange(Number(e.target.value))}
+            className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white"
+          >
+            <option value={1}>1 week</option>
+            <option value={2}>2 weeks</option>
+            <option value={4}>4 weeks</option>
+            <option value={8}>8 weeks</option>
+            <option value={12}>12 weeks</option>
+          </select>
+        </div>
+        {upcomingMeetingProjects.length === 0 ? (
+          <p className="text-center text-gray-500 py-6">
+            No meetings within {meetingsWeeks} week{meetingsWeeks !== 1 ? 's' : ''}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {upcomingMeetingProjects.slice(0, 6).map((project) => {
+              const locationInfo = getLocationInfo(project);
+              const daysUntil = Math.ceil(
+                (new Date(project.next_meeting_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+              );
+              const isUrgent = daysUntil <= 3;
+              return (
+                <Link
+                  key={project.id}
+                  to={`/projects/${project.id}`}
+                  className="block bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="font-medium text-sm">{project.title}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      isUrgent ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
+                    </span>
+                  </div>
+                  {locationInfo && (
+                    <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
+                  )}
+                  <div className="flex flex-wrap gap-1">
+                    <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
+                      {project.status}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(project.next_meeting_date!).toLocaleDateString()}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Status Distribution */}

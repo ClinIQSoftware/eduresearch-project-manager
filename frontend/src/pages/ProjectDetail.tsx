@@ -196,6 +196,7 @@ export default function ProjectDetailPage() {
         open_to_participants: editData.open_to_participants,
         start_date: editData.start_date ?? undefined,
         end_date: editData.end_date ?? undefined,
+        next_meeting_date: editData.next_meeting_date ?? null,
         color: editData.color,
         institution_id: editData.institution_id ?? null,
         department_id: editData.department_id ?? null,
@@ -500,6 +501,15 @@ export default function ProjectDetailPage() {
                   className="w-full border rounded-lg px-3 py-2"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Next Meeting</label>
+                <input
+                  type="date"
+                  value={editData.next_meeting_date || ''}
+                  onChange={(e) => setEditData({ ...editData, next_meeting_date: e.target.value || undefined })}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
             </div>
             <div className="flex items-center">
               <input
@@ -563,6 +573,12 @@ export default function ProjectDetailPage() {
                 <p className="text-sm text-gray-500">Deadline</p>
                 <p className="font-medium">
                   {project.end_date ? new Date(project.end_date).toLocaleDateString() : 'Not set'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Next Meeting</p>
+                <p className="font-medium">
+                  {project.next_meeting_date ? new Date(project.next_meeting_date).toLocaleDateString() : 'Not set'}
                 </p>
               </div>
             </div>

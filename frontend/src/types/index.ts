@@ -102,6 +102,7 @@ export interface Project {
   open_to_participants: boolean;
   start_date: string | null;
   end_date: string | null;  // Deadline/target completion date
+  next_meeting_date: string | null;  // Next project discussion meeting
   last_status_change: string | null;
   institution_id: number | null;
   department_id: number | null;

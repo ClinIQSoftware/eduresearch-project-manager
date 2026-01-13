@@ -129,6 +129,44 @@ def get_upcoming_deadlines(
     return projects
 
 
+@router.get("/upcoming-meetings", response_model=List[ProjectWithLead])
+def get_upcoming_meetings(
+    weeks: int = Query(default=2, ge=1, le=52, description="Number of weeks to look ahead"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get projects with meetings within the specified number of weeks.
+
+    Returns projects where the user is a member and the next meeting is:
+    - Set (not null)
+    - Today or in the future
+    - Within the specified number of weeks
+
+    Sorted by meeting date (earliest first).
+    """
+    today = date.today()
+    end_date = today + timedelta(weeks=weeks)
+
+    # Get project IDs where user is a member
+    member_project_ids = db.query(ProjectMember.project_id).filter(
+        ProjectMember.user_id == current_user.id
+    ).subquery()
+
+    # Fetch projects with upcoming meetings
+    projects = db.query(Project).options(
+        joinedload(Project.lead),
+        joinedload(Project.institution),
+        joinedload(Project.department)
+    ).filter(
+        Project.id.in_(select(member_project_ids)),
+        Project.next_meeting_date.isnot(None),
+        Project.next_meeting_date >= today,
+        Project.next_meeting_date <= end_date
+    ).order_by(Project.next_meeting_date.asc()).all()
+
+    return projects
+
+
 @router.get("/search", response_model=List[ProjectWithLead])
 def search_projects(
     q: str = Query(..., min_length=1, max_length=200, description="Search query"),
