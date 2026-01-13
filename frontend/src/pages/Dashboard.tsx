@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { getProjects, getMyProjects, getInstitutions, getDepartments, getNewMatchedProjects, getUpcomingDeadlines, getUpcomingMeetings } from '../services/api';
 import { DashboardTabs, type DashboardView } from '../components/dashboard/DashboardTabs';
@@ -63,19 +63,23 @@ export default function Dashboard() {
       .catch((err) => console.error('Error fetching matched projects:', err));
   }, [interestsWeeks]);
 
-  // Fetch projects with upcoming deadlines
+  // Fetch projects with upcoming deadlines (only needed for personal view)
   useEffect(() => {
-    getUpcomingDeadlines(deadlineWeeks)
-      .then((res) => setUpcomingDeadlineProjects(res.data))
-      .catch((err) => console.error('Error fetching upcoming deadlines:', err));
-  }, [deadlineWeeks]);
+    if (activeView === 'personal') {
+      getUpcomingDeadlines(deadlineWeeks)
+        .then((res) => setUpcomingDeadlineProjects(res.data))
+        .catch((err) => console.error('Error fetching upcoming deadlines:', err));
+    }
+  }, [deadlineWeeks, activeView]);
 
-  // Fetch projects with upcoming meetings
+  // Fetch projects with upcoming meetings (only needed for personal view)
   useEffect(() => {
-    getUpcomingMeetings(meetingsWeeks)
-      .then((res) => setUpcomingMeetingProjects(res.data))
-      .catch((err) => console.error('Error fetching upcoming meetings:', err));
-  }, [meetingsWeeks]);
+    if (activeView === 'personal') {
+      getUpcomingMeetings(meetingsWeeks)
+        .then((res) => setUpcomingMeetingProjects(res.data))
+        .catch((err) => console.error('Error fetching upcoming meetings:', err));
+    }
+  }, [meetingsWeeks, activeView]);
 
   const handleDeadlineWeeksChange = (weeks: number) => {
     setDeadlineWeeks(weeks);
@@ -178,6 +182,33 @@ export default function Dashboard() {
         return 'Dashboard';
     }
   };
+
+  // Filter matched projects based on active view
+  const filteredMatchedProjects = useMemo(() => {
+    if (activeView === 'global' || activeView === 'personal') {
+      return newMatchedProjects;
+    }
+
+    if (activeView === 'department') {
+      const deptId = user?.is_superuser && selectedDeptId
+        ? Number(selectedDeptId)
+        : user?.department_id;
+      if (deptId) {
+        return newMatchedProjects.filter(p => p.department_id === deptId);
+      }
+    }
+
+    if (activeView === 'institution') {
+      const instId = user?.is_superuser && selectedInstId
+        ? Number(selectedInstId)
+        : user?.institution_id;
+      if (instId) {
+        return newMatchedProjects.filter(p => p.institution_id === instId);
+      }
+    }
+
+    return newMatchedProjects;
+  }, [newMatchedProjects, activeView, selectedDeptId, selectedInstId, user]);
 
   if (loading) {
     return <div className="text-center py-8">Loading...</div>;
@@ -296,211 +327,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* New Projects Matching Interests & Upcoming Deadlines - Side by Side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* New Projects Matching Your Interests */}
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-              <h2 className="text-lg font-semibold text-green-800">Matching Your Interests</h2>
-            </div>
-            <select
-              value={interestsWeeks}
-              onChange={(e) => handleInterestsWeeksChange(Number(e.target.value))}
-              className="border border-green-300 rounded-lg px-2 py-1 text-sm bg-white"
-            >
-              <option value={1}>1 week</option>
-              <option value={2}>2 weeks</option>
-              <option value={4}>4 weeks</option>
-              <option value={8}>8 weeks</option>
-              <option value={12}>12 weeks</option>
-            </select>
-          </div>
-          {newMatchedProjects.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-green-600 text-sm mb-2">No matching projects in last {interestsWeeks} week{interestsWeeks !== 1 ? 's' : ''}</p>
-              <Link to="/settings" className="text-xs text-green-500 hover:text-green-700">
-                Add keywords to track projects of interest
-              </Link>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                {newMatchedProjects.slice(0, 4).map((project) => {
-                  const locationInfo = getLocationInfo(project);
-                  return (
-                    <Link
-                      key={project.id}
-                      to={`/projects/${project.id}`}
-                      className="block bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <p className="font-medium text-sm">{project.title}</p>
-                        <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">New</span>
-                      </div>
-                      {locationInfo && (
-                        <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
-                      )}
-                      <div className="flex flex-wrap gap-1">
-                        <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
-                          {project.status}
-                        </span>
-                        {project.matched_keywords && project.matched_keywords.slice(0, 2).map((kw, idx) => (
-                          <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                            {kw}
-                          </span>
-                        ))}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-              {newMatchedProjects.length > 4 && (
-                <div className="text-center mt-3">
-                  <Link to="/projects" className="text-sm text-green-600 hover:text-green-800">
-                    View all {newMatchedProjects.length} matching projects
-                  </Link>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Upcoming Deadlines */}
-        <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h2 className="text-lg font-semibold text-orange-800">Upcoming Deadlines</h2>
-            </div>
-            <select
-              value={deadlineWeeks}
-              onChange={(e) => handleDeadlineWeeksChange(Number(e.target.value))}
-              className="border border-orange-300 rounded-lg px-2 py-1 text-sm bg-white"
-            >
-              <option value={1}>1 week</option>
-              <option value={2}>2 weeks</option>
-              <option value={4}>4 weeks</option>
-              <option value={8}>8 weeks</option>
-              <option value={12}>12 weeks</option>
-            </select>
-          </div>
-          {upcomingDeadlineProjects.length === 0 ? (
-            <p className="text-center text-orange-600 py-6">
-              No deadlines within {deadlineWeeks} week{deadlineWeeks !== 1 ? 's' : ''}
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {upcomingDeadlineProjects.slice(0, 4).map((project) => {
-                const locationInfo = getLocationInfo(project);
-                const daysUntil = Math.ceil(
-                  (new Date(project.end_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-                );
-                const isUrgent = daysUntil <= 7;
-                return (
-                  <Link
-                    key={project.id}
-                    to={`/projects/${project.id}`}
-                    className="block bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <p className="font-medium text-sm">{project.title}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        isUrgent ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
-                      </span>
-                    </div>
-                    {locationInfo && (
-                      <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
-                    )}
-                    <div className="flex flex-wrap gap-1">
-                      <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
-                        {project.status}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(project.end_date!).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Upcoming Meetings */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <h2 className="text-lg font-semibold text-gray-800">Upcoming Meetings</h2>
-          </div>
-          <select
-            value={meetingsWeeks}
-            onChange={(e) => handleMeetingsWeeksChange(Number(e.target.value))}
-            className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white"
-          >
-            <option value={1}>1 week</option>
-            <option value={2}>2 weeks</option>
-            <option value={4}>4 weeks</option>
-            <option value={8}>8 weeks</option>
-            <option value={12}>12 weeks</option>
-          </select>
-        </div>
-        {upcomingMeetingProjects.length === 0 ? (
-          <p className="text-center text-gray-500 py-6">
-            No meetings within {meetingsWeeks} week{meetingsWeeks !== 1 ? 's' : ''}
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {upcomingMeetingProjects.slice(0, 6).map((project) => {
-              const locationInfo = getLocationInfo(project);
-              const daysUntil = Math.ceil(
-                (new Date(project.next_meeting_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-              );
-              const isUrgent = daysUntil <= 3;
-              return (
-                <Link
-                  key={project.id}
-                  to={`/projects/${project.id}`}
-                  className="block bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <p className="font-medium text-sm">{project.title}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      isUrgent ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
-                    </span>
-                  </div>
-                  {locationInfo && (
-                    <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
-                  )}
-                  <div className="flex flex-wrap gap-1">
-                    <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
-                      {project.status}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(project.next_meeting_date!).toLocaleDateString()}
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Status Distribution */}
+      {/* Status Distribution - Right after counts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-4">Projects by Status</h2>
@@ -550,6 +377,212 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Matching Your Interests - Filtered by view */}
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+            <h2 className="text-lg font-semibold text-green-800">Matching Your Interests</h2>
+          </div>
+          <select
+            value={interestsWeeks}
+            onChange={(e) => handleInterestsWeeksChange(Number(e.target.value))}
+            className="border border-green-300 rounded-lg px-2 py-1 text-sm bg-white"
+          >
+            <option value={1}>1 week</option>
+            <option value={2}>2 weeks</option>
+            <option value={4}>4 weeks</option>
+            <option value={8}>8 weeks</option>
+            <option value={12}>12 weeks</option>
+          </select>
+        </div>
+        {filteredMatchedProjects.length === 0 ? (
+          <div className="text-center py-6">
+            <p className="text-green-600 text-sm mb-2">No matching projects in last {interestsWeeks} week{interestsWeeks !== 1 ? 's' : ''}</p>
+            <Link to="/settings" className="text-xs text-green-500 hover:text-green-700">
+              Add keywords to track projects of interest
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {filteredMatchedProjects.slice(0, 6).map((project) => {
+                const locationInfo = getLocationInfo(project);
+                return (
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="block bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <p className="font-medium text-sm">{project.title}</p>
+                      <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">New</span>
+                    </div>
+                    {locationInfo && (
+                      <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1">
+                      <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
+                        {project.status}
+                      </span>
+                      {project.matched_keywords && project.matched_keywords.slice(0, 2).map((kw, idx) => (
+                        <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            {filteredMatchedProjects.length > 6 && (
+              <div className="text-center mt-3">
+                <Link to="/projects" className="text-sm text-green-600 hover:text-green-800">
+                  View all {filteredMatchedProjects.length} matching projects
+                </Link>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Upcoming Deadlines & Meetings - Only in Personal tab */}
+      {activeView === 'personal' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Upcoming Deadlines */}
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h2 className="text-lg font-semibold text-orange-800">Upcoming Deadlines</h2>
+              </div>
+              <select
+                value={deadlineWeeks}
+                onChange={(e) => handleDeadlineWeeksChange(Number(e.target.value))}
+                className="border border-orange-300 rounded-lg px-2 py-1 text-sm bg-white"
+              >
+                <option value={1}>1 week</option>
+                <option value={2}>2 weeks</option>
+                <option value={4}>4 weeks</option>
+                <option value={8}>8 weeks</option>
+                <option value={12}>12 weeks</option>
+              </select>
+            </div>
+            {upcomingDeadlineProjects.length === 0 ? (
+              <p className="text-center text-orange-600 py-6">
+                No deadlines within {deadlineWeeks} week{deadlineWeeks !== 1 ? 's' : ''}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {upcomingDeadlineProjects.slice(0, 4).map((project) => {
+                  const locationInfo = getLocationInfo(project);
+                  const daysUntil = Math.ceil(
+                    (new Date(project.end_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                  );
+                  const isUrgent = daysUntil <= 7;
+                  return (
+                    <Link
+                      key={project.id}
+                      to={`/projects/${project.id}`}
+                      className="block bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <p className="font-medium text-sm">{project.title}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          isUrgent ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                        }`}>
+                          {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
+                        </span>
+                      </div>
+                      {locationInfo && (
+                        <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
+                      )}
+                      <div className="flex flex-wrap gap-1">
+                        <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
+                          {project.status}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(project.end_date!).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Upcoming Meetings */}
+          <div className="bg-white border border-gray-200 rounded-lg shadow p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <h2 className="text-lg font-semibold text-gray-800">Upcoming Meetings</h2>
+              </div>
+              <select
+                value={meetingsWeeks}
+                onChange={(e) => handleMeetingsWeeksChange(Number(e.target.value))}
+                className="border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white"
+              >
+                <option value={1}>1 week</option>
+                <option value={2}>2 weeks</option>
+                <option value={4}>4 weeks</option>
+                <option value={8}>8 weeks</option>
+                <option value={12}>12 weeks</option>
+              </select>
+            </div>
+            {upcomingMeetingProjects.length === 0 ? (
+              <p className="text-center text-gray-500 py-6">
+                No meetings within {meetingsWeeks} week{meetingsWeeks !== 1 ? 's' : ''}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {upcomingMeetingProjects.slice(0, 4).map((project) => {
+                  const locationInfo = getLocationInfo(project);
+                  const daysUntil = Math.ceil(
+                    (new Date(project.next_meeting_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                  );
+                  const isUrgent = daysUntil <= 3;
+                  return (
+                    <Link
+                      key={project.id}
+                      to={`/projects/${project.id}`}
+                      className="block bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <p className="font-medium text-sm">{project.title}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          isUrgent ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `${daysUntil} days`}
+                        </span>
+                      </div>
+                      {locationInfo && (
+                        <p className="text-xs text-gray-400 mb-1">{locationInfo}</p>
+                      )}
+                      <div className="flex flex-wrap gap-1">
+                        <span className={`text-xs px-2 py-0.5 rounded ${statusColors[project.status]}`}>
+                          {project.status}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(project.next_meeting_date!).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Recent Activity and Upcoming Projects */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
