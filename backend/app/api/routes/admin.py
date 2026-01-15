@@ -26,7 +26,7 @@ from app.schemas.system_settings import (
 )
 from app.dependencies import get_current_user, require_superuser, is_institution_admin, require_admin_access_check
 from app.services.auth import create_user, get_password_hash
-from app.services.email import email_service
+from app.services.email import email_service, get_email_service_from_db
 
 router = APIRouter()
 
@@ -748,13 +748,22 @@ def update_email_template(
 @router.post("/email-templates/test")
 async def send_test_email(
     request: TestEmailRequest,
-    background_tasks: BackgroundTasks,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Send a test email using a specific template."""
     require_admin_access_check(institution_id, current_user, db)
+
+    # Get email service configured with database settings
+    configured_email_service = get_email_service_from_db(db, institution_id)
+
+    # Check if email is actually configured
+    if not configured_email_service.smtp_user or not configured_email_service.smtp_password:
+        raise HTTPException(
+            status_code=400,
+            detail="Email settings not configured. Please configure SMTP settings first."
+        )
 
     # Get the template
     template = db.query(EmailTemplate).filter(
@@ -789,12 +798,18 @@ async def send_test_email(
         "task_link": "https://example.com/tasks/1"
     }
 
-    background_tasks.add_task(
-        email_service.send_templated_email,
+    # Send email directly (not in background) so we can report errors
+    success = await configured_email_service.send_templated_email(
         request.recipient_email,
         template.subject,
         template.body,
         test_context
     )
 
-    return {"message": f"Test email queued for {request.recipient_email}"}
+    if success:
+        return {"message": f"Test email sent successfully to {request.recipient_email}"}
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to send test email. Check SMTP settings and server logs."
+        )

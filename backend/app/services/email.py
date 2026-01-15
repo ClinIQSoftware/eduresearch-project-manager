@@ -490,5 +490,51 @@ EduResearch Project Manager
         return await self.send_email(to_email, subject, body, html_body)
 
 
-# Default email service instance
+# Default email service instance (uses environment variables)
 email_service = EmailService()
+
+
+def get_email_service_from_db(db, institution_id: int = None) -> EmailService:
+    """Get an EmailService configured with database settings.
+
+    Args:
+        db: Database session
+        institution_id: Optional institution ID to get institution-specific settings
+
+    Returns:
+        EmailService configured with database settings, or default if none found
+    """
+    from app.models.email_settings import EmailSettings
+
+    # Try institution-specific settings first
+    if institution_id:
+        settings = db.query(EmailSettings).filter(
+            EmailSettings.institution_id == institution_id
+        ).first()
+        if settings and settings.smtp_user and settings.smtp_password:
+            return EmailService(
+                smtp_host=settings.smtp_host,
+                smtp_port=settings.smtp_port,
+                smtp_user=settings.smtp_user,
+                smtp_password=settings.smtp_password,
+                from_email=settings.from_email,
+                from_name=settings.from_name
+            )
+
+    # Fall back to global settings
+    global_settings = db.query(EmailSettings).filter(
+        EmailSettings.institution_id.is_(None)
+    ).first()
+
+    if global_settings and global_settings.smtp_user and global_settings.smtp_password:
+        return EmailService(
+            smtp_host=global_settings.smtp_host,
+            smtp_port=global_settings.smtp_port,
+            smtp_user=global_settings.smtp_user,
+            smtp_password=global_settings.smtp_password,
+            from_email=global_settings.from_email,
+            from_name=global_settings.from_name
+        )
+
+    # Fall back to default (environment variables)
+    return email_service
