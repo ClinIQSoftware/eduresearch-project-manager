@@ -154,10 +154,10 @@ export const removeProjectMember = (projectId: number, userId: number) =>
 
 // Join Requests
 export const createJoinRequest = (projectId: number, message?: string) =>
-  api.post<JoinRequestWithUser>('/join-requests', { project_id: projectId, message });
+  api.post<JoinRequestWithUser>('/join-requests/', { project_id: projectId, message });
 
 export const getJoinRequests = (params?: { project_id?: number; status?: RequestStatus }) =>
-  api.get<JoinRequestWithUser[]>('/join-requests', { params });
+  api.get<JoinRequestWithUser[]>('/join-requests/', { params });
 
 export const respondToJoinRequest = (requestId: number, status: RequestStatus) =>
   api.put<JoinRequestWithUser>(`/join-requests/${requestId}`, { status });
