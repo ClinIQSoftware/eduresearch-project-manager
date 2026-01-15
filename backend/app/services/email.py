@@ -489,6 +489,136 @@ EduResearch Project Manager
 
         return await self.send_email(to_email, subject, body, html_body)
 
+    async def send_meeting_reminder(
+        self,
+        to_emails: List[str],
+        project_title: str,
+        meeting_date: str,
+        days_until: int,
+        project_id: int
+    ):
+        """Send meeting reminder email to all project members.
+
+        Args:
+            to_emails: List of member email addresses
+            project_title: Name of the project
+            meeting_date: Formatted meeting date string
+            days_until: Number of days until meeting
+            project_id: Project ID for linking
+        """
+        days_text = "tomorrow" if days_until == 1 else f"in {days_until} days"
+        subject = f"[EduResearch] Meeting Reminder: {project_title} - {days_text}"
+
+        body = f"""
+Hello,
+
+This is a reminder that the project "{project_title}" has a meeting scheduled {days_text}.
+
+Meeting Date: {meeting_date}
+
+Please make sure to prepare for the meeting and review any relevant materials.
+
+View project details: {settings.frontend_url}/projects/{project_id}
+
+Best regards,
+EduResearch Project Manager
+        """
+
+        html_body = f"""
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #1f2937;">Meeting Reminder</h2>
+    <p>This is a reminder that the project <strong>{project_title}</strong> has a meeting scheduled <strong>{days_text}</strong>.</p>
+
+    <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0;"><strong>Meeting Date:</strong> {meeting_date}</p>
+    </div>
+
+    <p>Please make sure to prepare for the meeting and review any relevant materials.</p>
+
+    <p>
+        <a href="{settings.frontend_url}/projects/{project_id}"
+           style="display: inline-block; background: #3B82F6; color: white; padding: 10px 20px;
+                  text-decoration: none; border-radius: 5px;">
+            View Project
+        </a>
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+    <p style="color: #9ca3af; font-size: 12px;">EduResearch Project Manager</p>
+</body>
+</html>
+        """
+
+        for email in to_emails:
+            await self.send_email(email, subject, body, html_body)
+
+    async def send_deadline_reminder(
+        self,
+        to_emails: List[str],
+        project_title: str,
+        deadline_date: str,
+        days_until: int,
+        project_id: int
+    ):
+        """Send deadline reminder email to all project members.
+
+        Args:
+            to_emails: List of member email addresses
+            project_title: Name of the project
+            deadline_date: Formatted deadline date string
+            days_until: Number of days until deadline
+            project_id: Project ID for linking
+        """
+        urgency = "urgent" if days_until <= 3 else ""
+        days_text = "tomorrow" if days_until == 1 else f"in {days_until} days"
+        subject = f"[EduResearch] {'URGENT ' if urgency else ''}Deadline Reminder: {project_title} - {days_text}"
+
+        body = f"""
+Hello,
+
+This is a reminder that the project "{project_title}" has a deadline approaching {days_text}.
+
+Deadline: {deadline_date}
+
+Please ensure all required work is completed before the deadline.
+
+View project details: {settings.frontend_url}/projects/{project_id}
+
+Best regards,
+EduResearch Project Manager
+        """
+
+        urgency_color = "#DC2626" if urgency else "#F59E0B"
+        html_body = f"""
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: {urgency_color};">{'⚠️ ' if urgency else ''}Deadline Reminder</h2>
+    <p>This is a reminder that the project <strong>{project_title}</strong> has a deadline approaching <strong>{days_text}</strong>.</p>
+
+    <div style="background: {'#FEF2F2' if urgency else '#FFFBEB'}; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {urgency_color};">
+        <p style="margin: 0;"><strong>Deadline:</strong> {deadline_date}</p>
+    </div>
+
+    <p>Please ensure all required work is completed before the deadline.</p>
+
+    <p>
+        <a href="{settings.frontend_url}/projects/{project_id}"
+           style="display: inline-block; background: #3B82F6; color: white; padding: 10px 20px;
+                  text-decoration: none; border-radius: 5px;">
+            View Project
+        </a>
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+    <p style="color: #9ca3af; font-size: 12px;">EduResearch Project Manager</p>
+</body>
+</html>
+        """
+
+        for email in to_emails:
+            await self.send_email(email, subject, body, html_body)
+
 
 # Default email service instance (uses environment variables)
 email_service = EmailService()

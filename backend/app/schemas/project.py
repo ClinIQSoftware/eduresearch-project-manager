@@ -17,6 +17,11 @@ class ProjectBase(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None  # Deadline/target completion date
     next_meeting_date: Optional[date] = None  # Next project discussion meeting
+    # Email reminder settings
+    meeting_reminder_enabled: bool = False
+    meeting_reminder_days: int = 1
+    deadline_reminder_enabled: bool = False
+    deadline_reminder_days: int = 7
 
 
 class ProjectCreate(ProjectBase):
@@ -36,6 +41,11 @@ class ProjectUpdate(BaseModel):
     next_meeting_date: Optional[date] = None
     institution_id: Optional[int] = None
     department_id: Optional[int] = None
+    # Email reminder settings
+    meeting_reminder_enabled: Optional[bool] = None
+    meeting_reminder_days: Optional[int] = None
+    deadline_reminder_enabled: Optional[bool] = None
+    deadline_reminder_days: Optional[int] = None
 
 
 class ProjectResponse(ProjectBase):

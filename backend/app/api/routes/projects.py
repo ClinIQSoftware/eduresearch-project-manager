@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_, select
 from typing import List, Optional
 from datetime import datetime, date, timedelta
+from pydantic import BaseModel
+import logging
 from app.database import get_db
 from app.models.project import Project, ProjectClassification, ProjectStatus
 from app.models.project_member import ProjectMember, MemberRole
@@ -14,7 +16,10 @@ from app.schemas.project import (
 from app.dependencies import (
     get_current_user, is_project_lead, is_project_member, count_project_leads
 )
-from app.services.email import email_service
+from app.services.email import email_service, get_email_service_from_db
+from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -503,3 +508,142 @@ def leave_project(
     db.commit()
 
     return {"message": "You have left the project"}
+
+
+# Cron job request model
+class SendRemindersRequest(BaseModel):
+    cron_secret: str
+
+
+@router.post("/send-reminders")
+async def send_project_reminders(
+    data: SendRemindersRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Cron-triggered endpoint to send project meeting and deadline reminders.
+    Should be called daily. Requires cron_secret for authentication.
+    """
+    # Validate cron secret
+    if not settings.cron_secret or data.cron_secret != settings.cron_secret:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid cron secret"
+        )
+
+    today = date.today()
+    meeting_reminders_sent = 0
+    deadline_reminders_sent = 0
+    errors = []
+
+    # Get email service with database settings
+    configured_email_service = get_email_service_from_db(db)
+
+    # Check if email is configured
+    if not configured_email_service.smtp_user or not configured_email_service.smtp_password:
+        return {
+            "success": False,
+            "message": "Email not configured",
+            "meeting_reminders_sent": 0,
+            "deadline_reminders_sent": 0
+        }
+
+    # === MEETING REMINDERS ===
+    # Find projects with meeting reminders enabled and meetings coming up
+    meeting_projects = db.query(Project).options(
+        joinedload(Project.members).joinedload(ProjectMember.user)
+    ).filter(
+        Project.meeting_reminder_enabled == True,
+        Project.next_meeting_date.isnot(None),
+        Project.next_meeting_date >= today
+    ).all()
+
+    for project in meeting_projects:
+        try:
+            days_until = (project.next_meeting_date - today).days
+
+            # Check if reminder should be sent today
+            if days_until != project.meeting_reminder_days:
+                continue
+
+            # Check if we already sent a reminder for this meeting date
+            if project.meeting_reminder_sent_date == project.next_meeting_date:
+                continue
+
+            # Get all member emails
+            member_emails = [m.user.email for m in project.members if m.user and m.user.email]
+
+            if not member_emails:
+                continue
+
+            # Send the reminder
+            await configured_email_service.send_meeting_reminder(
+                to_emails=member_emails,
+                project_title=project.title,
+                meeting_date=project.next_meeting_date.strftime("%A, %B %d, %Y"),
+                days_until=days_until,
+                project_id=project.id
+            )
+
+            # Update the sent date
+            project.meeting_reminder_sent_date = project.next_meeting_date
+            meeting_reminders_sent += 1
+
+        except Exception as e:
+            logger.error(f"Error sending meeting reminder for project {project.id}: {str(e)}")
+            errors.append(f"Meeting reminder for project {project.id}: {str(e)}")
+
+    # === DEADLINE REMINDERS ===
+    # Find projects with deadline reminders enabled and deadlines coming up
+    deadline_projects = db.query(Project).options(
+        joinedload(Project.members).joinedload(ProjectMember.user)
+    ).filter(
+        Project.deadline_reminder_enabled == True,
+        Project.end_date.isnot(None),
+        Project.end_date >= today
+    ).all()
+
+    for project in deadline_projects:
+        try:
+            days_until = (project.end_date - today).days
+
+            # Check if reminder should be sent today
+            if days_until != project.deadline_reminder_days:
+                continue
+
+            # Check if we already sent a reminder for this deadline
+            if project.deadline_reminder_sent_date == project.end_date:
+                continue
+
+            # Get all member emails
+            member_emails = [m.user.email for m in project.members if m.user and m.user.email]
+
+            if not member_emails:
+                continue
+
+            # Send the reminder
+            await configured_email_service.send_deadline_reminder(
+                to_emails=member_emails,
+                project_title=project.title,
+                deadline_date=project.end_date.strftime("%A, %B %d, %Y"),
+                days_until=days_until,
+                project_id=project.id
+            )
+
+            # Update the sent date
+            project.deadline_reminder_sent_date = project.end_date
+            deadline_reminders_sent += 1
+
+        except Exception as e:
+            logger.error(f"Error sending deadline reminder for project {project.id}: {str(e)}")
+            errors.append(f"Deadline reminder for project {project.id}: {str(e)}")
+
+    # Commit changes
+    db.commit()
+
+    return {
+        "success": True,
+        "meeting_reminders_sent": meeting_reminders_sent,
+        "deadline_reminders_sent": deadline_reminders_sent,
+        "errors": errors if errors else None
+    }

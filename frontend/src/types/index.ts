@@ -111,6 +111,11 @@ export interface Project {
   updated_at: string | null;
   institution: InstitutionBrief | null;
   department: DepartmentBrief | null;
+  // Email reminder settings
+  meeting_reminder_enabled: boolean;
+  meeting_reminder_days: number;
+  deadline_reminder_enabled: boolean;
+  deadline_reminder_days: number;
 }
 
 export interface ProjectWithLead extends Project {

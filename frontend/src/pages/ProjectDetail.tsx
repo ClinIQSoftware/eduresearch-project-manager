@@ -200,6 +200,11 @@ export default function ProjectDetailPage() {
         color: editData.color,
         institution_id: editData.institution_id ?? null,
         department_id: editData.department_id ?? null,
+        // Email reminder settings
+        meeting_reminder_enabled: editData.meeting_reminder_enabled,
+        meeting_reminder_days: editData.meeting_reminder_days,
+        deadline_reminder_enabled: editData.deadline_reminder_enabled,
+        deadline_reminder_days: editData.deadline_reminder_days,
       });
       setEditing(false);
       fetchProject();
@@ -521,6 +526,73 @@ export default function ProjectDetailPage() {
               />
               <label htmlFor="open">Open to new participants</label>
             </div>
+
+            {/* Email Reminder Settings */}
+            <div className="border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Email Reminders</h3>
+
+              {/* Meeting Reminder */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="meeting_reminder"
+                    checked={editData.meeting_reminder_enabled || false}
+                    onChange={(e) => setEditData({ ...editData, meeting_reminder_enabled: e.target.checked })}
+                    className="mr-2 w-4 h-4"
+                  />
+                  <label htmlFor="meeting_reminder" className="text-sm">Meeting reminder</label>
+                </div>
+                {editData.meeting_reminder_enabled && (
+                  <div className="flex items-center gap-2 ml-6 sm:ml-2">
+                    <select
+                      value={editData.meeting_reminder_days || 1}
+                      onChange={(e) => setEditData({ ...editData, meeting_reminder_days: Number(e.target.value) })}
+                      className="border rounded px-2 py-1 text-sm"
+                    >
+                      <option value={1}>1 day</option>
+                      <option value={2}>2 days</option>
+                      <option value={3}>3 days</option>
+                      <option value={5}>5 days</option>
+                      <option value={7}>1 week</option>
+                    </select>
+                    <span className="text-sm text-gray-500">before meeting</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Deadline Reminder */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="deadline_reminder"
+                    checked={editData.deadline_reminder_enabled || false}
+                    onChange={(e) => setEditData({ ...editData, deadline_reminder_enabled: e.target.checked })}
+                    className="mr-2 w-4 h-4"
+                  />
+                  <label htmlFor="deadline_reminder" className="text-sm">Deadline reminder</label>
+                </div>
+                {editData.deadline_reminder_enabled && (
+                  <div className="flex items-center gap-2 ml-6 sm:ml-2">
+                    <select
+                      value={editData.deadline_reminder_days || 7}
+                      onChange={(e) => setEditData({ ...editData, deadline_reminder_days: Number(e.target.value) })}
+                      className="border rounded px-2 py-1 text-sm"
+                    >
+                      <option value={1}>1 day</option>
+                      <option value={3}>3 days</option>
+                      <option value={5}>5 days</option>
+                      <option value={7}>1 week</option>
+                      <option value={14}>2 weeks</option>
+                      <option value={30}>1 month</option>
+                    </select>
+                    <span className="text-sm text-gray-500">before deadline</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button type="submit" className="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 active:bg-green-800">
               Save Changes
             </button>
@@ -582,6 +654,25 @@ export default function ProjectDetailPage() {
                 </p>
               </div>
             </div>
+
+            {/* Email Reminder Status - only visible to leads */}
+            {isLead && (project.meeting_reminder_enabled || project.deadline_reminder_enabled) && (
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm text-gray-500 mb-2">Email Reminders</p>
+                <div className="flex flex-wrap gap-2">
+                  {project.meeting_reminder_enabled && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Meeting: {project.meeting_reminder_days} day{project.meeting_reminder_days !== 1 ? 's' : ''} before
+                    </span>
+                  )}
+                  {project.deadline_reminder_enabled && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                      Deadline: {project.deadline_reminder_days} day{project.deadline_reminder_days !== 1 ? 's' : ''} before
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Request to Join button for non-members */}
             {canEdit && !currentUserMember && project.open_to_participants && (

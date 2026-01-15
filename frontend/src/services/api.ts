@@ -141,6 +141,11 @@ export const updateProject = (id: number, data: {
   color?: string;
   institution_id?: number | null;
   department_id?: number | null;
+  // Email reminder settings
+  meeting_reminder_enabled?: boolean;
+  meeting_reminder_days?: number;
+  deadline_reminder_enabled?: boolean;
+  deadline_reminder_days?: number;
 }) => api.put<Project>(`/projects/${id}`, data);
 
 export const deleteProject = (id: number) => api.delete(`/projects/${id}`);

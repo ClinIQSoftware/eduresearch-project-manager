@@ -40,6 +40,14 @@ class Project(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Email reminder settings
+    meeting_reminder_enabled = Column(Boolean, default=False)
+    meeting_reminder_days = Column(Integer, default=1)  # Days before meeting to send reminder
+    deadline_reminder_enabled = Column(Boolean, default=False)
+    deadline_reminder_days = Column(Integer, default=7)  # Days before deadline to send reminder
+    meeting_reminder_sent_date = Column(Date, nullable=True)  # Track last reminder sent
+    deadline_reminder_sent_date = Column(Date, nullable=True)  # Track last reminder sent
+
     # Foreign keys
     institution_id = Column(Integer, ForeignKey("institutions.id"), nullable=True)
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
