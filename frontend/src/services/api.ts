@@ -6,7 +6,8 @@ import type {
   ProjectClassification, ProjectStatus, RequestStatus,
   SystemSettings, BulkUploadResult, UserBrief,
   EmailSettings, EmailTemplate,
-  UserKeyword, AlertPreference, MatchedProject
+  UserKeyword, AlertPreference, MatchedProject,
+  NotificationListResponse, NotificationPreference, NotificationTypeInfo
 } from '../types';
 
 // Use environment variable for API URL, fallback to /api for local dev with proxy
@@ -358,5 +359,69 @@ export const searchProjects = (query: string, filters?: {
   status?: ProjectStatus;
   open_to_participants?: boolean;
 }) => api.get<ProjectWithLead[]>('/projects/search', { params: { q: query, ...filters } });
+
+// Notifications
+export const getNotifications = (params?: {
+  is_read?: boolean;
+  notification_type?: string;
+  limit?: number;
+  offset?: number;
+}) => api.get<NotificationListResponse>('/notifications', { params });
+
+export const getUnreadNotificationCount = () =>
+  api.get<{ count: number }>('/notifications/unread-count');
+
+export const markNotificationRead = (id: number) =>
+  api.put<{ success: boolean; message: string }>(`/notifications/${id}/read`);
+
+export const markAllNotificationsRead = () =>
+  api.put<{ success: boolean; message: string }>('/notifications/read-all');
+
+export const deleteNotification = (id: number) =>
+  api.delete<{ success: boolean; message: string }>(`/notifications/${id}`);
+
+export const getNotificationPreferences = () =>
+  api.get<{ preferences: NotificationPreference[] }>('/notifications/preferences');
+
+export const updateNotificationPreferences = (preferences: {
+  notification_type: string;
+  in_app_enabled: boolean;
+  email_enabled: boolean;
+}[]) => api.put<{ preferences: NotificationPreference[] }>('/notifications/preferences', { preferences });
+
+export const resetNotificationPreferences = () =>
+  api.post<{ success: boolean; message: string }>('/notifications/preferences/reset');
+
+export const getNotificationTypes = () =>
+  api.get<NotificationTypeInfo[]>('/notifications/types');
+
+// Jinja Email Templates (admin - file-based templates)
+export interface JinjaTemplateInfo {
+  name: string;
+  filename: string;
+  description: string;
+  variables: string[];
+}
+
+export interface JinjaTemplateContent extends JinjaTemplateInfo {
+  content: string;
+}
+
+export interface JinjaTemplatePreviewResponse {
+  html: string;
+  subject: string;
+}
+
+export const getJinjaTemplates = () =>
+  api.get<JinjaTemplateInfo[]>('/email-templates');
+
+export const getJinjaTemplate = (filename: string) =>
+  api.get<JinjaTemplateContent>(`/email-templates/${filename}`);
+
+export const updateJinjaTemplate = (filename: string, content: string) =>
+  api.put(`/email-templates/${filename}`, { content });
+
+export const previewJinjaTemplate = (templateName: string, sampleData?: Record<string, unknown>) =>
+  api.post<JinjaTemplatePreviewResponse>('/email-templates/preview', { template_name: templateName, sample_data: sampleData });
 
 export default api;

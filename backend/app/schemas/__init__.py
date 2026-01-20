@@ -27,6 +27,11 @@ from app.schemas.email_template import (
 )
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from app.schemas.time_entry import TimeEntryCreate, TimeEntryUpdate, TimeEntryResponse
+from app.schemas.notification import (
+    NotificationCreate, NotificationResponse, NotificationListResponse, UnreadCountResponse,
+    NotificationPreferenceBase, NotificationPreferenceCreate, NotificationPreferenceUpdate,
+    NotificationPreferenceResponse, NotificationPreferencesListResponse, NotificationPreferencesBulkUpdate
+)
 
 __all__ = [
     "UserBase", "UserCreate", "UserCreateOAuth", "UserUpdate", "UserUpdateAdmin",
@@ -44,4 +49,7 @@ __all__ = [
     "EmailTemplateBase", "EmailTemplateCreate", "EmailTemplateUpdate", "EmailTemplateResponse", "TestEmailRequest",
     "TaskCreate", "TaskUpdate", "TaskResponse",
     "TimeEntryCreate", "TimeEntryUpdate", "TimeEntryResponse",
+    "NotificationCreate", "NotificationResponse", "NotificationListResponse", "UnreadCountResponse",
+    "NotificationPreferenceBase", "NotificationPreferenceCreate", "NotificationPreferenceUpdate",
+    "NotificationPreferenceResponse", "NotificationPreferencesListResponse", "NotificationPreferencesBulkUpdate",
 ]

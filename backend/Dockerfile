@@ -38,8 +38,8 @@ COPY . .
 # Create uploads directory
 RUN mkdir -p uploads
 
-# Make start script executable
-RUN chmod +x start.sh
+# Fix line endings and make start script executable
+RUN sed -i 's/\r$//' start.sh && chmod +x start.sh
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash appuser && \

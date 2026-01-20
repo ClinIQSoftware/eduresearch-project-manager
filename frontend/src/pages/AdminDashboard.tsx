@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   getAdminUsers, createUser, updateUser, deactivateUser, deleteUserPermanently,
   getSystemSettings, updateSystemSettings, getPendingUsers,
   approveUser, rejectUser, bulkUploadUsers, downloadUserTemplate,
   getInstitutions, createInstitution, deleteInstitution,
   getDepartments, createDepartment, deleteDepartment,
-  getEmailSettings, updateEmailSettings, getEmailTemplates, updateEmailTemplate, sendTestEmail
+  getEmailSettings, updateEmailSettings, getEmailTemplates, updateEmailTemplate, sendTestEmail,
+  getJinjaTemplates, getJinjaTemplate, updateJinjaTemplate, previewJinjaTemplate,
+  type JinjaTemplateInfo
 } from '../services/api';
 import type { User, SystemSettings, BulkUploadResult, Institution, Department, EmailTemplate } from '../types';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
-type TabType = 'users' | 'institutions' | 'departments' | 'security' | 'email' | 'import';
+type TabType = 'users' | 'institutions' | 'departments' | 'security' | 'email' | 'templates' | 'import';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('users');
@@ -72,6 +76,16 @@ export default function AdminDashboard() {
             Email
           </button>
           <button
+            onClick={() => setActiveTab('templates')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              activeTab === 'templates'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Templates
+          </button>
+          <button
             onClick={() => setActiveTab('import')}
             className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'import'
@@ -90,6 +104,7 @@ export default function AdminDashboard() {
       {activeTab === 'departments' && <DepartmentsTab />}
       {activeTab === 'security' && <SecurityTab />}
       {activeTab === 'email' && <EmailTab />}
+      {activeTab === 'templates' && <EmailTemplatesTab />}
       {activeTab === 'import' && <ImportTab />}
     </div>
   );
@@ -1379,32 +1394,10 @@ function ImportTab() {
 }
 
 // ==================== EMAIL TAB ====================
-const TEMPLATE_LABELS: Record<string, { name: string; description: string; variables: string[] }> = {
-  user_approval_request: {
-    name: 'User Approval Request',
-    description: 'Sent to admins when a new user registers and requires approval',
-    variables: ['user_name', 'user_email', 'institution_name', 'department_name', 'approval_link']
-  },
-  join_request: {
-    name: 'Join Request',
-    description: 'Sent to project leads when someone requests to join their project',
-    variables: ['project_name', 'requester_name', 'message', 'project_link']
-  },
-  task_assignment: {
-    name: 'Task Assignment',
-    description: 'Sent to users when a task is assigned to them',
-    variables: ['task_title', 'project_name', 'priority', 'due_date', 'description', 'task_link']
-  }
-};
-
 function EmailTab() {
-  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
-  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
-  const [testEmail, setTestEmail] = useState('');
-  const [testingTemplate, setTestingTemplate] = useState('');
 
   // Form state for SMTP settings
   const [smtpForm, setSmtpForm] = useState({
@@ -1423,10 +1416,7 @@ function EmailTab() {
 
   async function fetchData() {
     try {
-      const [settingsRes, templatesRes] = await Promise.all([
-        getEmailSettings(),
-        getEmailTemplates()
-      ]);
+      const settingsRes = await getEmailSettings();
       const settings = settingsRes.data;
       setSmtpForm({
         smtp_host: settings.smtp_host || '',
@@ -1437,7 +1427,6 @@ function EmailTab() {
         from_name: settings.from_name || '',
         is_active: settings.is_active
       });
-      setTemplates(templatesRes.data);
     } catch (error) {
       console.error('Error fetching email settings:', error);
       setMessage('Failed to load email settings');
@@ -1450,7 +1439,7 @@ function EmailTab() {
     setSaving(true);
     setMessage('');
     try {
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         smtp_host: smtpForm.smtp_host,
         smtp_port: smtpForm.smtp_port,
         smtp_user: smtpForm.smtp_user || null,
@@ -1465,46 +1454,11 @@ function EmailTab() {
       await updateEmailSettings(updateData);
       setMessage('Email settings saved successfully');
       setSmtpForm({ ...smtpForm, smtp_password: '' });
-    } catch (error: any) {
-      setMessage(error.response?.data?.detail || 'Failed to save settings');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } } };
+      setMessage(err.response?.data?.detail || 'Failed to save settings');
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleSaveTemplate() {
-    if (!editingTemplate) return;
-    setSaving(true);
-    setMessage('');
-    try {
-      await updateEmailTemplate(editingTemplate.template_type, {
-        subject: editingTemplate.subject,
-        body: editingTemplate.body,
-        is_active: editingTemplate.is_active
-      });
-      setMessage('Template saved successfully');
-      setEditingTemplate(null);
-      fetchData();
-    } catch (error: any) {
-      setMessage(error.response?.data?.detail || 'Failed to save template');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleTestEmail(templateType: string) {
-    if (!testEmail) {
-      setMessage('Please enter a test email address');
-      return;
-    }
-    setTestingTemplate(templateType);
-    try {
-      await sendTestEmail(templateType, testEmail);
-      setMessage(`Test email queued for ${testEmail}`);
-    } catch (error: any) {
-      setMessage(error.response?.data?.detail || 'Failed to send test email');
-    } finally {
-      setTestingTemplate('');
     }
   }
 
@@ -1513,10 +1467,18 @@ function EmailTab() {
   return (
     <div className="max-w-4xl space-y-6">
       {message && (
-        <div className={`p-3 rounded-lg ${message.includes('success') || message.includes('queued') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+        <div className={`p-3 rounded-lg ${message.includes('success') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
           {message}
         </div>
       )}
+
+      {/* Info Banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-800 mb-1">Email Configuration</h3>
+        <p className="text-sm text-blue-700">
+          Configure SMTP settings for sending email notifications. To edit email templates, go to the <strong>Templates</strong> tab.
+        </p>
+      </div>
 
       {/* SMTP Settings */}
       <div className="bg-white p-6 rounded-lg shadow">
@@ -1602,137 +1564,545 @@ function EmailTab() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Test Email Section */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Test Email</h2>
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">Test Recipient Email</label>
-            <input
-              type="email"
-              value={testEmail}
-              onChange={(e) => setTestEmail(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
-              placeholder="your-email@example.com"
-            />
-          </div>
-        </div>
-        <p className="text-sm text-gray-500 mt-2">
-          Enter your email address above, then click "Send Test" on any template below to test it.
+// ==================== EMAIL TEMPLATES TAB ====================
+// Template metadata for DB-stored templates
+const DB_TEMPLATE_LABELS: Record<string, { name: string; description: string; variables: string[] }> = {
+  user_approval_request: {
+    name: 'User Approval Request',
+    description: 'Sent to admins when a new user registers and requires approval',
+    variables: ['user_name', 'user_email', 'institution_name', 'department_name', 'approval_link']
+  },
+  join_request: {
+    name: 'Join Request',
+    description: 'Sent to project leads when someone requests to join their project',
+    variables: ['project_name', 'requester_name', 'message', 'project_link']
+  },
+  task_assignment: {
+    name: 'Task Assignment',
+    description: 'Sent to users when a task is assigned to them',
+    variables: ['task_title', 'project_name', 'priority', 'due_date', 'description', 'task_link']
+  }
+};
+
+// Unified template item interface
+interface UnifiedTemplate {
+  id: string;
+  name: string;
+  description: string;
+  variables: string[];
+  type: 'jinja' | 'db';
+  // For DB templates
+  subject?: string;
+  body?: string;
+  is_active?: boolean;
+  template_type?: string;
+  // For Jinja templates
+  filename?: string;
+  content?: string;
+}
+
+function EmailTemplatesTab() {
+  // Jinja templates state
+  const [jinjaTemplates, setJinjaTemplates] = useState<JinjaTemplateInfo[]>([]);
+  // DB templates state
+  const [dbTemplates, setDbTemplates] = useState<EmailTemplate[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState<UnifiedTemplate | null>(null);
+  const [editedContent, setEditedContent] = useState('');
+  const [editedSubject, setEditedSubject] = useState('');
+  const [editedIsActive, setEditedIsActive] = useState(true);
+  const [preview, setPreview] = useState<{ html: string; subject: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [editorMode, setEditorMode] = useState<'wysiwyg' | 'html'>('wysiwyg');
+  const [testEmail, setTestEmail] = useState('');
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [templateCategory, setTemplateCategory] = useState<'all' | 'reminder' | 'notification'>('all');
+
+  // Quill editor modules configuration
+  const quillModules = useMemo(() => ({
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'align': [] }],
+      ['link'],
+      ['clean']
+    ],
+  }), []);
+
+  useEffect(() => {
+    fetchAllTemplates();
+  }, []);
+
+  async function fetchAllTemplates() {
+    setLoading(true);
+    try {
+      const [jinjaRes, dbRes] = await Promise.all([
+        getJinjaTemplates(),
+        getEmailTemplates()
+      ]);
+      setJinjaTemplates(jinjaRes.data);
+      setDbTemplates(dbRes.data);
+    } catch (err) {
+      console.error('Error fetching templates:', err);
+      setError('Failed to load templates');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Convert templates to unified format for display
+  const unifiedTemplates: UnifiedTemplate[] = [
+    // Jinja templates (reminder emails)
+    ...jinjaTemplates.map(t => ({
+      id: `jinja-${t.filename}`,
+      name: t.name,
+      description: t.description,
+      variables: t.variables,
+      type: 'jinja' as const,
+      filename: t.filename
+    })),
+    // DB templates (notification emails)
+    ...dbTemplates.map(t => {
+      const meta = DB_TEMPLATE_LABELS[t.template_type] || {
+        name: t.template_type,
+        description: '',
+        variables: []
+      };
+      return {
+        id: `db-${t.template_type}`,
+        name: meta.name,
+        description: meta.description,
+        variables: meta.variables,
+        type: 'db' as const,
+        subject: t.subject,
+        body: t.body,
+        is_active: t.is_active,
+        template_type: t.template_type
+      };
+    })
+  ];
+
+  // Filter templates by category
+  const filteredTemplates = unifiedTemplates.filter(t => {
+    if (templateCategory === 'all') return true;
+    if (templateCategory === 'reminder') return t.type === 'jinja';
+    if (templateCategory === 'notification') return t.type === 'db';
+    return true;
+  });
+
+  async function handleSelectTemplate(template: UnifiedTemplate) {
+    setError('');
+    setMessage('');
+    setPreview(null);
+
+    if (template.type === 'jinja' && template.filename) {
+      try {
+        const response = await getJinjaTemplate(template.filename);
+        setSelectedTemplate({
+          ...template,
+          content: response.data.content
+        });
+        setEditedContent(response.data.content);
+        setEditedSubject('');
+        setEditedIsActive(true);
+      } catch (err) {
+        console.error('Error loading template:', err);
+        setError('Failed to load template content');
+      }
+    } else if (template.type === 'db') {
+      setSelectedTemplate(template);
+      setEditedContent(template.body || '');
+      setEditedSubject(template.subject || '');
+      setEditedIsActive(template.is_active ?? true);
+    }
+  }
+
+  async function handlePreview() {
+    if (!selectedTemplate) return;
+    setPreviewing(true);
+    setError('');
+
+    if (selectedTemplate.type === 'jinja' && selectedTemplate.filename) {
+      try {
+        const response = await previewJinjaTemplate(selectedTemplate.filename);
+        setPreview(response.data);
+      } catch (err: unknown) {
+        const error = err as { response?: { data?: { detail?: string } } };
+        setError(error.response?.data?.detail || 'Failed to preview template');
+      }
+    } else if (selectedTemplate.type === 'db') {
+      // For DB templates, create a simple preview
+      setPreview({
+        html: editedContent,
+        subject: editedSubject
+      });
+    }
+    setPreviewing(false);
+  }
+
+  async function handleSave() {
+    if (!selectedTemplate) return;
+    setSaving(true);
+    setError('');
+    setMessage('');
+
+    try {
+      if (selectedTemplate.type === 'jinja' && selectedTemplate.filename) {
+        await updateJinjaTemplate(selectedTemplate.filename, editedContent);
+        // Refresh the template content
+        const response = await getJinjaTemplate(selectedTemplate.filename);
+        setSelectedTemplate({
+          ...selectedTemplate,
+          content: response.data.content
+        });
+        setEditedContent(response.data.content);
+      } else if (selectedTemplate.type === 'db' && selectedTemplate.template_type) {
+        await updateEmailTemplate(selectedTemplate.template_type, {
+          subject: editedSubject,
+          body: editedContent,
+          is_active: editedIsActive
+        });
+        // Refresh all templates
+        await fetchAllTemplates();
+        // Update selected template
+        setSelectedTemplate({
+          ...selectedTemplate,
+          subject: editedSubject,
+          body: editedContent,
+          is_active: editedIsActive
+        });
+      }
+      setMessage('Template saved successfully');
+      setPreview(null);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to save template');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleReset() {
+    if (!selectedTemplate) return;
+
+    if (selectedTemplate.type === 'jinja') {
+      setEditedContent(selectedTemplate.content || '');
+    } else {
+      setEditedContent(selectedTemplate.body || '');
+      setEditedSubject(selectedTemplate.subject || '');
+      setEditedIsActive(selectedTemplate.is_active ?? true);
+    }
+    setMessage('');
+    setError('');
+  }
+
+  async function handleTestEmail() {
+    if (!selectedTemplate || !testEmail) return;
+    if (selectedTemplate.type !== 'db' || !selectedTemplate.template_type) {
+      setError('Test email is only available for notification templates');
+      return;
+    }
+
+    setTestingEmail(true);
+    setError('');
+    setMessage('');
+
+    try {
+      await sendTestEmail(selectedTemplate.template_type, testEmail);
+      setMessage(`Test email sent to ${testEmail}`);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setError(error.response?.data?.detail || 'Failed to send test email');
+    } finally {
+      setTestingEmail(false);
+    }
+  }
+
+  // Check if content has changed
+  const hasChanges = selectedTemplate ? (
+    selectedTemplate.type === 'jinja'
+      ? editedContent !== (selectedTemplate.content || '')
+      : (editedContent !== (selectedTemplate.body || '') ||
+         editedSubject !== (selectedTemplate.subject || '') ||
+         editedIsActive !== (selectedTemplate.is_active ?? true))
+  ) : false;
+
+  if (loading) return <div className="text-center py-8">Loading...</div>;
+
+  return (
+    <div className="space-y-6">
+      {/* Info Banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-800 mb-1">Email Templates</h3>
+        <p className="text-sm text-blue-700">
+          Manage all email templates. <strong>Reminder Templates</strong> (Jinja2) are used for automatic meeting/deadline reminders.
+          <strong> Notification Templates</strong> are used for user actions like join requests and task assignments.
+          Use <code className="bg-blue-100 px-1 rounded">{'{{variable}}'}</code> syntax for dynamic content.
         </p>
       </div>
 
-      {/* Email Templates */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Email Templates</h2>
-        <div className="space-y-4">
-          {templates.map((template) => {
-            const meta = TEMPLATE_LABELS[template.template_type] || {
-              name: template.template_type,
-              description: '',
-              variables: []
-            };
-            return (
-              <div key={template.id} className="border rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
+      {/* Messages */}
+      {message && (
+        <div className="bg-green-50 text-green-600 p-4 rounded-lg">{message}</div>
+      )}
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Template List */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <h3 className="font-semibold mb-3">Templates</h3>
+
+          {/* Category Filter */}
+          <div className="flex gap-1 mb-4">
+            <button
+              onClick={() => setTemplateCategory('all')}
+              className={`px-2 py-1 text-xs rounded ${templateCategory === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setTemplateCategory('reminder')}
+              className={`px-2 py-1 text-xs rounded ${templateCategory === 'reminder' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Reminders
+            </button>
+            <button
+              onClick={() => setTemplateCategory('notification')}
+              className={`px-2 py-1 text-xs rounded ${templateCategory === 'notification' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Notifications
+            </button>
+          </div>
+
+          <div className="space-y-2 max-h-[500px] overflow-y-auto">
+            {filteredTemplates.map((template) => (
+              <button
+                key={template.id}
+                onClick={() => handleSelectTemplate(template)}
+                className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                  selectedTemplate?.id === template.id
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <p className="font-medium text-sm">{template.name}</p>
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${
+                    template.type === 'jinja'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-green-100 text-green-700'
+                  }`}>
+                    {template.type === 'jinja' ? 'Reminder' : 'Notification'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{template.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Editor */}
+        <div className="lg:col-span-2 space-y-4">
+          {selectedTemplate ? (
+            <>
+              {/* Template Info */}
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="font-medium">{meta.name}</h3>
-                    <p className="text-sm text-gray-500">{meta.description}</p>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{selectedTemplate.name}</h3>
+                      <span className={`text-xs px-2 py-0.5 rounded ${
+                        selectedTemplate.type === 'jinja'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {selectedTemplate.type === 'jinja' ? 'Jinja2 Template' : 'DB Template'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500">{selectedTemplate.description}</p>
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleTestEmail(template.template_type)}
-                      disabled={testingTemplate === template.template_type || !testEmail}
-                      className="px-3 py-1 text-sm border border-green-600 text-green-600 rounded hover:bg-green-50 disabled:opacity-50"
+                      onClick={handlePreview}
+                      disabled={previewing}
+                      className="px-3 py-1 text-sm border border-purple-600 text-purple-600 rounded hover:bg-purple-50 disabled:opacity-50"
                     >
-                      {testingTemplate === template.template_type ? 'Sending...' : 'Send Test'}
+                      {previewing ? 'Loading...' : 'Preview'}
                     </button>
                     <button
-                      onClick={() => setEditingTemplate({ ...template })}
-                      className="px-3 py-1 text-sm border border-blue-600 text-blue-600 rounded hover:bg-blue-50"
+                      onClick={handleReset}
+                      className="px-3 py-1 text-sm border border-gray-400 text-gray-600 rounded hover:bg-gray-50"
                     >
-                      Edit
+                      Reset
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={saving || !hasChanges}
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {saving ? 'Saving...' : 'Save'}
                     </button>
                   </div>
                 </div>
-                <div className="text-sm">
-                  <p><span className="font-medium">Subject:</span> {template.subject}</p>
-                  <p className={`mt-1 ${template.is_active ? 'text-green-600' : 'text-red-600'}`}>
-                    {template.is_active ? 'Active' : 'Inactive'}
-                  </p>
+
+                {/* Variables */}
+                <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                  <p className="text-xs font-medium text-gray-700 mb-1">Available Variables:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTemplate.variables.map((v) => (
+                      <code key={v} className="text-xs bg-gray-200 px-2 py-1 rounded cursor-pointer hover:bg-gray-300"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`{{${v}}}`);
+                          setMessage(`Copied {{${v}}} to clipboard`);
+                          setTimeout(() => setMessage(''), 2000);
+                        }}
+                        title="Click to copy"
+                      >
+                        {`{{${v}}}`}
+                      </code>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Subject (DB templates only) */}
+                {selectedTemplate.type === 'db' && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Subject</label>
+                    <input
+                      type="text"
+                      value={editedSubject}
+                      onChange={(e) => setEditedSubject(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="Email subject line..."
+                    />
+                  </div>
+                )}
+
+                {/* Editor Mode Toggle */}
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium">
+                    {selectedTemplate.type === 'jinja' ? 'Template HTML' : 'Email Body'}
+                  </label>
+                  <div className="flex gap-1 bg-gray-100 p-1 rounded">
+                    <button
+                      onClick={() => setEditorMode('wysiwyg')}
+                      className={`px-3 py-1 text-xs rounded ${editorMode === 'wysiwyg' ? 'bg-white shadow text-blue-600' : 'text-gray-600'}`}
+                    >
+                      Visual Editor
+                    </button>
+                    <button
+                      onClick={() => setEditorMode('html')}
+                      className={`px-3 py-1 text-xs rounded ${editorMode === 'html' ? 'bg-white shadow text-blue-600' : 'text-gray-600'}`}
+                    >
+                      HTML Code
+                    </button>
+                  </div>
+                </div>
+
+                {/* WYSIWYG Editor or HTML Editor */}
+                {editorMode === 'wysiwyg' ? (
+                  <div className="border rounded-lg overflow-hidden">
+                    <ReactQuill
+                      theme="snow"
+                      value={editedContent}
+                      onChange={setEditedContent}
+                      modules={quillModules}
+                      className="bg-white"
+                      style={{ minHeight: '300px' }}
+                    />
+                  </div>
+                ) : (
+                  <textarea
+                    value={editedContent}
+                    onChange={(e) => setEditedContent(e.target.value)}
+                    className="w-full h-80 border rounded-lg px-3 py-2 font-mono text-sm bg-gray-50"
+                    spellCheck={false}
+                    placeholder="Enter HTML template content..."
+                  />
+                )}
+
+                {/* Active toggle (DB templates only) */}
+                {selectedTemplate.type === 'db' && (
+                  <div className="mt-4 flex items-center justify-between">
+                    <label className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={editedIsActive}
+                        onChange={(e) => setEditedIsActive(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm">Template Active</span>
+                    </label>
+
+                    {/* Test Email */}
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="email"
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                        placeholder="test@example.com"
+                        className="border rounded px-2 py-1 text-sm w-48"
+                      />
+                      <button
+                        onClick={handleTestEmail}
+                        disabled={testingEmail || !testEmail}
+                        className="px-3 py-1 text-sm border border-green-600 text-green-600 rounded hover:bg-green-50 disabled:opacity-50"
+                      >
+                        {testingEmail ? 'Sending...' : 'Send Test'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            );
-          })}
+
+              {/* Preview Panel */}
+              {preview && (
+                <div className="bg-white rounded-lg shadow p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-semibold">Preview</h3>
+                    <button
+                      onClick={() => setPreview(null)}
+                      className="text-gray-400 hover:text-gray-600 text-xl"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                  {preview.subject && (
+                    <div className="mb-3">
+                      <span className="text-sm font-medium text-gray-700">Subject: </span>
+                      <span className="text-sm">{preview.subject}</span>
+                    </div>
+                  )}
+                  <div className="border rounded-lg overflow-hidden">
+                    <iframe
+                      srcDoc={preview.html}
+                      className="w-full h-96 bg-white"
+                      title="Email Preview"
+                      sandbox="allow-same-origin"
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+              <p>Select a template from the list to edit it</p>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Edit Template Modal */}
-      {editingTemplate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">
-              Edit Template: {TEMPLATE_LABELS[editingTemplate.template_type]?.name || editingTemplate.template_type}
-            </h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Subject</label>
-                <input
-                  type="text"
-                  value={editingTemplate.subject}
-                  onChange={(e) => setEditingTemplate({ ...editingTemplate, subject: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Body (HTML)</label>
-                <textarea
-                  value={editingTemplate.body}
-                  onChange={(e) => setEditingTemplate({ ...editingTemplate, body: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2 font-mono text-sm"
-                  rows={15}
-                />
-              </div>
-
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-sm font-medium text-blue-800 mb-1">Available Variables:</p>
-                <p className="text-sm text-blue-700">
-                  {TEMPLATE_LABELS[editingTemplate.template_type]?.variables.map(v => `{{${v}}}`).join(', ') || 'None'}
-                </p>
-              </div>
-
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={editingTemplate.is_active}
-                  onChange={(e) => setEditingTemplate({ ...editingTemplate, is_active: e.target.checked })}
-                  className="w-4 h-4"
-                />
-                <span>Template Active</span>
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => setEditingTemplate(null)}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveTemplate}
-                disabled={saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Save Template'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Deadline Reminder - {{ project_title }}{% endblock %}
+
+{% block header_color %}{% if is_urgent %}#dc2626{% else %}#f59e0b{% endif %}{% endblock %}
+
+{% block header %}
+<h1>{% if is_urgent %}Urgent: {% endif %}Deadline Approaching</h1>
+<p class="subtitle">{{ project_title }}</p>
+{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <div class="icon-circle deadline{% if is_urgent %} urgent{% endif %}">
+        {% if is_urgent %}&#9888;{% else %}&#128197;{% endif %}
+    </div>
+    <h2>{% if is_urgent %}Deadline Today!{% else %}Upcoming Deadline{% endif %}</h2>
+</div>
+
+<p>Hello,</p>
+
+{% if is_urgent %}
+<p>This is an <strong>urgent reminder</strong> that the project <strong>{{ project_title }}</strong> has a deadline <strong>today</strong>.</p>
+{% else %}
+<p>This is a friendly reminder that the project <strong>{{ project_title }}</strong> has an upcoming deadline.</p>
+{% endif %}
+
+<div class="info-box{% if is_urgent %} urgent{% elif days_until <= 1 %} warning{% endif %}">
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px; width: 120px;">Deadline</td>
+            <td style="padding: 8px 0; color: #1e293b; font-size: 14px; font-weight: 500;">{{ deadline_date }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Project</td>
+            <td style="padding: 8px 0; color: #1e293b; font-size: 14px; font-weight: 500;">{{ project_title }}</td>
+        </tr>
+        {% if days_until == 0 %}
+        <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Status</td>
+            <td style="padding: 8px 0; color: #dc2626; font-size: 14px; font-weight: 600;">Due Today!</td>
+        </tr>
+        {% elif days_until == 1 %}
+        <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Status</td>
+            <td style="padding: 8px 0; color: #f59e0b; font-size: 14px; font-weight: 600;">Due Tomorrow</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Status</td>
+            <td style="padding: 8px 0; color: #10b981; font-size: 14px; font-weight: 500;">{{ days_until }} days remaining</td>
+        </tr>
+        {% endif %}
+    </table>
+</div>
+
+{% if is_urgent %}
+<div class="info-box urgent">
+    <p style="margin: 0; color: #991b1b; font-weight: 500;">
+        &#128680; <strong>Action Required:</strong> The deadline is today. Please ensure all deliverables are completed and submitted.
+    </p>
+</div>
+{% elif days_until == 1 %}
+<div class="info-box warning">
+    <p style="margin: 0; color: #92400e;">
+        &#9888; The deadline is <strong>tomorrow</strong>. Please review your progress and ensure everything is on track.
+    </p>
+</div>
+{% endif %}
+
+<p class="mt-4">Please review the following:</p>
+<ul style="color: #475569; padding-left: 20px;">
+    <li>Check outstanding tasks and their completion status</li>
+    <li>Review any pending deliverables</li>
+    <li>Coordinate with team members if needed</li>
+    <li>Contact the project lead if you anticipate any delays</li>
+</ul>
+
+{% if task_summary %}
+<div class="mt-4">
+    <h3 style="color: #1e293b; font-size: 16px; margin-bottom: 12px;">Task Summary</h3>
+    <div class="info-box">
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 6px 0; color: #64748b; font-size: 13px;">Total Tasks</td>
+                <td style="padding: 6px 0; color: #1e293b; font-size: 14px; font-weight: 500; text-align: right;">{{ task_summary.total }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 6px 0; color: #10b981; font-size: 13px;">Completed</td>
+                <td style="padding: 6px 0; color: #10b981; font-size: 14px; font-weight: 500; text-align: right;">{{ task_summary.completed }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 6px 0; color: #f59e0b; font-size: 13px;">In Progress</td>
+                <td style="padding: 6px 0; color: #f59e0b; font-size: 14px; font-weight: 500; text-align: right;">{{ task_summary.in_progress }}</td>
+            </tr>
+            <tr>
+                <td style="padding: 6px 0; color: #64748b; font-size: 13px;">Pending</td>
+                <td style="padding: 6px 0; color: #64748b; font-size: 14px; font-weight: 500; text-align: right;">{{ task_summary.pending }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="text-center mt-4">
+    <a href="{{ app_url }}/projects/{{ project_id }}" class="btn{% if is_urgent %}" style="background-color: #dc2626;{% else %}{% endif %}">View Project</a>
+    <a href="{{ app_url }}/tasks" class="btn btn-secondary" style="margin-left: 8px;">View Tasks</a>
+</div>
+{% endblock %}
+
+{% block footer %}
+<p>This reminder was sent because you are a member of the project "{{ project_title }}".</p>
+<p class="mt-4" style="color: #94a3b8; font-size: 12px;">
+    To manage your notification preferences, visit your settings in EduResearch Project Manager.
+</p>
+{% endblock %}

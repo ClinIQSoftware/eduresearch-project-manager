@@ -3,11 +3,21 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import logging
+import os
+from pathlib import Path
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Setup Jinja2 template environment
+TEMPLATES_DIR = Path(__file__).parent.parent / "templates" / "email"
+jinja_env = Environment(
+    loader=FileSystemLoader(str(TEMPLATES_DIR)),
+    autoescape=select_autoescape(['html', 'xml'])
+)
 
 
 class EmailService:
@@ -279,6 +289,23 @@ EduResearch Project Manager
             result = result.replace(placeholder, str(value) if value else "")
         return result
 
+    def _render_jinja_template(self, template_name: str, context: Dict[str, Any]) -> str:
+        """Render a Jinja2 HTML template with the given context.
+
+        Args:
+            template_name: Name of the template file (e.g., 'meeting_reminder.html')
+            context: Dictionary of variables to pass to the template
+
+        Returns:
+            Rendered HTML string
+        """
+        try:
+            template = jinja_env.get_template(template_name)
+            return template.render(**context)
+        except Exception as e:
+            logger.error(f"Failed to render template {template_name}: {e}")
+            raise
+
     async def send_templated_email(
         self,
         to_email: str,
@@ -497,7 +524,7 @@ EduResearch Project Manager
         days_until: int,
         project_id: int
     ):
-        """Send meeting reminder email to all project members.
+        """Send meeting reminder email to all project members using Jinja2 template.
 
         Args:
             to_emails: List of member email addresses
@@ -506,9 +533,47 @@ EduResearch Project Manager
             days_until: Number of days until meeting
             project_id: Project ID for linking
         """
-        days_text = "tomorrow" if days_until == 1 else f"in {days_until} days"
+        days_text = "today" if days_until == 0 else ("tomorrow" if days_until == 1 else f"in {days_until} days")
         subject = f"[EduResearch] Meeting Reminder: {project_title} - {days_text}"
 
+        # Prepare template context
+        context = {
+            "project_title": project_title,
+            "meeting_date": meeting_date,
+            "days_until": days_until,
+            "project_id": project_id,
+            "app_url": settings.frontend_url
+        }
+
+        # Render HTML template
+        try:
+            html_body = self._render_jinja_template("meeting_reminder.html", context)
+        except Exception as e:
+            logger.warning(f"Failed to render meeting reminder template, falling back to inline: {e}")
+            # Fallback to inline HTML if template fails
+            html_body = f"""
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #1f2937;">Meeting Reminder</h2>
+    <p>This is a reminder that the project <strong>{project_title}</strong> has a meeting scheduled <strong>{days_text}</strong>.</p>
+    <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0;"><strong>Meeting Date:</strong> {meeting_date}</p>
+    </div>
+    <p>Please make sure to prepare for the meeting and review any relevant materials.</p>
+    <p>
+        <a href="{settings.frontend_url}/projects/{project_id}"
+           style="display: inline-block; background: #3B82F6; color: white; padding: 10px 20px;
+                  text-decoration: none; border-radius: 5px;">
+            View Project
+        </a>
+    </p>
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+    <p style="color: #9ca3af; font-size: 12px;">EduResearch Project Manager</p>
+</body>
+</html>
+            """
+
+        # Plain text version
         body = f"""
 Hello,
 
@@ -524,32 +589,6 @@ Best regards,
 EduResearch Project Manager
         """
 
-        html_body = f"""
-<html>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: #1f2937;">Meeting Reminder</h2>
-    <p>This is a reminder that the project <strong>{project_title}</strong> has a meeting scheduled <strong>{days_text}</strong>.</p>
-
-    <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
-        <p style="margin: 0;"><strong>Meeting Date:</strong> {meeting_date}</p>
-    </div>
-
-    <p>Please make sure to prepare for the meeting and review any relevant materials.</p>
-
-    <p>
-        <a href="{settings.frontend_url}/projects/{project_id}"
-           style="display: inline-block; background: #3B82F6; color: white; padding: 10px 20px;
-                  text-decoration: none; border-radius: 5px;">
-            View Project
-        </a>
-    </p>
-
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-    <p style="color: #9ca3af; font-size: 12px;">EduResearch Project Manager</p>
-</body>
-</html>
-        """
-
         for email in to_emails:
             await self.send_email(email, subject, body, html_body)
 
@@ -559,9 +598,10 @@ EduResearch Project Manager
         project_title: str,
         deadline_date: str,
         days_until: int,
-        project_id: int
+        project_id: int,
+        task_summary: Dict[str, int] = None
     ):
-        """Send deadline reminder email to all project members.
+        """Send deadline reminder email to all project members using Jinja2 template.
 
         Args:
             to_emails: List of member email addresses
@@ -569,11 +609,53 @@ EduResearch Project Manager
             deadline_date: Formatted deadline date string
             days_until: Number of days until deadline
             project_id: Project ID for linking
+            task_summary: Optional dict with task counts (total, completed, in_progress, pending)
         """
-        urgency = "urgent" if days_until <= 3 else ""
-        days_text = "tomorrow" if days_until == 1 else f"in {days_until} days"
-        subject = f"[EduResearch] {'URGENT ' if urgency else ''}Deadline Reminder: {project_title} - {days_text}"
+        is_urgent = days_until == 0
+        days_text = "today" if days_until == 0 else ("tomorrow" if days_until == 1 else f"in {days_until} days")
+        subject = f"[EduResearch] {'URGENT ' if is_urgent else ''}Deadline Reminder: {project_title} - {days_text}"
 
+        # Prepare template context
+        context = {
+            "project_title": project_title,
+            "deadline_date": deadline_date,
+            "days_until": days_until,
+            "is_urgent": is_urgent,
+            "project_id": project_id,
+            "app_url": settings.frontend_url,
+            "task_summary": task_summary
+        }
+
+        # Render HTML template
+        try:
+            html_body = self._render_jinja_template("deadline_reminder.html", context)
+        except Exception as e:
+            logger.warning(f"Failed to render deadline reminder template, falling back to inline: {e}")
+            # Fallback to inline HTML if template fails
+            urgency_color = "#DC2626" if is_urgent else "#F59E0B"
+            html_body = f"""
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: {urgency_color};">{'⚠️ ' if is_urgent else ''}Deadline Reminder</h2>
+    <p>This is a reminder that the project <strong>{project_title}</strong> has a deadline approaching <strong>{days_text}</strong>.</p>
+    <div style="background: {'#FEF2F2' if is_urgent else '#FFFBEB'}; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {urgency_color};">
+        <p style="margin: 0;"><strong>Deadline:</strong> {deadline_date}</p>
+    </div>
+    <p>Please ensure all required work is completed before the deadline.</p>
+    <p>
+        <a href="{settings.frontend_url}/projects/{project_id}"
+           style="display: inline-block; background: #3B82F6; color: white; padding: 10px 20px;
+                  text-decoration: none; border-radius: 5px;">
+            View Project
+        </a>
+    </p>
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+    <p style="color: #9ca3af; font-size: 12px;">EduResearch Project Manager</p>
+</body>
+</html>
+            """
+
+        # Plain text version
         body = f"""
 Hello,
 
@@ -587,33 +669,6 @@ View project details: {settings.frontend_url}/projects/{project_id}
 
 Best regards,
 EduResearch Project Manager
-        """
-
-        urgency_color = "#DC2626" if urgency else "#F59E0B"
-        html_body = f"""
-<html>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <h2 style="color: {urgency_color};">{'⚠️ ' if urgency else ''}Deadline Reminder</h2>
-    <p>This is a reminder that the project <strong>{project_title}</strong> has a deadline approaching <strong>{days_text}</strong>.</p>
-
-    <div style="background: {'#FEF2F2' if urgency else '#FFFBEB'}; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {urgency_color};">
-        <p style="margin: 0;"><strong>Deadline:</strong> {deadline_date}</p>
-    </div>
-
-    <p>Please ensure all required work is completed before the deadline.</p>
-
-    <p>
-        <a href="{settings.frontend_url}/projects/{project_id}"
-           style="display: inline-block; background: #3B82F6; color: white; padding: 10px 20px;
-                  text-decoration: none; border-radius: 5px;">
-            View Project
-        </a>
-    </p>
-
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-    <p style="color: #9ca3af; font-size: 12px;">EduResearch Project Manager</p>
-</body>
-</html>
         """
 
         for email in to_emails:

@@ -13,8 +13,14 @@ from app.schemas.join_request import (
 )
 from app.dependencies import get_current_user
 from app.services.email import email_service
+from app.services.notification_service import NotificationService
 
 router = APIRouter()
+
+
+def get_notification_service(db: Session) -> NotificationService:
+    """Get notification service instance."""
+    return NotificationService(db)
 
 
 @router.post("/", response_model=JoinRequestResponse)
@@ -153,7 +159,7 @@ async def respond_to_join_request(
     db.commit()
     db.refresh(join_request)
 
-    # Notify requester
+    # Notify requester via email
     requester = db.query(User).filter(User.id == join_request.user_id).first()
     if requester:
         background_tasks.add_task(
@@ -161,6 +167,19 @@ async def respond_to_join_request(
             requester.email,
             project.title,
             response_data.status == RequestStatus.approved
+        )
+
+    # Send in-app notification
+    notification_service = get_notification_service(db)
+    if response_data.status == RequestStatus.approved:
+        background_tasks.add_task(
+            notification_service.notify_join_approved,
+            join_request
+        )
+    elif response_data.status == RequestStatus.rejected:
+        background_tasks.add_task(
+            notification_service.notify_join_rejected,
+            join_request
         )
 
     return join_request
