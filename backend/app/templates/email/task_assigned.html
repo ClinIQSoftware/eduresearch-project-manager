@@ -1,0 +1,46 @@
+{% extends "email/base.html" %}
+
+{% block title %}New Task Assignment{% endblock %}
+
+{% block content %}
+<h2>New Task Assigned to You</h2>
+
+<p>Hello {{ user_name }},</p>
+
+<p>You have been assigned a new task on EduResearch Project Manager.</p>
+
+<div class="info-box">
+    <div style="margin-bottom: 12px;">
+        <div class="label">Task</div>
+        <div class="value">{{ task_title }}</div>
+    </div>
+    <div style="margin-bottom: 12px;">
+        <div class="label">Project</div>
+        <div class="value">{{ project_title }}</div>
+    </div>
+    <div style="margin-bottom: 12px;">
+        <div class="label">Assigned By</div>
+        <div class="value">{{ assigner_name }}</div>
+    </div>
+    {% if due_date %}
+    <div>
+        <div class="label">Due Date</div>
+        <div class="value" style="color: #DC2626;">{{ due_date }}</div>
+    </div>
+    {% endif %}
+</div>
+
+{% if due_date %}
+<div class="alert alert-warning">
+    <strong>Reminder:</strong> This task is due on {{ due_date }}. Please plan accordingly to complete it on time.
+</div>
+{% endif %}
+
+<p>Please review the task details and begin working on it when you're ready. You can update the task status and add comments through the project page.</p>
+
+<div class="btn-container">
+    <a href="{{ task_url }}" class="btn btn-primary">View Task Details</a>
+</div>
+
+<p style="font-size: 14px; color: #6B7280;">If you have questions about this task, please contact {{ assigner_name }} or your project lead.</p>
+{% endblock %}

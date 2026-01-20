@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from typing import List
-from app.database import get_db
-from app.models.task import Task, TaskStatus
+from app.api.deps import get_db
+from app.models.task import Task
 from app.models.time_entry import TimeEntry
 from app.models.project import Project
 
@@ -14,8 +14,8 @@ router = APIRouter()
 @router.get("/summary")
 def get_summary(db: Session = Depends(get_db)):
     total_tasks = db.query(Task).count()
-    completed_tasks = db.query(Task).filter(Task.status == TaskStatus.COMPLETED).count()
-    in_progress_tasks = db.query(Task).filter(Task.status == TaskStatus.IN_PROGRESS).count()
+    completed_tasks = db.query(Task).filter(Task.status == "completed").count()
+    in_progress_tasks = db.query(Task).filter(Task.status == "in_progress").count()
 
     total_time = db.query(func.sum(TimeEntry.duration)).scalar() or 0
 
@@ -40,7 +40,7 @@ def get_summary(db: Session = Depends(get_db)):
 def get_time_by_project(db: Session = Depends(get_db)):
     results = db.query(
         Project.id,
-        Project.name,
+        Project.title,
         Project.color,
         func.coalesce(func.sum(TimeEntry.duration), 0).label("total_minutes")
     ).outerjoin(
@@ -48,13 +48,13 @@ def get_time_by_project(db: Session = Depends(get_db)):
     ).outerjoin(
         TimeEntry, TimeEntry.task_id == Task.id
     ).group_by(
-        Project.id, Project.name, Project.color
+        Project.id, Project.title, Project.color
     ).all()
 
     return [
         {
             "project_id": r.id,
-            "project_name": r.name,
+            "project_name": r.title,
             "color": r.color,
             "total_minutes": round(r.total_minutes, 1)
         }
@@ -71,7 +71,7 @@ def get_tasks_completed(days: int = 7, db: Session = Depends(get_db)):
         func.date(Task.updated_at).label("date"),
         func.count(Task.id).label("count")
     ).filter(
-        Task.status == TaskStatus.COMPLETED,
+        Task.status == "completed",
         Task.updated_at >= start_date
     ).group_by(
         func.date(Task.updated_at)

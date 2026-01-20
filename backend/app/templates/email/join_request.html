@@ -1,0 +1,37 @@
+{% extends "email/base.html" %}
+
+{% block title %}New Project Join Request{% endblock %}
+
+{% block content %}
+<h2>New Join Request</h2>
+
+<p>Hello {{ lead_name }},</p>
+
+<p>Someone would like to join your research project on EduResearch Project Manager.</p>
+
+<div class="info-box">
+    <div style="margin-bottom: 12px;">
+        <div class="label">Project</div>
+        <div class="value">{{ project_title }}</div>
+    </div>
+    <div>
+        <div class="label">Requester</div>
+        <div class="value">{{ requester_name }}</div>
+    </div>
+</div>
+
+{% if message %}
+<div class="highlight">
+    <p><strong>Message from {{ requester_name }}:</strong></p>
+    <p style="margin-top: 8px; font-style: italic;">"{{ message }}"</p>
+</div>
+{% endif %}
+
+<p>Please review this request and decide whether to approve or decline. You can manage join requests from your project's settings page.</p>
+
+<div class="btn-container">
+    <a href="{{ project_url }}" class="btn btn-primary">Review Request</a>
+</div>
+
+<p style="font-size: 14px; color: #6B7280;">The requester will be notified of your decision via email.</p>
+{% endblock %}

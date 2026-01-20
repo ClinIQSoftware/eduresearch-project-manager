@@ -1,0 +1,38 @@
+{% extends "email/base.html" %}
+
+{% block title %}Welcome to EduResearch Project Manager{% endblock %}
+
+{% block content %}
+<h2>Welcome, {{ user_name }}!</h2>
+
+<p>We're excited to have you join EduResearch Project Manager, your new platform for research collaboration and project management.</p>
+
+{% if temp_password %}
+<div class="highlight">
+    <p><strong>Your temporary login credentials:</strong></p>
+</div>
+
+<div class="info-box">
+    <div class="label">Temporary Password</div>
+    <div class="value" style="font-family: monospace; font-size: 18px;">{{ temp_password }}</div>
+</div>
+
+<div class="alert alert-warning">
+    <strong>Important:</strong> For your security, please change your password immediately after logging in. Go to Settings &gt; Account to update your password.
+</div>
+{% endif %}
+
+<p>With EduResearch Project Manager, you can:</p>
+<ul style="color: #4B5563; margin: 16px 0; padding-left: 24px;">
+    <li style="margin-bottom: 8px;">Create and manage research projects</li>
+    <li style="margin-bottom: 8px;">Collaborate with team members</li>
+    <li style="margin-bottom: 8px;">Track tasks and milestones</li>
+    <li style="margin-bottom: 8px;">Share resources and documents</li>
+</ul>
+
+<div class="btn-container">
+    <a href="{{ login_url }}" class="btn btn-primary">Log In to Your Account</a>
+</div>
+
+<p style="font-size: 14px; color: #6B7280;">If you have any questions or need assistance, please don't hesitate to contact your system administrator.</p>
+{% endblock %}

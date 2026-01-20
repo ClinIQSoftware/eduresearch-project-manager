@@ -1,0 +1,49 @@
+{% extends "email/base.html" %}
+
+{% block title %}Account {{ 'Approved' if approved else 'Status Update' }}{% endblock %}
+
+{% block content %}
+<h2>Account {{ 'Approved' if approved else 'Not Approved' }}</h2>
+
+<p>Hello {{ user_name }},</p>
+
+{% if approved %}
+<div class="alert alert-success">
+    <strong>Great news!</strong> Your account has been approved.
+</div>
+
+<p>Your registration for EduResearch Project Manager has been reviewed and approved by an administrator. You now have full access to the platform.</p>
+
+<p>You can now:</p>
+<ul style="color: #4B5563; margin: 16px 0; padding-left: 24px;">
+    <li style="margin-bottom: 8px;">Browse and join existing research projects</li>
+    <li style="margin-bottom: 8px;">Create your own projects</li>
+    <li style="margin-bottom: 8px;">Collaborate with other researchers</li>
+    <li style="margin-bottom: 8px;">Manage tasks and track progress</li>
+</ul>
+
+<div class="btn-container">
+    <a href="{{ login_url }}" class="btn btn-success">Log In Now</a>
+</div>
+
+<p style="font-size: 14px; color: #6B7280;">Welcome to the community! We look forward to seeing your contributions.</p>
+
+{% else %}
+<div class="alert alert-error">
+    <strong>Account Not Approved</strong>
+</div>
+
+<p>We regret to inform you that your registration request for EduResearch Project Manager has not been approved at this time.</p>
+
+<p>This could be due to various reasons, such as:</p>
+<ul style="color: #4B5563; margin: 16px 0; padding-left: 24px;">
+    <li style="margin-bottom: 8px;">Incomplete registration information</li>
+    <li style="margin-bottom: 8px;">Unable to verify your affiliation</li>
+    <li style="margin-bottom: 8px;">Registration criteria not met</li>
+</ul>
+
+<p>If you believe this decision was made in error or would like more information, please contact your institution's administrator.</p>
+
+<p style="font-size: 14px; color: #6B7280;">We appreciate your interest in EduResearch Project Manager.</p>
+{% endif %}
+{% endblock %}

@@ -1,22 +1,41 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, BigInteger
-from sqlalchemy.orm import relationship
+"""ProjectFile model for EduResearch Project Manager."""
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
+
+from sqlalchemy import BigInteger, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.project import Project
+    from app.models.user import User
 
 
 class ProjectFile(Base):
+    """Represents a file uploaded to a project."""
+
     __tablename__ = "project_files"
 
-    id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
-    uploaded_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    filename = Column(String(255), nullable=False)
-    original_filename = Column(String(255), nullable=False)
-    file_path = Column(String(500), nullable=False)
-    file_size = Column(BigInteger, nullable=False)
-    content_type = Column(String(100), nullable=True)
-    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    uploaded_by_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    filename: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )  # Stored filename (UUID)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    content_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    uploaded_at: Mapped[datetime] = mapped_column(
+        default=func.now(), server_default=func.now()
+    )
 
     # Relationships
-    project = relationship("Project", back_populates="files")
-    uploaded_by = relationship("User", back_populates="uploaded_files")
+    project: Mapped["Project"] = relationship("Project", back_populates="files")
+    uploaded_by: Mapped["User"] = relationship("User", back_populates="uploaded_files")

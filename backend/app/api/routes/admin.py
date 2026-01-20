@@ -1,32 +1,49 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO
 import secrets
 import string
-from app.database import get_db
+
+from app.api.deps import get_db, get_current_user, get_current_superuser, is_institution_admin
 from app.models.user import User
 from app.models.project import Project
 from app.models.email_settings import EmailSettings
 from app.models.email_template import EmailTemplate
 from app.models.system_settings import SystemSettings
-from app.models.organization import Institution
+from app.models.institution import Institution
 from app.models.department import Department
-from app.schemas.user import UserResponse, UserUpdateAdmin, UserCreateAdmin, PendingUserResponse
-from app.schemas.project import ProjectResponse, ProjectUpdate
-from app.schemas.email_settings import (
-    EmailSettingsCreate, EmailSettingsUpdate, EmailSettingsResponse
+from app.schemas import (
+    UserResponse,
+    UserUpdateAdmin,
+    UserCreateAdmin,
+    PendingUserResponse,
+    ProjectResponse,
+    ProjectUpdate,
+    EmailSettingsResponse,
+    EmailSettingsUpdate,
+    EmailTemplateResponse,
+    EmailTemplateUpdate,
+    TestEmailRequest,
+    SystemSettingsResponse,
+    SystemSettingsUpdate,
+    BulkUploadResult,
 )
-from app.schemas.email_template import (
-    EmailTemplateResponse, EmailTemplateUpdate, TestEmailRequest
-)
-from app.schemas.system_settings import (
-    SystemSettingsResponse, SystemSettingsUpdate, BulkUploadResult
-)
-from app.dependencies import get_current_user, require_superuser, is_institution_admin, require_admin_access_check
-from app.services.auth import create_user, get_password_hash
-from app.services.email import email_service, get_email_service_from_db
+from app.services import UserService, EmailService
+from app.core.security import hash_password
+
+
+def require_admin_access(institution_id: Optional[int], current_user: User, db: Session):
+    """Check if user has admin access for the given institution."""
+    if current_user.is_superuser:
+        return
+    if institution_id:
+        if not is_institution_admin(db, current_user.id, institution_id):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    else:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Superuser access required")
 
 router = APIRouter()
 
@@ -85,19 +102,27 @@ async def create_user_admin(
     # Generate temporary password
     temp_password = generate_temp_password()
 
-    user = create_user(
-        db=db,
+    # Create user directly (admin-created users are auto-approved)
+    user = User(
         email=user_data.email,
-        password=temp_password,
+        password_hash=hash_password(temp_password),
         first_name=user_data.first_name,
         last_name=user_data.last_name,
         institution_id=user_data.institution_id,
         department_id=user_data.department_id,
-        is_superuser=user_data.is_superuser
+        is_superuser=user_data.is_superuser,
+        is_approved=True,
+        approved_at=datetime.now(timezone.utc),
+        approved_by_id=current_user.id,
+        is_active=True
     )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
 
     # Send welcome email with temporary password in background
     full_name = f"{user_data.first_name} {user_data.last_name}".strip()
+    email_service = EmailService(db)
     background_tasks.add_task(
         email_service.send_welcome_email,
         user_data.email,
@@ -144,7 +169,7 @@ def update_user_admin(
 @router.delete("/users/{user_id}")
 def deactivate_user(
     user_id: int,
-    current_user: User = Depends(require_superuser),
+    current_user: User = Depends(get_current_superuser),
     db: Session = Depends(get_db)
 ):
     """Deactivate a user (superuser only)."""
@@ -164,7 +189,7 @@ def deactivate_user(
 @router.delete("/users/{user_id}/permanent")
 def delete_user_permanently(
     user_id: int,
-    current_user: User = Depends(require_superuser),
+    current_user: User = Depends(get_current_superuser),
     db: Session = Depends(get_db)
 ):
     """Permanently delete a user (superuser only). This action cannot be undone."""
@@ -197,7 +222,7 @@ def delete_user_permanently(
 
 @router.get("/projects", response_model=List[ProjectResponse])
 def get_all_projects_admin(
-    current_user: User = Depends(require_superuser),
+    current_user: User = Depends(get_current_superuser),
     db: Session = Depends(get_db)
 ):
     """Get all projects (superuser only)."""
@@ -208,7 +233,7 @@ def get_all_projects_admin(
 def update_project_admin(
     project_id: int,
     project_data: ProjectUpdate,
-    current_user: User = Depends(require_superuser),
+    current_user: User = Depends(get_current_superuser),
     db: Session = Depends(get_db)
 ):
     """Update any project (superuser only)."""
@@ -234,7 +259,7 @@ def get_email_settings(
     db: Session = Depends(get_db)
 ):
     """Get email settings."""
-    require_admin_access_check(institution_id, current_user, db)
+    require_admin_access(institution_id, current_user, db)
 
     settings = db.query(EmailSettings).filter(
         EmailSettings.institution_id == institution_id
@@ -262,7 +287,7 @@ def update_email_settings(
     db: Session = Depends(get_db)
 ):
     """Update email settings."""
-    require_admin_access_check(institution_id, current_user, db)
+    require_admin_access(institution_id, current_user, db)
 
     settings = db.query(EmailSettings).filter(
         EmailSettings.institution_id == institution_id
@@ -451,7 +476,7 @@ def generate_temp_password(length: int = 12) -> str:
 @router.post("/users/bulk-upload", response_model=BulkUploadResult)
 async def bulk_upload_users(
     file: UploadFile = File(...),
-    current_user: User = Depends(require_superuser),
+    current_user: User = Depends(get_current_superuser),
     db: Session = Depends(get_db)
 ):
     """
@@ -574,7 +599,7 @@ async def bulk_upload_users(
                     email=email,
                     first_name=first_name,
                     last_name=last_name,
-                    password_hash=get_password_hash(temp_password),
+                    password_hash=hash_password(temp_password),
                     phone=phone,
                     bio=bio,
                     institution_id=inst_id,
@@ -606,11 +631,10 @@ async def bulk_upload_users(
 
 @router.get("/users/upload-template")
 async def get_upload_template(
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(get_current_superuser)
 ):
     """Download Excel template for bulk user upload."""
     import openpyxl
-    from fastapi.responses import StreamingResponse
 
     workbook = openpyxl.Workbook()
     sheet = workbook.active
@@ -653,7 +677,7 @@ def get_email_templates(
     db: Session = Depends(get_db)
 ):
     """Get all email templates."""
-    require_admin_access_check(institution_id, current_user, db)
+    require_admin_access(institution_id, current_user, db)
 
     # Get institution-specific templates first, then fall back to global
     templates = db.query(EmailTemplate).filter(
@@ -677,7 +701,7 @@ def get_email_template(
     db: Session = Depends(get_db)
 ):
     """Get a specific email template by type."""
-    require_admin_access_check(institution_id, current_user, db)
+    require_admin_access(institution_id, current_user, db)
 
     # Try institution-specific first
     template = db.query(EmailTemplate).filter(
@@ -707,7 +731,7 @@ def update_email_template(
     db: Session = Depends(get_db)
 ):
     """Update an email template."""
-    require_admin_access_check(institution_id, current_user, db)
+    require_admin_access(institution_id, current_user, db)
 
     # Try to get existing template for this institution
     template = db.query(EmailTemplate).filter(
@@ -753,15 +777,15 @@ async def send_test_email(
     db: Session = Depends(get_db)
 ):
     """Send a test email using a specific template."""
-    require_admin_access_check(institution_id, current_user, db)
+    require_admin_access(institution_id, current_user, db)
 
     # Get email service configured with database settings
-    configured_email_service = get_email_service_from_db(db, institution_id)
+    email_svc = EmailService(db, institution_id)
 
     # Check if email is actually configured
-    if not configured_email_service.smtp_user or not configured_email_service.smtp_password:
+    if not email_svc.is_configured():
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email settings not configured. Please configure SMTP settings first."
         )
 
@@ -799,17 +823,23 @@ async def send_test_email(
     }
 
     # Send email directly (not in background) so we can report errors
-    success = await configured_email_service.send_templated_email(
-        request.recipient_email,
-        template.subject,
-        template.body,
-        test_context
-    )
+    try:
+        success = await email_svc.send_templated_email(
+            request.recipient_email,
+            template.subject,
+            template.body,
+            test_context
+        )
 
-    if success:
-        return {"message": f"Test email sent successfully to {request.recipient_email}"}
-    else:
+        if success:
+            return {"message": f"Test email sent successfully to {request.recipient_email}"}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send test email. Check SMTP settings and server logs."
+            )
+    except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail="Failed to send test email. Check SMTP settings and server logs."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send test email: {str(e)}"
         )

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
@@ -10,11 +10,19 @@ import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import JoinRequests from './pages/JoinRequests';
 import Reports from './pages/Reports';
-import AdminDashboard from './pages/AdminDashboard';
 import PendingUsers from './pages/PendingUsers';
 import Tasks from './pages/Tasks';
 import TimeTracking from './pages/TimeTracking';
 import Settings from './pages/Settings';
+import {
+  AdminLayout,
+  UsersTab,
+  InstitutionsTab,
+  DepartmentsTab,
+  SecurityTab,
+  EmailTab,
+  ImportTab,
+} from './pages/admin';
 
 function App() {
   return (
@@ -123,11 +131,19 @@ function App() {
           element={
             <ProtectedRoute requireSuperuser>
               <Layout>
-                <AdminDashboard />
+                <AdminLayout />
               </Layout>
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="/admin/users" replace />} />
+          <Route path="users" element={<UsersTab />} />
+          <Route path="institutions" element={<InstitutionsTab />} />
+          <Route path="departments" element={<DepartmentsTab />} />
+          <Route path="security" element={<SecurityTab />} />
+          <Route path="email" element={<EmailTab />} />
+          <Route path="import" element={<ImportTab />} />
+        </Route>
       </Routes>
     </AuthProvider>
   );

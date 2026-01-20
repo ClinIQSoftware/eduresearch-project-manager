@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session, joinedload
 from typing import List
-from app.database import get_db
+from app.api.deps import get_db, get_current_user
 from app.models.project import Project
 from app.models.project_member import ProjectMember, MemberRole
 from app.models.user import User
-from app.dependencies import get_current_user
 from pydantic import BaseModel
 from typing import Optional
 
@@ -70,8 +69,8 @@ def get_projects_with_leads(
         result.append(ProjectWithLeadReport(
             id=project.id,
             title=project.title,
-            classification=project.classification.value if project.classification else None,
-            status=project.status.value if project.status else None,
+            classification=project.classification or None,
+            status=project.status or None,
             open_to_participants=project.open_to_participants,
             start_date=str(project.start_date) if project.start_date else None,
             last_status_change=str(project.last_status_change) if project.last_status_change else None,
@@ -120,8 +119,8 @@ def get_leads_with_projects(
             projects=[{
                 "id": p.id,
                 "title": p.title,
-                "status": p.status.value if p.status else None,
-                "classification": p.classification.value if p.classification else None
+                "status": p.status or None,
+                "classification": p.classification or None
             } for p in projects]
         ))
 
@@ -167,8 +166,8 @@ def get_users_with_projects(
             projects=[{
                 "id": m.project.id,
                 "title": m.project.title,
-                "role": m.role.value if m.role else "participant",
-                "status": m.project.status.value if m.project.status else None
+                "role": m.role or "participant",
+                "status": m.project.status or None
             } for m in memberships if m.project]
         ))
 

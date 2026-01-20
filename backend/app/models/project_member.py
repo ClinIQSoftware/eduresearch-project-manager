@@ -1,24 +1,47 @@
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, Enum
-from sqlalchemy.orm import relationship
+"""ProjectMember model for EduResearch Project Manager."""
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
 from app.database import Base
-import enum
 
 
-class MemberRole(str, enum.Enum):
+class MemberRole:
+    """Constants for project member roles."""
     lead = "lead"
     participant = "participant"
 
 
-class ProjectMember(Base):
-    __tablename__ = "project_members"
+if TYPE_CHECKING:
+    from app.models.project import Project
+    from app.models.user import User
 
-    id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    role = Column(Enum(MemberRole), default=MemberRole.participant)
-    joined_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class ProjectMember(Base):
+    """Represents a user's membership in a project."""
+
+    __tablename__ = "project_members"
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id", name="uq_project_member"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    role: Mapped[str] = mapped_column(
+        String(20), default="participant"
+    )  # 'lead' or 'participant'
+    joined_at: Mapped[datetime] = mapped_column(
+        default=func.now(), server_default=func.now()
+    )
 
     # Relationships
-    project = relationship("Project", back_populates="members")
-    user = relationship("User", back_populates="project_memberships")
+    project: Mapped["Project"] = relationship("Project", back_populates="members")
+    user: Mapped["User"] = relationship("User", back_populates="project_memberships")

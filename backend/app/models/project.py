@@ -1,63 +1,93 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Enum, Date
-from sqlalchemy.orm import relationship
+"""Project model for EduResearch Project Manager."""
+from datetime import date, datetime
+from typing import TYPE_CHECKING, List, Optional
+
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
 from app.database import Base
-import enum
 
-
-class ProjectClassification(str, enum.Enum):
-    education = "education"
-    research = "research"
-    quality_improvement = "quality_improvement"
-    administrative = "administrative"
-
-
-class ProjectStatus(str, enum.Enum):
-    preparation = "preparation"
-    recruitment = "recruitment"
-    analysis = "analysis"
-    writing = "writing"
+if TYPE_CHECKING:
+    from app.models.department import Department
+    from app.models.institution import Institution
+    from app.models.join_request import JoinRequest
+    from app.models.project_file import ProjectFile
+    from app.models.project_member import ProjectMember
+    from app.models.task import Task
+    from app.models.user import User
 
 
 class Project(Base):
+    """Represents a research/education project."""
+
     __tablename__ = "projects"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), nullable=False)
-    description = Column(String(2000), nullable=True)
-    color = Column(String(7), default="#3B82F6")
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
+    color: Mapped[str] = mapped_column(String(7), default="#3B82F6")
 
-    # New classification and status fields
-    classification = Column(Enum(ProjectClassification), default=ProjectClassification.research)
-    status = Column(Enum(ProjectStatus), default=ProjectStatus.preparation)
-    open_to_participants = Column(Boolean, default=True)
+    # Classification and status
+    classification: Mapped[str] = mapped_column(
+        String(30), default="research"
+    )  # 'research', 'education', 'quality_improvement', 'administrative'
+    status: Mapped[str] = mapped_column(
+        String(20), default="preparation"
+    )  # 'preparation', 'recruitment', 'analysis', 'writing'
+    open_to_participants: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Dates
-    start_date = Column(Date, nullable=True)
-    end_date = Column(Date, nullable=True)  # Deadline/target completion date
-    next_meeting_date = Column(Date, nullable=True)  # Next project discussion meeting
-    last_status_change = Column(DateTime(timezone=True), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    start_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    next_meeting_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    last_status_change: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     # Email reminder settings
-    meeting_reminder_enabled = Column(Boolean, default=False)
-    meeting_reminder_days = Column(Integer, default=1)  # Days before meeting to send reminder
-    deadline_reminder_enabled = Column(Boolean, default=False)
-    deadline_reminder_days = Column(Integer, default=7)  # Days before deadline to send reminder
-    meeting_reminder_sent_date = Column(Date, nullable=True)  # Track last reminder sent
-    deadline_reminder_sent_date = Column(Date, nullable=True)  # Track last reminder sent
+    meeting_reminder_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    meeting_reminder_days: Mapped[int] = mapped_column(Integer, default=1)
+    deadline_reminder_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    deadline_reminder_days: Mapped[int] = mapped_column(Integer, default=7)
+    meeting_reminder_sent_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    deadline_reminder_sent_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
     # Foreign keys
-    institution_id = Column(Integer, ForeignKey("institutions.id"), nullable=True)
-    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
-    lead_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    institution_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("institutions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    department_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    lead_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        onupdate=func.now(), nullable=True
+    )
 
     # Relationships
-    institution = relationship("Institution", back_populates="projects")
-    department = relationship("Department", backref="projects")
-    lead = relationship("User", back_populates="led_projects", foreign_keys=[lead_id])
-    members = relationship("ProjectMember", back_populates="project", cascade="all, delete-orphan")
-    join_requests = relationship("JoinRequest", back_populates="project", cascade="all, delete-orphan")
-    files = relationship("ProjectFile", back_populates="project", cascade="all, delete-orphan")
-    tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
+    institution: Mapped[Optional["Institution"]] = relationship(
+        "Institution", back_populates="projects"
+    )
+    department: Mapped[Optional["Department"]] = relationship(
+        "Department", back_populates="projects"
+    )
+    lead: Mapped[Optional["User"]] = relationship(
+        "User", back_populates="led_projects", foreign_keys=[lead_id]
+    )
+    members: Mapped[List["ProjectMember"]] = relationship(
+        "ProjectMember", back_populates="project", cascade="all, delete-orphan"
+    )
+    tasks: Mapped[List["Task"]] = relationship(
+        "Task", back_populates="project", cascade="all, delete-orphan"
+    )
+    files: Mapped[List["ProjectFile"]] = relationship(
+        "ProjectFile", back_populates="project", cascade="all, delete-orphan"
+    )
+    join_requests: Mapped[List["JoinRequest"]] = relationship(
+        "JoinRequest", back_populates="project", cascade="all, delete-orphan"
+    )

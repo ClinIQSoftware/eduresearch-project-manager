@@ -1,9 +1,25 @@
+"""Main FastAPI application for EduResearch Project Manager.
+
+This module sets up the FastAPI application with all routes, middleware, and configuration.
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+
 from app.api.routes import (
-    auth, institutions, departments, projects, tasks, timetracking,
-    analytics, join_requests, files, reports, admin, keywords
+    auth_router,
+    users_router,
+    institutions_router,
+    departments_router,
+    projects_router,
+    tasks_router,
+    join_requests_router,
+    files_router,
+    admin_router,
+    keywords_router,
+    reports_router,
+    analytics_router,
+    timetracking_router,
 )
 from app.config import settings
 
@@ -12,7 +28,7 @@ from app.config import settings
 
 app = FastAPI(
     title="EduResearch Project Manager API",
-    description="API for managing research projects, collaboration, and time tracking",
+    description="API for managing research projects and collaboration",
     version="2.0.0",
     redirect_slashes=False  # Prevent 307 redirects that drop auth headers on mobile
 )
@@ -33,44 +49,48 @@ app.add_middleware(
 )
 
 # Auth routes
-app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
+
+# User routes (for admin user management)
+app.include_router(users_router, prefix="/api/users", tags=["Users"])
 
 # Institution routes
-app.include_router(institutions.router, prefix="/api/institutions", tags=["Institutions"])
+app.include_router(institutions_router, prefix="/api/institutions", tags=["Institutions"])
 
 # Department routes
-app.include_router(departments.router, prefix="/api/departments", tags=["Departments"])
+app.include_router(departments_router, prefix="/api/departments", tags=["Departments"])
 
 # Project routes
-app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
+app.include_router(projects_router, prefix="/api/projects", tags=["Projects"])
+
+# Task routes
+app.include_router(tasks_router, prefix="/api/tasks", tags=["Tasks"])
 
 # Join request routes
-app.include_router(join_requests.router, prefix="/api/join-requests", tags=["Join Requests"])
+app.include_router(join_requests_router, prefix="/api/join-requests", tags=["Join Requests"])
 
 # File routes
-app.include_router(files.router, prefix="/api", tags=["Files"])
+app.include_router(files_router, prefix="/api/files", tags=["Files"])
+
+# Admin routes (includes admin/users and admin/settings)
+app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
+
+# Keywords routes
+app.include_router(keywords_router, prefix="/api/keywords", tags=["Keywords"])
 
 # Reports routes
-app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
+app.include_router(reports_router, prefix="/api/reports", tags=["Reports"])
 
-# Admin routes
-app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+# Analytics routes
+app.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics"])
 
-# Task routes (existing)
-app.include_router(tasks.router, prefix="/api/tasks", tags=["Tasks"])
-
-# Time tracking routes (existing)
-app.include_router(timetracking.router, prefix="/api/time-entries", tags=["Time Tracking"])
-
-# Analytics routes (existing)
-app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
-
-# Keywords routes (user interest tracking)
-app.include_router(keywords.router, prefix="/api/keywords", tags=["Keywords"])
+# Time tracking routes
+app.include_router(timetracking_router, prefix="/api/time-entries", tags=["Time Tracking"])
 
 
 @app.get("/")
 def root():
+    """Root endpoint returning API information."""
     return {
         "message": "EduResearch Project Manager API",
         "version": "2.0.0",
@@ -80,4 +100,5 @@ def root():
 
 @app.get("/health")
 def health_check():
+    """Health check endpoint."""
     return {"status": "healthy"}

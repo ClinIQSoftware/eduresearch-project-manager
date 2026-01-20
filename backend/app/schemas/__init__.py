@@ -1,47 +1,248 @@
+"""Pydantic schemas for EduResearch Project Manager."""
+
+# Authentication schemas
+from app.schemas.auth import (
+    LoginRequest,
+    PasswordChange,
+    Token,
+    TokenData,
+    TokenResponse,
+)
+
+# User schemas
 from app.schemas.user import (
-    UserBase, UserCreate, UserCreateOAuth, UserUpdate, UserUpdateAdmin,
-    UserResponse, UserBrief, Token, TokenData, LoginRequest
+    AuthProvider,
+    PendingUserResponse,
+    UserBase,
+    UserBrief,
+    UserCreate,
+    UserCreateAdmin,
+    UserCreateOAuth,
+    UserResponse,
+    UserUpdate,
+    UserUpdateAdmin,
 )
+
+# Institution schemas
 from app.schemas.institution import (
-    InstitutionBase, InstitutionCreate, InstitutionUpdate,
-    InstitutionResponse, InstitutionWithMembers, AddMemberRequest
+    AddMemberRequest,
+    InstitutionBase,
+    InstitutionBrief,
+    InstitutionCreate,
+    InstitutionResponse,
+    InstitutionUpdate,
+    InstitutionWithMembers,
 )
+
+# Department schemas
 from app.schemas.department import (
-    DepartmentBase, DepartmentCreate, DepartmentUpdate,
-    DepartmentResponse, DepartmentWithMembers, DepartmentBrief
+    DepartmentBase,
+    DepartmentBrief,
+    DepartmentCreate,
+    DepartmentResponse,
+    DepartmentUpdate,
+    DepartmentWithMembers,
 )
+
+# Project schemas
 from app.schemas.project import (
-    ProjectBase, ProjectCreate, ProjectUpdate, ProjectResponse,
-    ProjectWithLead, ProjectMemberInfo, ProjectDetail, AddProjectMemberRequest
+    AddProjectMemberRequest,
+    MemberRole,
+    ProjectBase,
+    ProjectClassification,
+    ProjectCreate,
+    ProjectDetail,
+    ProjectMemberInfo,
+    ProjectResponse,
+    ProjectStatus,
+    ProjectUpdate,
+    ProjectWithLead,
 )
+
+# Project member schemas
+from app.schemas.project_member import (
+    ProjectMemberCreate,
+    ProjectMemberResponse,
+    ProjectMemberUpdate,
+)
+
+# Task schemas
+from app.schemas.task import (
+    TaskBase,
+    TaskCreate,
+    TaskPriority,
+    TaskResponse,
+    TaskStatus,
+    TaskUpdate,
+    TaskWithAssignee,
+)
+
+# Join request schemas
 from app.schemas.join_request import (
-    JoinRequestBase, JoinRequestCreate, JoinRequestResponse,
-    JoinRequestWithUser, JoinRequestWithProject, RespondToJoinRequest
+    JoinRequestCreate,
+    JoinRequestDetail,
+    JoinRequestResponse,
+    JoinRequestResponseAction,
+    JoinRequestWithProject,
+    JoinRequestWithUser,
+    RequestStatus,
+    RespondToJoinRequest,
 )
-from app.schemas.file import FileUploadResponse, FileWithUploader
-from app.schemas.email_settings import (
-    EmailSettingsBase, EmailSettingsCreate, EmailSettingsUpdate, EmailSettingsResponse
+
+# File schemas
+from app.schemas.file import (
+    FileResponse,
+    FileUploadResponse,
+    FileWithUploader,
 )
+
+# Settings schemas
+from app.schemas.settings import (
+    ApproveUserRequest,
+    BulkUploadResult,
+    EmailSettingsBase,
+    EmailSettingsCreate,
+    EmailSettingsResponse,
+    EmailSettingsUpdate,
+    RegistrationApprovalMode,
+    RejectUserRequest,
+    SystemSettingsBase,
+    SystemSettingsResponse,
+    SystemSettingsUpdate,
+    TestEmailRequest,
+)
+
+# Time entry schemas (kept for backwards compatibility)
+from app.schemas.time_entry import (
+    TimeEntryCreate,
+    TimeEntryResponse,
+    TimeEntryUpdate,
+)
+
+# Email template schemas (kept for backwards compatibility)
 from app.schemas.email_template import (
-    EmailTemplateBase, EmailTemplateCreate, EmailTemplateUpdate, EmailTemplateResponse, TestEmailRequest
+    EmailTemplateBase,
+    EmailTemplateCreate,
+    EmailTemplateResponse,
+    EmailTemplateUpdate,
 )
-from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
-from app.schemas.time_entry import TimeEntryCreate, TimeEntryUpdate, TimeEntryResponse
+
+# Keyword schemas (kept for backwards compatibility)
+from app.schemas.keyword import (
+    AlertPreferenceResponse,
+    AlertPreferenceUpdate,
+    KeywordBase,
+    KeywordBulkUpdate,
+    KeywordCreate,
+    KeywordListResponse,
+    KeywordResponse,
+    MatchedProjectResponse,
+    ProjectSearchParams,
+    SendAlertsRequest,
+)
+
 
 __all__ = [
-    "UserBase", "UserCreate", "UserCreateOAuth", "UserUpdate", "UserUpdateAdmin",
-    "UserResponse", "UserBrief", "Token", "TokenData", "LoginRequest",
-    "InstitutionBase", "InstitutionCreate", "InstitutionUpdate",
-    "InstitutionResponse", "InstitutionWithMembers", "AddMemberRequest",
-    "DepartmentBase", "DepartmentCreate", "DepartmentUpdate",
-    "DepartmentResponse", "DepartmentWithMembers", "DepartmentBrief",
-    "ProjectBase", "ProjectCreate", "ProjectUpdate", "ProjectResponse",
-    "ProjectWithLead", "ProjectMemberInfo", "ProjectDetail", "AddProjectMemberRequest",
-    "JoinRequestBase", "JoinRequestCreate", "JoinRequestResponse",
-    "JoinRequestWithUser", "JoinRequestWithProject", "RespondToJoinRequest",
-    "FileUploadResponse", "FileWithUploader",
-    "EmailSettingsBase", "EmailSettingsCreate", "EmailSettingsUpdate", "EmailSettingsResponse",
-    "EmailTemplateBase", "EmailTemplateCreate", "EmailTemplateUpdate", "EmailTemplateResponse", "TestEmailRequest",
-    "TaskCreate", "TaskUpdate", "TaskResponse",
-    "TimeEntryCreate", "TimeEntryUpdate", "TimeEntryResponse",
+    # Auth
+    "LoginRequest",
+    "PasswordChange",
+    "Token",
+    "TokenData",
+    "TokenResponse",
+    # User
+    "AuthProvider",
+    "PendingUserResponse",
+    "UserBase",
+    "UserBrief",
+    "UserCreate",
+    "UserCreateAdmin",
+    "UserCreateOAuth",
+    "UserResponse",
+    "UserUpdate",
+    "UserUpdateAdmin",
+    # Institution
+    "AddMemberRequest",
+    "InstitutionBase",
+    "InstitutionBrief",
+    "InstitutionCreate",
+    "InstitutionResponse",
+    "InstitutionUpdate",
+    "InstitutionWithMembers",
+    # Department
+    "DepartmentBase",
+    "DepartmentBrief",
+    "DepartmentCreate",
+    "DepartmentResponse",
+    "DepartmentUpdate",
+    "DepartmentWithMembers",
+    # Project
+    "AddProjectMemberRequest",
+    "MemberRole",
+    "ProjectBase",
+    "ProjectClassification",
+    "ProjectCreate",
+    "ProjectDetail",
+    "ProjectMemberInfo",
+    "ProjectResponse",
+    "ProjectStatus",
+    "ProjectUpdate",
+    "ProjectWithLead",
+    # Project Member
+    "ProjectMemberCreate",
+    "ProjectMemberResponse",
+    "ProjectMemberUpdate",
+    # Task
+    "TaskBase",
+    "TaskCreate",
+    "TaskPriority",
+    "TaskResponse",
+    "TaskStatus",
+    "TaskUpdate",
+    "TaskWithAssignee",
+    # Join Request
+    "JoinRequestCreate",
+    "JoinRequestDetail",
+    "JoinRequestResponse",
+    "JoinRequestResponseAction",
+    "JoinRequestWithProject",
+    "JoinRequestWithUser",
+    "RequestStatus",
+    "RespondToJoinRequest",
+    # File
+    "FileResponse",
+    "FileUploadResponse",
+    "FileWithUploader",
+    # Settings
+    "ApproveUserRequest",
+    "BulkUploadResult",
+    "EmailSettingsBase",
+    "EmailSettingsCreate",
+    "EmailSettingsResponse",
+    "EmailSettingsUpdate",
+    "RegistrationApprovalMode",
+    "RejectUserRequest",
+    "SystemSettingsBase",
+    "SystemSettingsResponse",
+    "SystemSettingsUpdate",
+    "TestEmailRequest",
+    # Time Entry
+    "TimeEntryCreate",
+    "TimeEntryResponse",
+    "TimeEntryUpdate",
+    # Email Template
+    "EmailTemplateBase",
+    "EmailTemplateCreate",
+    "EmailTemplateResponse",
+    "EmailTemplateUpdate",
+    # Keyword
+    "AlertPreferenceResponse",
+    "AlertPreferenceUpdate",
+    "KeywordBase",
+    "KeywordBulkUpdate",
+    "KeywordCreate",
+    "KeywordListResponse",
+    "KeywordResponse",
+    "MatchedProjectResponse",
+    "ProjectSearchParams",
+    "SendAlertsRequest",
 ]

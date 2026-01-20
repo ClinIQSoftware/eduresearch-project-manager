@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List, Optional
 from datetime import datetime, timedelta
-from app.database import get_db
+from app.api.deps import get_db, get_current_user
 from app.models.project import Project
 from app.models.user import User
 from app.models.user_keyword import UserKeyword
@@ -13,8 +13,7 @@ from app.schemas.keyword import (
     AlertPreferenceUpdate, AlertPreferenceResponse, MatchedProjectResponse,
     SendAlertsRequest
 )
-from app.dependencies import get_current_user
-from app.services.email import email_service
+from app.services import EmailService
 from app.config import settings
 
 router = APIRouter()
@@ -430,12 +429,34 @@ async def send_scheduled_alerts(
                     "matched_keywords": matched
                 })
 
-            # Send email
-            await email_service.send_keyword_alert(
-                to_email=user.email,
-                user_name=user.name,
-                projects=project_data,
-                frequency=pref.alert_frequency
+            # Build email content
+            project_list_html = ""
+            for item in project_data:
+                p = item["project"]
+                kws = ", ".join(item["matched_keywords"])
+                project_list_html += f"<li><strong>{p.title}</strong> - matched keywords: {kws}</li>"
+
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2>New Projects Matching Your Keywords</h2>
+                <p>Hello {user.name},</p>
+                <p>We found {len(new_projects)} new project(s) matching your keywords:</p>
+                <ul>{project_list_html}</ul>
+                <p><a href="{settings.frontend_url}/projects">View Projects</a></p>
+                <hr>
+                <p style="color: #666; font-size: 12px;">EduResearch Project Manager</p>
+            </body>
+            </html>
+            """
+
+            # Send email using EmailService
+            email_svc = EmailService(db)
+            email_svc.send_email(
+                to=user.email,
+                subject=f"New Projects Matching Your Keywords ({pref.alert_frequency} digest)",
+                html_content=html_content,
+                institution_id=user.institution_id
             )
 
             # Update tracking
