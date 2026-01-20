@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getProjects, getMyProjects, getInstitutions, getDepartments, getNewMatchedProjects, getUpcomingDeadlines, getUpcomingMeetings } from '../services/api';
 import { DashboardTabs, type DashboardView } from '../components/dashboard/DashboardTabs';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationsDashboardWidget from '../components/notifications/NotificationsDashboardWidget';
 import type { ProjectWithLead, Institution, Department, MatchedProject } from '../types';
 
 const VIEW_STORAGE_KEY = 'dashboardView';
@@ -308,22 +309,18 @@ export default function Dashboard() {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
-          <p className="text-xs md:text-sm text-gray-500">Total Projects</p>
-          <p className="text-xl md:text-2xl font-bold">{stats.total}</p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 items-stretch">
+        <div className="bg-white px-3 py-2 rounded-lg shadow flex flex-col justify-center">
+          <p className="text-xs text-gray-500">Total Projects</p>
+          <p className="text-lg font-bold">{stats.total}</p>
         </div>
-        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
-          <p className="text-xs md:text-sm text-gray-500">Open to Join</p>
-          <p className="text-xl md:text-2xl font-bold text-green-600">{stats.open}</p>
+        <div className="bg-white px-3 py-2 rounded-lg shadow flex flex-col justify-center">
+          <p className="text-xs text-gray-500">Open to Join</p>
+          <p className="text-lg font-bold text-green-600">{stats.open}</p>
         </div>
-        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
-          <p className="text-xs md:text-sm text-gray-500">Recruiting</p>
-          <p className="text-xl md:text-2xl font-bold text-blue-600">{stats.byStatus.recruitment}</p>
-        </div>
-        <div className="bg-white p-3 md:p-4 rounded-lg shadow">
-          <p className="text-xs md:text-sm text-gray-500">Research</p>
-          <p className="text-xl md:text-2xl font-bold text-purple-600">{stats.byClassification.research}</p>
+        {/* Recent Notifications - spans 2 columns */}
+        <div className="col-span-2">
+          <NotificationsDashboardWidget />
         </div>
       </div>
 

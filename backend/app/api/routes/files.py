@@ -10,9 +10,15 @@ from app.schemas.file import FileUploadResponse, FileWithUploader
 from app.dependencies import get_current_user, is_project_member, is_project_lead
 from app.services.files import save_uploaded_file, read_file, delete_file, get_content_type
 from app.services.email import email_service
+from app.services.notification_service import NotificationService
 from app.config import settings
 
 router = APIRouter()
+
+
+def get_notification_service(db: Session) -> NotificationService:
+    """Get notification service instance."""
+    return NotificationService(db)
 
 
 @router.post("/projects/{project_id}/files", response_model=FileUploadResponse)
@@ -66,6 +72,15 @@ async def upload_file(
                     file.filename,
                     file_content
                 )
+
+        # Send in-app notifications to all project members
+        notification_service = get_notification_service(db)
+        background_tasks.add_task(
+            notification_service.notify_file_uploaded,
+            project,
+            file.filename,
+            current_user
+        )
 
         return project_file
 

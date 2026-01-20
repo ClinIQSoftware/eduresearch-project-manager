@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import NotificationBell from '../notifications/NotificationBell';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊' },
@@ -22,8 +23,13 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-gray-900 text-white flex flex-col">
       <div className="p-4 border-b border-gray-700">
-        <h1 className="text-xl font-bold">EduResearch</h1>
-        <p className="text-sm text-gray-400">Project Manager</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold">EduResearch</h1>
+            <p className="text-sm text-gray-400">Project Manager</p>
+          </div>
+          <NotificationBell />
+        </div>
       </div>
 
       <nav className="flex-1 p-4">

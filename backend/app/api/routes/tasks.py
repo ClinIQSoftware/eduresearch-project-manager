@@ -9,8 +9,14 @@ from app.models.user import User
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from app.dependencies import get_current_user
 from app.services.email import email_service
+from app.services.notification_service import NotificationService
 
 router = APIRouter()
+
+
+def get_notification_service(db: Session) -> NotificationService:
+    """Get notification service instance."""
+    return NotificationService(db)
 
 
 def is_project_member(db: Session, user_id: int, project_id: int) -> bool:
@@ -119,6 +125,13 @@ def create_task(
     # Send assignment email if task is assigned to someone (other than creator)
     if db_task.assigned_to_id and db_task.assigned_to_id != current_user.id:
         send_task_assignment_email(background_tasks, db, db_task, current_user)
+        # Also create in-app notification
+        notification_service = get_notification_service(db)
+        background_tasks.add_task(
+            notification_service.notify_task_assigned,
+            db_task,
+            current_user
+        )
 
     return db_task
 
@@ -149,6 +162,7 @@ def update_task(
 
     # Track if assignment is changing
     old_assigned_to_id = db_task.assigned_to_id
+    old_status = db_task.status
     new_assigned_to_id = task.assigned_to_id if task.assigned_to_id is not None else old_assigned_to_id
 
     # If task belongs to a project, verify user is a member
@@ -179,6 +193,25 @@ def update_task(
         new_assigned_to_id != old_assigned_to_id and
         new_assigned_to_id != current_user.id):
         send_task_assignment_email(background_tasks, db, db_task, current_user)
+        # Also create in-app notification
+        notification_service = get_notification_service(db)
+        background_tasks.add_task(
+            notification_service.notify_task_assigned,
+            db_task,
+            current_user
+        )
+
+    # Notify task creator if task was just completed
+    if (task.status == TaskStatus.COMPLETED and
+        old_status != TaskStatus.COMPLETED and
+        db_task.created_by_id and
+        db_task.created_by_id != current_user.id):
+        notification_service = get_notification_service(db)
+        background_tasks.add_task(
+            notification_service.notify_task_completed,
+            db_task,
+            current_user
+        )
 
     return db_task
 

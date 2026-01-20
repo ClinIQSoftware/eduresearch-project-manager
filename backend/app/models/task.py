@@ -36,3 +36,4 @@ class Task(Base):
     assigned_to = relationship("User", foreign_keys=[assigned_to_id], backref="assigned_tasks")
     created_by = relationship("User", foreign_keys=[created_by_id], backref="created_tasks")
     time_entries = relationship("TimeEntry", back_populates="task", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="task")

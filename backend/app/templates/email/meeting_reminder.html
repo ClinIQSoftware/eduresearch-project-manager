@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Meeting Reminder - {{ project_title }}{% endblock %}
+
+{% block header_color %}#2563eb{% endblock %}
+
+{% block header %}
+<h1>Meeting Reminder</h1>
+<p class="subtitle">{{ project_title }}</p>
+{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <div class="icon-circle meeting">
+        &#128197;
+    </div>
+    <h2>Upcoming Meeting</h2>
+</div>
+
+<p>Hello,</p>
+
+<p>This is a friendly reminder that you have an upcoming meeting scheduled for the project <strong>{{ project_title }}</strong>.</p>
+
+<div class="info-box">
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px; width: 120px;">Meeting Date</td>
+            <td style="padding: 8px 0; color: #1e293b; font-size: 14px; font-weight: 500;">{{ meeting_date }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Project</td>
+            <td style="padding: 8px 0; color: #1e293b; font-size: 14px; font-weight: 500;">{{ project_title }}</td>
+        </tr>
+        {% if days_until == 0 %}
+        <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Status</td>
+            <td style="padding: 8px 0; color: #2563eb; font-size: 14px; font-weight: 600;">Today!</td>
+        </tr>
+        {% elif days_until == 1 %}
+        <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Status</td>
+            <td style="padding: 8px 0; color: #f59e0b; font-size: 14px; font-weight: 600;">Tomorrow</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td style="padding: 8px 0; color: #64748b; font-size: 13px;">Status</td>
+            <td style="padding: 8px 0; color: #10b981; font-size: 14px; font-weight: 500;">In {{ days_until }} days</td>
+        </tr>
+        {% endif %}
+    </table>
+</div>
+
+{% if days_until == 0 %}
+<div class="info-box warning">
+    <p style="margin: 0; color: #92400e; font-weight: 500;">
+        &#9888; Your meeting is scheduled for <strong>today</strong>. Please ensure you're prepared and have all necessary materials ready.
+    </p>
+</div>
+{% elif days_until == 1 %}
+<div class="info-box warning">
+    <p style="margin: 0; color: #92400e;">
+        &#128337; Your meeting is <strong>tomorrow</strong>. Make sure to review the project status and prepare any updates you need to share.
+    </p>
+</div>
+{% endif %}
+
+<p class="mt-4">Please make sure to:</p>
+<ul style="color: #475569; padding-left: 20px;">
+    <li>Review the project's current status</li>
+    <li>Prepare any updates or questions you have</li>
+    <li>Check if there are any blockers to discuss</li>
+    <li>Have access to any documents you may need to share</li>
+</ul>
+
+<div class="text-center mt-4">
+    <a href="{{ app_url }}/projects/{{ project_id }}" class="btn">View Project</a>
+</div>
+{% endblock %}
+
+{% block footer %}
+<p>This reminder was sent because you are a member of the project "{{ project_title }}".</p>
+<p class="mt-4" style="color: #94a3b8; font-size: 12px;">
+    To manage your notification preferences, visit your settings in EduResearch Project Manager.
+</p>
+{% endblock %}

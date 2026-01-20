@@ -61,3 +61,4 @@ class Project(Base):
     join_requests = relationship("JoinRequest", back_populates="project", cascade="all, delete-orphan")
     files = relationship("ProjectFile", back_populates="project", cascade="all, delete-orphan")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="project")

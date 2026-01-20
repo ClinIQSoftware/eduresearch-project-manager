@@ -17,11 +17,17 @@ from app.dependencies import (
     get_current_user, is_project_lead, is_project_member, count_project_leads
 )
 from app.services.email import email_service, get_email_service_from_db
+from app.services.notification_service import NotificationService
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def get_notification_service(db: Session) -> NotificationService:
+    """Get notification service instance."""
+    return NotificationService(db)
 
 
 @router.get("", response_model=List[ProjectWithLead])
@@ -279,7 +285,8 @@ async def update_project(
 
     # Track status change
     old_status = project.status
-    if "status" in update_data and update_data["status"] != old_status:
+    status_changed = "status" in update_data and update_data["status"] != old_status
+    if status_changed:
         project.last_status_change = datetime.utcnow()
 
     for key, value in update_data.items():
@@ -309,6 +316,15 @@ async def update_project(
             project.title,
             update_summary,
             current_user.name
+        )
+
+    # Send in-app notification if status changed
+    if status_changed:
+        notification_service = get_notification_service(db)
+        background_tasks.add_task(
+            notification_service.notify_project_status_changed,
+            project,
+            current_user
         )
 
     return project
@@ -353,9 +369,10 @@ def get_project_members(
 
 
 @router.post("/{project_id}/members")
-def add_project_member(
+async def add_project_member(
     project_id: int,
     member_data: AddProjectMemberRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -392,13 +409,23 @@ def add_project_member(
     db.add(member)
     db.commit()
 
+    # Send notification to the added user
+    notification_service = get_notification_service(db)
+    background_tasks.add_task(
+        notification_service.notify_added_to_project,
+        member_data.user_id,
+        project,
+        current_user
+    )
+
     return {"message": "Member added successfully"}
 
 
 @router.delete("/{project_id}/members/{user_id}")
-def remove_project_member(
+async def remove_project_member(
     project_id: int,
     user_id: int,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -428,8 +455,21 @@ def remove_project_member(
                 detail="Cannot remove the last project lead. Assign another lead first."
             )
 
+    # Store user_id before deletion for notification
+    removed_user_id = member.user_id
+
     db.delete(member)
     db.commit()
+
+    # Send notification to removed user (if not removing self)
+    if removed_user_id != current_user.id:
+        notification_service = get_notification_service(db)
+        background_tasks.add_task(
+            notification_service.notify_removed_from_project,
+            removed_user_id,
+            project,
+            current_user
+        )
 
     return {"message": "Member removed successfully"}
 
@@ -534,19 +574,17 @@ async def send_project_reminders(
     today = date.today()
     meeting_reminders_sent = 0
     deadline_reminders_sent = 0
+    in_app_notifications_created = 0
     errors = []
 
     # Get email service with database settings
     configured_email_service = get_email_service_from_db(db)
 
-    # Check if email is configured
-    if not configured_email_service.smtp_user or not configured_email_service.smtp_password:
-        return {
-            "success": False,
-            "message": "Email not configured",
-            "meeting_reminders_sent": 0,
-            "deadline_reminders_sent": 0
-        }
+    # Get notification service for in-app notifications
+    notification_service = NotificationService(db)
+
+    # Check if email is configured (we'll still create in-app notifications even without email)
+    email_configured = configured_email_service.smtp_user and configured_email_service.smtp_password
 
     # === MEETING REMINDERS ===
     # Find projects with meeting reminders enabled and meetings coming up
@@ -570,20 +608,36 @@ async def send_project_reminders(
             if project.meeting_reminder_sent_date == project.next_meeting_date:
                 continue
 
-            # Get all member emails
-            member_emails = [m.user.email for m in project.members if m.user and m.user.email]
+            # Get all members with their info
+            members_with_email = [(m.user.id, m.user.email) for m in project.members if m.user]
 
-            if not member_emails:
+            if not members_with_email:
                 continue
 
-            # Send the reminder
-            await configured_email_service.send_meeting_reminder(
-                to_emails=member_emails,
-                project_title=project.title,
-                meeting_date=project.next_meeting_date.strftime("%A, %B %d, %Y"),
-                days_until=days_until,
-                project_id=project.id
-            )
+            meeting_date_str = project.next_meeting_date.strftime("%A, %B %d, %Y")
+
+            # Create in-app notifications for all members
+            for user_id, _ in members_with_email:
+                notification = notification_service.notify_meeting_approaching(
+                    user_id=user_id,
+                    project=project,
+                    meeting_date=meeting_date_str,
+                    days_until=days_until
+                )
+                if notification:
+                    in_app_notifications_created += 1
+
+            # Send email reminders if email is configured
+            if email_configured:
+                member_emails = [email for _, email in members_with_email if email]
+                if member_emails:
+                    await configured_email_service.send_meeting_reminder(
+                        to_emails=member_emails,
+                        project_title=project.title,
+                        meeting_date=meeting_date_str,
+                        days_until=days_until,
+                        project_id=project.id
+                    )
 
             # Update the sent date
             project.meeting_reminder_sent_date = project.next_meeting_date
@@ -615,20 +669,36 @@ async def send_project_reminders(
             if project.deadline_reminder_sent_date == project.end_date:
                 continue
 
-            # Get all member emails
-            member_emails = [m.user.email for m in project.members if m.user and m.user.email]
+            # Get all members with their info
+            members_with_email = [(m.user.id, m.user.email) for m in project.members if m.user]
 
-            if not member_emails:
+            if not members_with_email:
                 continue
 
-            # Send the reminder
-            await configured_email_service.send_deadline_reminder(
-                to_emails=member_emails,
-                project_title=project.title,
-                deadline_date=project.end_date.strftime("%A, %B %d, %Y"),
-                days_until=days_until,
-                project_id=project.id
-            )
+            deadline_date_str = project.end_date.strftime("%A, %B %d, %Y")
+
+            # Create in-app notifications for all members
+            for user_id, _ in members_with_email:
+                notification = notification_service.notify_deadline_approaching(
+                    user_id=user_id,
+                    project=project,
+                    deadline_date=deadline_date_str,
+                    days_until=days_until
+                )
+                if notification:
+                    in_app_notifications_created += 1
+
+            # Send email reminders if email is configured
+            if email_configured:
+                member_emails = [email for _, email in members_with_email if email]
+                if member_emails:
+                    await configured_email_service.send_deadline_reminder(
+                        to_emails=member_emails,
+                        project_title=project.title,
+                        deadline_date=deadline_date_str,
+                        days_until=days_until,
+                        project_id=project.id
+                    )
 
             # Update the sent date
             project.deadline_reminder_sent_date = project.end_date
@@ -645,5 +715,7 @@ async def send_project_reminders(
         "success": True,
         "meeting_reminders_sent": meeting_reminders_sent,
         "deadline_reminders_sent": deadline_reminders_sent,
+        "in_app_notifications_created": in_app_notifications_created,
+        "email_configured": email_configured,
         "errors": errors if errors else None
     }

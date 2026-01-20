@@ -59,3 +59,7 @@ class User(Base):
     # Keyword tracking relationships
     keywords = relationship("UserKeyword", back_populates="user", cascade="all, delete-orphan")
     alert_preference = relationship("UserAlertPreference", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+    # Notification relationships
+    notifications = relationship("Notification", back_populates="user", foreign_keys="Notification.user_id", cascade="all, delete-orphan")
+    notification_preferences = relationship("NotificationPreference", back_populates="user", cascade="all, delete-orphan")
