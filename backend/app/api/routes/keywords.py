@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.api.deps import get_db, get_current_user
 from app.models.project import Project
 from app.models.user import User
@@ -470,7 +470,7 @@ async def send_scheduled_alerts(
             errors.append(f"User {pref.user_id}: {str(e)}")
 
     return {
-        "message": f"Processed alerts",
+        "message": "Processed alerts",
         "alerts_sent": alerts_sent,
         "errors": errors if errors else None
     }
