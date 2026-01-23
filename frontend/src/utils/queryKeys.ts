@@ -79,6 +79,7 @@ export const queryKeys = {
     },
     systemSettings: () => [...queryKeys.admin.all, 'systemSettings'] as const,
     emailSettings: (institutionId?: number) => [...queryKeys.admin.all, 'emailSettings', institutionId] as const,
+    emailTemplates: (institutionId?: number) => [...queryKeys.admin.all, 'emailTemplates', institutionId] as const,
   },
 };
 

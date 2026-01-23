@@ -208,7 +208,10 @@ def get_reports_overview(
         projects_query = projects_query.filter(*project_filter)
 
     total_projects = projects_query.count()
-    active_projects = projects_query.filter(Project.status == 'active').count()
+    # Count projects in active phases (recruitment and analysis)
+    active_projects = projects_query.filter(
+        Project.status.in_(['recruitment', 'analysis'])
+    ).count()
 
     # Project status breakdown
     status_counts = db.query(
@@ -228,12 +231,12 @@ def get_reports_overview(
     tasks_query = db.query(Task).filter(Task.project_id.in_(project_ids)) if project_ids else db.query(Task).filter(False)
 
     total_tasks = tasks_query.count()
-    open_tasks = tasks_query.filter(Task.status.in_(['open', 'in_progress'])).count()
+    open_tasks = tasks_query.filter(Task.status.in_(['todo', 'in_progress'])).count()
 
     # Overdue tasks
     today = datetime.utcnow().date()
     overdue_tasks = tasks_query.filter(
-        Task.status.in_(['open', 'in_progress']),
+        Task.status.in_(['todo', 'in_progress']),
         Task.due_date < today
     ).count()
 

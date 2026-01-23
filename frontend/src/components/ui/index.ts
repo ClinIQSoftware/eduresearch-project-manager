@@ -56,3 +56,6 @@ export type { FileUploadProps } from './FileUpload';
 
 // PendingApprovalBanner
 export { PendingApprovalBanner, useCanEdit } from './PendingApprovalBanner';
+
+// RichTextEditor
+export { RichTextEditor } from './RichTextEditor';

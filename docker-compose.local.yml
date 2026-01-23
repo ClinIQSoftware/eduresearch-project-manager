@@ -47,11 +47,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.local
+      args:
+        VITE_API_URL: http://localhost:8001/api
     container_name: eduresearch-frontend-local
     ports:
       - "3000:80"
-    environment:
-      VITE_API_URL: http://localhost:8001
     depends_on:
       - backend
 

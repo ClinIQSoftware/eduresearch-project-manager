@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../utils/queryKeys';
 import * as adminApi from '../api/admin';
+import * as api from '../services/api';
 import type { UserFilters, CreateUserData, UpdateUserData, UpdateEmailSettingsData } from '../api/admin';
 import type { SystemSettings } from '../types';
 
@@ -179,6 +180,56 @@ export function useTestEmail() {
   return useMutation({
     mutationFn: async ({ to, institutionId }: { to: string; institutionId?: number }) => {
       const response = await adminApi.testEmail(to, institutionId);
+      return response.data;
+    },
+  });
+}
+
+// Email Templates
+export function useEmailTemplates(institutionId?: number) {
+  return useQuery({
+    queryKey: queryKeys.admin.emailTemplates(institutionId),
+    queryFn: async () => {
+      const response = await api.getEmailTemplates(institutionId);
+      return response.data;
+    },
+  });
+}
+
+export function useUpdateEmailTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      templateType,
+      data,
+      institutionId,
+    }: {
+      templateType: string;
+      data: { subject?: string; body?: string; is_active?: boolean };
+      institutionId?: number;
+    }) => {
+      const response = await api.updateEmailTemplate(templateType, data, institutionId);
+      return response.data;
+    },
+    onSuccess: (_, { institutionId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.emailTemplates(institutionId) });
+    },
+  });
+}
+
+export function useTestTemplateEmail() {
+  return useMutation({
+    mutationFn: async ({
+      templateType,
+      recipientEmail,
+      institutionId,
+    }: {
+      templateType: string;
+      recipientEmail: string;
+      institutionId?: number;
+    }) => {
+      const response = await api.sendTestEmail(templateType, recipientEmail, institutionId);
       return response.data;
     },
   });

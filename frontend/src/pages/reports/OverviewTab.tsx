@@ -7,19 +7,18 @@ import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6b7280', '#ef4444'];
 
 const STATUS_LABELS: Record<string, string> = {
-  planning: 'Planning',
-  active: 'Active',
-  on_hold: 'On Hold',
-  completed: 'Completed',
+  preparation: 'Preparation',
+  recruitment: 'Recruitment',
+  analysis: 'Analysis',
+  writing: 'Writing',
   unknown: 'Unknown',
 };
 
 const CLASSIFICATION_LABELS: Record<string, string> = {
-  basic_science: 'Basic Science',
-  clinical: 'Clinical',
-  translational: 'Translational',
-  epidemiological: 'Epidemiological',
-  other: 'Other',
+  education: 'Education',
+  research: 'Research',
+  quality_improvement: 'Quality Improvement',
+  administrative: 'Administrative',
   unclassified: 'Unclassified',
 };
 

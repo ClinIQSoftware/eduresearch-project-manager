@@ -1,6 +1,6 @@
 """Task model for EduResearch Project Manager."""
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import Date, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -10,6 +10,7 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.project import Project
+    from app.models.time_entry import TimeEntry
     from app.models.user import User
 
 
@@ -56,4 +57,7 @@ class Task(Base):
     )
     created_by: Mapped[Optional["User"]] = relationship(
         "User", back_populates="created_tasks", foreign_keys=[created_by_id]
+    )
+    time_entries: Mapped[List["TimeEntry"]] = relationship(
+        "TimeEntry", back_populates="task", cascade="all, delete-orphan"
     )

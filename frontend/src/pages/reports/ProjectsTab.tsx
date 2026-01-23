@@ -12,19 +12,18 @@ import type { ProjectWithLeadReport } from '../../types';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All Statuses' },
-  { value: 'planning', label: 'Planning' },
-  { value: 'active', label: 'Active' },
-  { value: 'on_hold', label: 'On Hold' },
-  { value: 'completed', label: 'Completed' },
+  { value: 'preparation', label: 'Preparation' },
+  { value: 'recruitment', label: 'Recruitment' },
+  { value: 'analysis', label: 'Analysis' },
+  { value: 'writing', label: 'Writing' },
 ];
 
 const CLASSIFICATION_OPTIONS = [
   { value: '', label: 'All Classifications' },
-  { value: 'basic_science', label: 'Basic Science' },
-  { value: 'clinical', label: 'Clinical' },
-  { value: 'translational', label: 'Translational' },
-  { value: 'epidemiological', label: 'Epidemiological' },
-  { value: 'other', label: 'Other' },
+  { value: 'education', label: 'Education' },
+  { value: 'research', label: 'Research' },
+  { value: 'quality_improvement', label: 'Quality Improvement' },
+  { value: 'administrative', label: 'Administrative' },
 ];
 
 const OPEN_OPTIONS = [
