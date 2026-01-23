@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.models.department import Department
     from app.models.institution import Institution
     from app.models.join_request import JoinRequest
+    from app.models.notification import Notification
     from app.models.project_file import ProjectFile
     from app.models.project_member import ProjectMember
     from app.models.task import Task
@@ -95,4 +96,7 @@ class Project(Base):
     )
     join_requests: Mapped[List["JoinRequest"]] = relationship(
         "JoinRequest", back_populates="project", cascade="all, delete-orphan"
+    )
+    notifications: Mapped[List["Notification"]] = relationship(
+        "Notification", back_populates="project"
     )

@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from app.models.department import Department
     from app.models.institution import Institution
     from app.models.join_request import JoinRequest
+    from app.models.notification import Notification, NotificationPreference
     from app.models.project import Project
     from app.models.project_file import ProjectFile
     from app.models.project_member import ProjectMember
@@ -119,4 +120,15 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
         uselist=False,
+    )
+
+    # Notification relationships
+    notifications: Mapped[List["Notification"]] = relationship(
+        "Notification",
+        back_populates="user",
+        foreign_keys="Notification.user_id",
+        cascade="all, delete-orphan",
+    )
+    notification_preferences: Mapped[List["NotificationPreference"]] = relationship(
+        "NotificationPreference", back_populates="user", cascade="all, delete-orphan"
     )

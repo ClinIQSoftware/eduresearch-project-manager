@@ -21,6 +21,7 @@ import {
 import PendingUsers from './pages/PendingUsers';
 import Tasks from './pages/Tasks';
 import TimeTracking from './pages/TimeTracking';
+import Notifications from './pages/Notifications';
 import {
   SettingsLayout,
   ProfileTab as SettingsProfileTab,
@@ -164,6 +165,16 @@ function App() {
           <Route path="security" element={<SettingsSecurityTab />} />
           <Route path="preferences" element={<SettingsPreferencesTab />} />
         </Route>
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Notifications />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Admin routes */}
         <Route

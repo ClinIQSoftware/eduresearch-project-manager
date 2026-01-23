@@ -375,4 +375,28 @@ export const searchProjects = (query: string, filters?: {
   open_to_participants?: boolean;
 }) => api.get<ProjectWithLead[]>('/projects/search', { params: { q: query, ...filters } });
 
+// Notifications
+import type { Notification, NotificationListResponse, NotificationPreferencesListResponse } from '../types';
+
+export const getNotifications = (params?: { limit?: number; offset?: number; unread_only?: boolean }) =>
+  api.get<NotificationListResponse>('/notifications/', { params });
+
+export const getUnreadCount = () =>
+  api.get<{ count: number }>('/notifications/unread-count');
+
+export const markNotificationRead = (notificationId: number) =>
+  api.put<Notification>(`/notifications/${notificationId}/read`);
+
+export const markAllNotificationsRead = () =>
+  api.put('/notifications/read-all');
+
+export const deleteNotification = (notificationId: number) =>
+  api.delete(`/notifications/${notificationId}`);
+
+export const getNotificationPreferences = () =>
+  api.get<NotificationPreferencesListResponse>('/notifications/preferences');
+
+export const updateNotificationPreferences = (preferences: Array<{ notification_type: string; in_app_enabled: boolean; email_enabled: boolean }>) =>
+  api.put<NotificationPreferencesListResponse>('/notifications/preferences', { preferences });
+
 export default api;

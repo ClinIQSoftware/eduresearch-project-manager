@@ -286,3 +286,51 @@ export interface AlertPreference {
 export interface MatchedProject extends ProjectWithLead {
   matched_keywords: string[];
 }
+
+// Notification types
+export type NotificationType =
+  | 'join_request'
+  | 'join_request_approved'
+  | 'join_request_denied'
+  | 'project_update'
+  | 'task_assigned'
+  | 'task_updated'
+  | 'task_completed'
+  | 'member_added'
+  | 'member_removed'
+  | 'deadline_reminder'
+  | 'meeting_reminder';
+
+export interface Notification {
+  id: number;
+  type: NotificationType;
+  title: string;
+  message: string | null;
+  user_id: number;
+  actor_id: number | null;
+  project_id: number | null;
+  task_id: number | null;
+  is_read: boolean;
+  created_at: string;
+  actor?: UserBrief | null;
+  project?: { id: number; title: string } | null;
+  task?: { id: number; title: string } | null;
+}
+
+export interface NotificationListResponse {
+  notifications: Notification[];
+  total: number;
+  unread_count: number;
+}
+
+export interface NotificationPreference {
+  id: number;
+  user_id: number;
+  notification_type: NotificationType;
+  in_app_enabled: boolean;
+  email_enabled: boolean;
+}
+
+export interface NotificationPreferencesListResponse {
+  preferences: NotificationPreference[];
+}

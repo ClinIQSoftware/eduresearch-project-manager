@@ -13,6 +13,12 @@ from app.models.email_settings import EmailSettings
 from app.models.system_settings import SystemSettings
 from app.models.user_keyword import UserKeyword
 from app.models.user_alert_preference import UserAlertPreference
+from app.models.notification import (
+    Notification,
+    NotificationPreference,
+    NotificationType,
+    DEFAULT_PREFERENCES,
+)
 
 # Keep organization_admins import for backward compatibility with authorization.py
 from app.models.organization import organization_admins
@@ -34,6 +40,11 @@ __all__ = [
     # Keywords
     "UserKeyword",
     "UserAlertPreference",
+    # Notifications
+    "Notification",
+    "NotificationPreference",
+    "NotificationType",
+    "DEFAULT_PREFERENCES",
     # Association tables
     "institution_admins",
     "organization_admins",  # Backward compatibility alias

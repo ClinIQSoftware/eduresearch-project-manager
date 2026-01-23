@@ -10,6 +10,7 @@ from sqlalchemy.sql import func
 from app.database import Base
 
 if TYPE_CHECKING:
+    from app.models.notification import Notification
     from app.models.project import Project
     from app.models.time_entry import TimeEntry
     from app.models.user import User
@@ -61,4 +62,7 @@ class Task(Base):
     )
     time_entries: Mapped[List["TimeEntry"]] = relationship(
         "TimeEntry", back_populates="task", cascade="all, delete-orphan"
+    )
+    notifications: Mapped[List["Notification"]] = relationship(
+        "Notification", back_populates="task"
     )
