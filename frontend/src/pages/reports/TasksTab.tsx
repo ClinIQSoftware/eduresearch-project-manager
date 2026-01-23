@@ -26,16 +26,16 @@ const PRIORITY_OPTIONS = [
   { value: 'high', label: 'High' },
 ];
 
-const PRIORITY_COLORS: Record<string, 'gray' | 'blue' | 'yellow' | 'red'> = {
-  low: 'gray',
-  medium: 'blue',
-  high: 'red',
+const PRIORITY_VARIANTS: Record<string, 'default' | 'info' | 'warning' | 'error'> = {
+  low: 'default',
+  medium: 'info',
+  high: 'error',
 };
 
-const STATUS_COLORS: Record<string, 'gray' | 'blue' | 'green'> = {
-  todo: 'gray',
-  in_progress: 'blue',
-  completed: 'green',
+const STATUS_VARIANTS: Record<string, 'default' | 'info' | 'success'> = {
+  todo: 'default',
+  in_progress: 'info',
+  completed: 'success',
 };
 
 function isOverdue(task: Task): boolean {
@@ -146,7 +146,7 @@ export default function TasksTab() {
       key: 'priority',
       header: 'Priority',
       render: (task) => (
-        <Badge variant={PRIORITY_COLORS[task.priority] || 'gray'}>
+        <Badge variant={PRIORITY_VARIANTS[task.priority] || 'gray'}>
           {task.priority}
         </Badge>
       ),
@@ -155,7 +155,7 @@ export default function TasksTab() {
       key: 'status',
       header: 'Status',
       render: (task) => (
-        <Badge variant={STATUS_COLORS[task.status] || 'gray'}>
+        <Badge variant={STATUS_VARIANTS[task.status] || 'gray'}>
           {task.status.replace('_', ' ')}
         </Badge>
       ),
