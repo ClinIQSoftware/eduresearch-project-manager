@@ -1,12 +1,12 @@
 import { Button } from '../ui/Button';
 
-interface ExportButtonProps {
-  data: Record<string, unknown>[];
+interface ExportButtonProps<T extends object> {
+  data: T[];
   filename: string;
   columns: { key: string; header: string }[];
 }
 
-export function ExportButton({ data, filename, columns }: ExportButtonProps) {
+export function ExportButton<T extends object>({ data, filename, columns }: ExportButtonProps<T>) {
   const handleExport = () => {
     if (data.length === 0) return;
 
@@ -14,7 +14,7 @@ export function ExportButton({ data, filename, columns }: ExportButtonProps) {
     const rows = data.map((row) =>
       columns
         .map((c) => {
-          const value = row[c.key];
+          const value = (row as Record<string, unknown>)[c.key];
           const str = value === null || value === undefined ? '' : String(value);
           // Escape quotes and wrap in quotes if contains comma
           if (str.includes(',') || str.includes('"') || str.includes('\n')) {
