@@ -197,6 +197,22 @@ export const getLeadsWithProjects = () =>
 export const getUsersWithProjects = () =>
   api.get<UserWithProjects[]>('/reports/users-with-projects');
 
+// Reports Overview
+export interface ReportsOverview {
+  total_projects: number;
+  active_projects: number;
+  total_tasks: number;
+  open_tasks: number;
+  overdue_tasks: number;
+  completed_this_month: number;
+  total_members: number;
+  projects_by_status: Record<string, number>;
+  projects_by_classification: Record<string, number>;
+}
+
+export const getReportsOverview = () =>
+  api.get<ReportsOverview>('/reports/overview');
+
 // Admin
 export const getAdminUsers = (institutionId?: number) =>
   api.get<User[]>('/admin/users', { params: { institution_id: institutionId } });

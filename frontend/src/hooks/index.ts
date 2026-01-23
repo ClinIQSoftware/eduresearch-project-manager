@@ -7,3 +7,4 @@ export * from './useDepartments';
 export * from './useJoinRequests';
 export * from './useFiles';
 export * from './useAdmin';
+export * from './useReports';
