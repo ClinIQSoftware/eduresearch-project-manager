@@ -8,11 +8,10 @@ export { default as Dashboard } from './Dashboard';
 export { default as Projects } from './Projects';
 export { default as ProjectDetail } from './ProjectDetail';
 export { default as Tasks } from './Tasks';
-export { default as Settings } from './Settings';
 export { default as JoinRequests } from './JoinRequests';
-export { default as Reports } from './Reports';
 export { default as TimeTracking } from './TimeTracking';
 export { default as PendingUsers } from './PendingUsers';
 
-// Admin Pages
-export * from './admin';
+// Note: Settings, Reports, and Admin pages are imported directly from their
+// subdirectories in App.tsx to avoid naming conflicts (e.g., SecurityTab exists
+// in both admin/ and settings/).
