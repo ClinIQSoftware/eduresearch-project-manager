@@ -5,12 +5,13 @@ Revises: 007
 Create Date: 2026-01-10
 
 """
+
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision = '008'
-down_revision = '007'
+revision = "008"
+down_revision = "007"
 branch_labels = None
 depends_on = None
 
@@ -18,9 +19,7 @@ depends_on = None
 def upgrade():
     # Rename column organization_id to institution_id
     op.alter_column(
-        'email_settings',
-        'organization_id',
-        new_column_name='institution_id'
+        "email_settings", "organization_id", new_column_name="institution_id"
     )
 
     # Note: The foreign key constraint may need to be recreated
@@ -30,7 +29,5 @@ def upgrade():
 
 def downgrade():
     op.alter_column(
-        'email_settings',
-        'institution_id',
-        new_column_name='organization_id'
+        "email_settings", "institution_id", new_column_name="organization_id"
     )

@@ -1,4 +1,5 @@
 """Project schemas for EduResearch Project Manager."""
+
 from datetime import date, datetime
 from typing import List, Literal, Optional
 
@@ -10,7 +11,9 @@ from app.schemas.user import UserBrief
 
 
 # Type aliases for project fields
-ProjectClassification = Literal["research", "education", "quality_improvement", "administrative"]
+ProjectClassification = Literal[
+    "research", "education", "quality_improvement", "administrative"
+]
 ProjectStatus = Literal["preparation", "recruitment", "analysis", "writing"]
 MemberRole = Literal["lead", "participant"]
 

@@ -1,4 +1,5 @@
 """Task repository for task-specific database operations."""
+
 from datetime import date
 from typing import List
 
@@ -28,11 +29,7 @@ class TaskRepository(BaseRepository[Task]):
         Returns:
             List of tasks in the project.
         """
-        return (
-            self.db.query(Task)
-            .filter(Task.project_id == project_id)
-            .all()
-        )
+        return self.db.query(Task).filter(Task.project_id == project_id).all()
 
     def get_by_assignee(self, user_id: int) -> List[Task]:
         """Get all tasks assigned to a user.
@@ -43,11 +40,7 @@ class TaskRepository(BaseRepository[Task]):
         Returns:
             List of tasks assigned to the user.
         """
-        return (
-            self.db.query(Task)
-            .filter(Task.assigned_to_id == user_id)
-            .all()
-        )
+        return self.db.query(Task).filter(Task.assigned_to_id == user_id).all()
 
     def get_overdue(self) -> List[Task]:
         """Get all overdue tasks.

@@ -2,12 +2,18 @@
 
 Handles user listing, retrieval, and approval workflows (admin only).
 """
+
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_current_superuser, get_db, is_institution_admin
+from app.api.deps import (
+    get_current_user,
+    get_current_superuser,
+    get_db,
+    is_institution_admin,
+)
 from app.models.user import User
 from app.schemas import (
     PendingUserResponse,
@@ -22,7 +28,7 @@ router = APIRouter()
 def list_users(
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """List all users (superuser only).
 
@@ -39,7 +45,7 @@ def list_users(
 def get_pending_users(
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get users pending approval.
 
@@ -52,12 +58,12 @@ def get_pending_users(
             if not is_institution_admin(db, current_user.id, institution_id):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Admin access required"
+                    detail="Admin access required",
                 )
         else:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Superuser access required"
+                detail="Superuser access required",
             )
 
     user_service = UserService(db)
@@ -67,7 +73,9 @@ def get_pending_users(
     if institution_id:
         pending_users = [u for u in pending_users if u.institution_id == institution_id]
     elif not current_user.is_superuser and current_user.institution_id:
-        pending_users = [u for u in pending_users if u.institution_id == current_user.institution_id]
+        pending_users = [
+            u for u in pending_users if u.institution_id == current_user.institution_id
+        ]
 
     return pending_users
 
@@ -76,7 +84,7 @@ def get_pending_users(
 def get_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get a user by ID.
 
@@ -89,8 +97,7 @@ def get_user(
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     # Check access
@@ -100,20 +107,19 @@ def get_user(
     if current_user.is_superuser:
         return user
 
-    if user.institution_id and is_institution_admin(db, current_user.id, user.institution_id):
+    if user.institution_id and is_institution_admin(
+        db, current_user.id, user.institution_id
+    ):
         return user
 
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Access denied"
-    )
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
 
 @router.post("/{user_id}/approve", response_model=UserResponse)
 def approve_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Approve a pending user registration.
 
@@ -125,14 +131,12 @@ def approve_user(
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     if user.is_approved:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is already approved"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User is already approved"
         )
 
     # Check admin access
@@ -141,12 +145,12 @@ def approve_user(
             if not is_institution_admin(db, current_user.id, user.institution_id):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Admin access required"
+                    detail="Admin access required",
                 )
         else:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Superuser access required"
+                detail="Superuser access required",
             )
 
     try:
@@ -158,6 +162,7 @@ def approve_user(
             # Institution admin approval - do it directly
             from datetime import datetime, timezone
             from app.repositories import UserRepository
+
             user_repo = UserRepository(db)
             approved_user = user_repo.update(
                 user_id,
@@ -165,13 +170,10 @@ def approve_user(
                     "is_approved": True,
                     "approved_at": datetime.now(timezone.utc),
                     "approved_by_id": current_user.id,
-                }
+                },
             )
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return approved_user
 
@@ -180,7 +182,7 @@ def approve_user(
 def reject_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Reject and delete a pending user registration.
 
@@ -192,14 +194,13 @@ def reject_user(
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     if user.is_approved:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot reject an approved user"
+            detail="Cannot reject an approved user",
         )
 
     # Check admin access
@@ -208,20 +209,17 @@ def reject_user(
             if not is_institution_admin(db, current_user.id, user.institution_id):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Admin access required"
+                    detail="Admin access required",
                 )
         else:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Superuser access required"
+                detail="Superuser access required",
             )
 
     try:
         user_service.reject_user(user_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return {"message": "User registration rejected and deleted"}

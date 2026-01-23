@@ -5,12 +5,13 @@ Revises: 012
 Create Date: 2026-01-23
 
 """
+
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision = '013'
-down_revision = '012'
+revision = "013"
+down_revision = "012"
 branch_labels = None
 depends_on = None
 
@@ -34,7 +35,7 @@ REMINDER_TEMPLATE = {
 <p><a href="{{project_link}}">View Project</a></p>
 <p style="color: #666; font-size: 12px;">You can manage your reminder preferences in your account settings.</p>
 </body>
-</html>"""
+</html>""",
 }
 
 

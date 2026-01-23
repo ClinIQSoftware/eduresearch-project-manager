@@ -7,14 +7,21 @@ import json
 
 class UserAlertPreference(Base):
     """Stores user preferences for keyword-based project alerts."""
+
     __tablename__ = "user_alert_preferences"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
     alert_frequency = Column(String(20), default="weekly")
-    dashboard_new_weeks = Column(Integer, default=2)  # Show new matches from last X weeks on dashboard
+    dashboard_new_weeks = Column(
+        Integer, default=2
+    )  # Show new matches from last X weeks on dashboard
     last_alert_sent_at = Column(DateTime(timezone=True), nullable=True)
-    _last_alert_project_ids = Column("last_alert_project_ids", Text, nullable=True)  # JSON-encoded list of IDs
+    _last_alert_project_ids = Column(
+        "last_alert_project_ids", Text, nullable=True
+    )  # JSON-encoded list of IDs
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

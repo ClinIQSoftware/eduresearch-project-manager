@@ -1,4 +1,5 @@
 """JoinRequest model for EduResearch Project Manager."""
+
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
@@ -11,6 +12,7 @@ from app.database import Base
 
 class RequestStatus:
     """Constants for join request status."""
+
     pending = "pending"
     approved = "approved"
     rejected = "rejected"

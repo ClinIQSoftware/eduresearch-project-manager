@@ -1,4 +1,5 @@
 """Join request repository for join request database operations."""
+
 from typing import List
 
 from sqlalchemy.orm import Session
@@ -60,11 +61,7 @@ class JoinRequestRepository(BaseRepository[JoinRequest]):
         Returns:
             List of join requests by the user.
         """
-        return (
-            self.db.query(JoinRequest)
-            .filter(JoinRequest.user_id == user_id)
-            .all()
-        )
+        return self.db.query(JoinRequest).filter(JoinRequest.user_id == user_id).all()
 
     def has_pending_request(self, project_id: int, user_id: int) -> bool:
         """Check if a user has a pending join request for a project.

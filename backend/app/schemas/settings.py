@@ -1,4 +1,5 @@
 """Settings schemas for EduResearch Project Manager."""
+
 from datetime import datetime
 from typing import Literal, Optional
 
@@ -71,7 +72,7 @@ class SystemSettingsBase(BaseModel):
     require_registration_approval: bool = False
     registration_approval_mode: RegistrationApprovalMode = Field(
         "block",
-        description="'block' - users cannot log in until approved; 'limited' - users can log in with limited access"
+        description="'block' - users cannot log in until approved; 'limited' - users can log in with limited access",
     )
 
     # Password Policy
@@ -146,4 +147,6 @@ class TestEmailRequest(BaseModel):
 
     to_email: EmailStr
     subject: Optional[str] = Field("Test Email from EduResearch", max_length=255)
-    message: Optional[str] = Field("This is a test email from EduResearch Project Manager.", max_length=2000)
+    message: Optional[str] = Field(
+        "This is a test email from EduResearch Project Manager.", max_length=2000
+    )

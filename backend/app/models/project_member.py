@@ -1,4 +1,5 @@
 """ProjectMember model for EduResearch Project Manager."""
+
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -11,6 +12,7 @@ from app.database import Base
 
 class MemberRole:
     """Constants for project member roles."""
+
     lead = "lead"
     participant = "participant"
 

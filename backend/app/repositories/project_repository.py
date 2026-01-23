@@ -1,4 +1,5 @@
 """Project repository for project-specific database operations."""
+
 from datetime import date, timedelta
 from typing import List, Optional
 
@@ -97,9 +98,7 @@ class ProjectRepository(BaseRepository[Project]):
             List of projects in the specified department.
         """
         return (
-            self.db.query(Project)
-            .filter(Project.department_id == department_id)
-            .all()
+            self.db.query(Project).filter(Project.department_id == department_id).all()
         )
 
     def get_upcoming_deadlines(self, days: int = 7) -> List[Project]:

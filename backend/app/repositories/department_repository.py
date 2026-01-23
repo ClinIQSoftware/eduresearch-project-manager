@@ -1,4 +1,5 @@
 """Department repository for department-specific database operations."""
+
 from typing import List
 
 from sqlalchemy.orm import Session

@@ -2,6 +2,7 @@
 
 Handles file upload, storage, and retrieval operations for project files.
 """
+
 import uuid
 from pathlib import Path
 from typing import List, Optional
@@ -17,8 +18,20 @@ from app.repositories import FileRepository, ProjectRepository
 # File upload constraints
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 ALLOWED_EXTENSIONS = {
-    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-    '.txt', '.csv', '.png', '.jpg', '.jpeg', '.gif', '.zip'
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".ppt",
+    ".pptx",
+    ".txt",
+    ".csv",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".zip",
 }
 
 
@@ -63,7 +76,9 @@ class FileService:
 
         # Validate file size
         if file.size and file.size > MAX_FILE_SIZE:
-            raise BadRequestException(f"File size exceeds maximum allowed ({MAX_FILE_SIZE // (1024*1024)}MB)")
+            raise BadRequestException(
+                f"File size exceeds maximum allowed ({MAX_FILE_SIZE // (1024 * 1024)}MB)"
+            )
 
         # Validate file extension
         file_extension = Path(file.filename).suffix.lower() if file.filename else ""

@@ -1,4 +1,5 @@
 """Institution Admin association model for EduResearch Project Manager."""
+
 from sqlalchemy import Column, ForeignKey, Integer, Table
 
 from app.database import Base

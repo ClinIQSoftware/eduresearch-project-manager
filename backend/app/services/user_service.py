@@ -3,6 +3,7 @@
 Handles user management operations including profile updates,
 approval workflows, and administrative user creation.
 """
+
 import secrets
 import string
 from datetime import datetime, timezone
@@ -10,7 +11,11 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
+from app.core.exceptions import (
+    BadRequestException,
+    ForbiddenException,
+    NotFoundException,
+)
 from app.core.security import hash_password
 from app.models.user import User
 from app.repositories import UserRepository
@@ -254,9 +259,9 @@ class UserService:
             raise NotFoundException(f"User with id {user_id} not found")
 
         # Handle both dict and Pydantic model inputs
-        if hasattr(data, 'model_dump'):
+        if hasattr(data, "model_dump"):
             update_data = data.model_dump(exclude_unset=True)
-        elif hasattr(data, 'dict'):
+        elif hasattr(data, "dict"):
             update_data = data.dict(exclude_unset=True)
         else:
             update_data = dict(data)
@@ -285,9 +290,7 @@ class UserService:
             secrets.choice("!@#$%^&*"),
         ]
         # Fill the rest randomly
-        password.extend(
-            secrets.choice(alphabet) for _ in range(length - len(password))
-        )
+        password.extend(secrets.choice(alphabet) for _ in range(length - len(password)))
         # Shuffle to avoid predictable positions
         secrets.SystemRandom().shuffle(password)
         return "".join(password)

@@ -2,6 +2,7 @@
 
 Handles project CRUD operations, membership management, and search.
 """
+
 import logging
 from datetime import date
 from typing import List, Optional
@@ -45,7 +46,7 @@ def get_projects(
     open_to_participants: Optional[bool] = None,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get all projects with optional filters.
 
@@ -59,7 +60,7 @@ def get_projects(
     query = db.query(Project).options(
         joinedload(Project.lead),
         joinedload(Project.institution),
-        joinedload(Project.department)
+        joinedload(Project.department),
     )
 
     if classification:
@@ -82,8 +83,7 @@ def get_projects(
 
 @router.get("/my", response_model=List[ProjectWithLead])
 def get_my_projects(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get projects where current user is lead or participant."""
     project_service = ProjectService(db)
@@ -92,9 +92,11 @@ def get_my_projects(
 
 @router.get("/upcoming-deadlines", response_model=List[ProjectWithLead])
 def get_upcoming_deadlines(
-    weeks: int = Query(default=2, ge=1, le=52, description="Number of weeks to look ahead"),
+    weeks: int = Query(
+        default=2, ge=1, le=52, description="Number of weeks to look ahead"
+    ),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get projects with deadlines within the specified number of weeks."""
     project_service = ProjectService(db)
@@ -104,9 +106,11 @@ def get_upcoming_deadlines(
 
 @router.get("/upcoming-meetings", response_model=List[ProjectWithLead])
 def get_upcoming_meetings(
-    weeks: int = Query(default=2, ge=1, le=52, description="Number of weeks to look ahead"),
+    weeks: int = Query(
+        default=2, ge=1, le=52, description="Number of weeks to look ahead"
+    ),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get projects with meetings within the specified number of weeks."""
     project_service = ProjectService(db)
@@ -121,7 +125,7 @@ def search_projects(
     status: Optional[ProjectStatus] = None,
     open_to_participants: Optional[bool] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Search projects by keyword in title or description."""
     project_service = ProjectService(db)
@@ -133,7 +137,9 @@ def search_projects(
     if status:
         projects = [p for p in projects if p.status == status]
     if open_to_participants is not None:
-        projects = [p for p in projects if p.open_to_participants == open_to_participants]
+        projects = [
+            p for p in projects if p.open_to_participants == open_to_participants
+        ]
 
     return projects[:50]  # Limit results
 
@@ -142,7 +148,7 @@ def search_projects(
 def create_project(
     project_data: ProjectCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Create a new project. Creator becomes the lead."""
     project_service = ProjectService(db)
@@ -154,10 +160,7 @@ def create_project(
     try:
         project = project_service.create_project(project_data, current_user)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return project
 
@@ -166,7 +169,7 @@ def create_project(
 def get_project(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get project details with members."""
     project_service = ProjectService(db)
@@ -174,8 +177,7 @@ def get_project(
 
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
     return project
@@ -187,7 +189,7 @@ async def update_project(
     project_data: ProjectUpdate,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Update project (lead only). Notifies all participants."""
     project_service = ProjectService(db)
@@ -195,36 +197,36 @@ async def update_project(
 
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
     # Check lead access
-    if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
+    if not current_user.is_superuser and not is_project_lead(
+        db, current_user.id, project_id
+    ):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only project lead can update"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only project lead can update"
         )
 
     try:
         updated_project = project_service.update_project(project_id, project_data)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Notify participants in background
-    members = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id != current_user.id
-    ).all()
+    members = (
+        db.query(ProjectMember)
+        .filter(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id != current_user.id,
+        )
+        .all()
+    )
 
     if members:
         email_service = EmailService(db)
         member_emails = [
-            db.query(User).filter(User.id == m.user_id).first().email
-            for m in members
+            db.query(User).filter(User.id == m.user_id).first().email for m in members
         ]
         member_emails = [e for e in member_emails if e]
 
@@ -236,7 +238,7 @@ async def update_project(
             member_emails,
             updated_project.title,
             update_summary,
-            current_user.name
+            current_user.name,
         )
 
     return updated_project
@@ -246,7 +248,7 @@ async def update_project(
 def delete_project(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Delete project (lead or superuser only)."""
     project_service = ProjectService(db)
@@ -254,23 +256,20 @@ def delete_project(
 
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
-    if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
+    if not current_user.is_superuser and not is_project_lead(
+        db, current_user.id, project_id
+    ):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only project lead can delete"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Only project lead can delete"
         )
 
     try:
         project_service.delete_project(project_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return {"message": "Project deleted successfully"}
 
@@ -279,7 +278,7 @@ def delete_project(
 def get_project_members(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get project members."""
     project_service = ProjectService(db)
@@ -287,13 +286,15 @@ def get_project_members(
 
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
-    members = db.query(ProjectMember).options(
-        joinedload(ProjectMember.user)
-    ).filter(ProjectMember.project_id == project_id).all()
+    members = (
+        db.query(ProjectMember)
+        .options(joinedload(ProjectMember.user))
+        .filter(ProjectMember.project_id == project_id)
+        .all()
+    )
 
     return members
 
@@ -303,7 +304,7 @@ def add_project_member(
     project_id: int,
     member_data: AddProjectMemberRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Add member to project (lead only)."""
     project_service = ProjectService(db)
@@ -311,22 +312,22 @@ def add_project_member(
 
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
-    if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
+    if not current_user.is_superuser and not is_project_lead(
+        db, current_user.id, project_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only project lead can add members"
+            detail="Only project lead can add members",
         )
 
     # Check if user exists
     user = db.query(User).filter(User.id == member_data.user_id).first()
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     role = member_data.role if member_data.role else "participant"
@@ -334,10 +335,7 @@ def add_project_member(
     try:
         project_service.add_member(project_id, member_data.user_id, role)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return {"message": "Member added successfully"}
 
@@ -347,7 +345,7 @@ def remove_project_member(
     project_id: int,
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Remove member from project (lead only)."""
     project_service = ProjectService(db)
@@ -355,37 +353,38 @@ def remove_project_member(
 
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
-    if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
+    if not current_user.is_superuser and not is_project_lead(
+        db, current_user.id, project_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only project lead can remove members"
+            detail="Only project lead can remove members",
         )
 
     # Check if removing a lead - ensure at least one lead remains
-    member = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == user_id
-    ).first()
+    member = (
+        db.query(ProjectMember)
+        .filter(
+            ProjectMember.project_id == project_id, ProjectMember.user_id == user_id
+        )
+        .first()
+    )
 
     if member and member.role == MemberRole.lead:
         lead_count = count_project_leads(db, project_id)
         if lead_count <= 1:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot remove the last project lead. Assign another lead first."
+                detail="Cannot remove the last project lead. Assign another lead first.",
             )
 
     try:
         project_service.remove_member(project_id, user_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return {"message": "Member removed successfully"}
 
@@ -396,31 +395,34 @@ def update_member_role(
     user_id: int,
     role: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Change a member's role (lead only). Ensure at least one lead remains."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
-    if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
+    if not current_user.is_superuser and not is_project_lead(
+        db, current_user.id, project_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only project lead can change member roles"
+            detail="Only project lead can change member roles",
         )
 
-    member = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == user_id
-    ).first()
+    member = (
+        db.query(ProjectMember)
+        .filter(
+            ProjectMember.project_id == project_id, ProjectMember.user_id == user_id
+        )
+        .first()
+    )
 
     if not member:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Member not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Member not found"
         )
 
     new_role = MemberRole.lead if role == "lead" else MemberRole.participant
@@ -431,7 +433,7 @@ def update_member_role(
         if lead_count <= 1:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot demote the last project lead. Assign another lead first."
+                detail="Cannot demote the last project lead. Assign another lead first.",
             )
 
     member.role = new_role
@@ -444,25 +446,28 @@ def update_member_role(
 def leave_project(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Leave a project. Leads can only leave if other leads exist."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
-    member = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id
-    ).first()
+    member = (
+        db.query(ProjectMember)
+        .filter(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == current_user.id,
+        )
+        .first()
+    )
 
     if not member:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You are not a member of this project"
+            detail="You are not a member of this project",
         )
 
     # If user is a lead, ensure at least one lead remains
@@ -471,7 +476,7 @@ def leave_project(
         if lead_count <= 1:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You are the only project lead. Assign another lead before leaving."
+                detail="You are the only project lead. Assign another lead before leaving.",
             )
 
     db.delete(member)
@@ -487,15 +492,13 @@ class SendRemindersRequest(BaseModel):
 
 @router.post("/send-reminders")
 async def send_project_reminders(
-    data: SendRemindersRequest,
-    db: Session = Depends(get_db)
+    data: SendRemindersRequest, db: Session = Depends(get_db)
 ):
     """Cron-triggered endpoint to send project meeting and deadline reminders."""
     # Validate cron secret
     if not settings.cron_secret or data.cron_secret != settings.cron_secret:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid cron secret"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid cron secret"
         )
 
     today = date.today()
@@ -511,17 +514,20 @@ async def send_project_reminders(
             "success": False,
             "message": "Email not configured",
             "meeting_reminders_sent": 0,
-            "deadline_reminders_sent": 0
+            "deadline_reminders_sent": 0,
         }
 
     # Meeting reminders
-    meeting_projects = db.query(Project).options(
-        joinedload(Project.members).joinedload(ProjectMember.user)
-    ).filter(
-        Project.meeting_reminder_enabled.is_(True),
-        Project.next_meeting_date.isnot(None),
-        Project.next_meeting_date >= today
-    ).all()
+    meeting_projects = (
+        db.query(Project)
+        .options(joinedload(Project.members).joinedload(ProjectMember.user))
+        .filter(
+            Project.meeting_reminder_enabled.is_(True),
+            Project.next_meeting_date.isnot(None),
+            Project.next_meeting_date >= today,
+        )
+        .all()
+    )
 
     for project in meeting_projects:
         try:
@@ -533,7 +539,9 @@ async def send_project_reminders(
             if project.meeting_reminder_sent_date == project.next_meeting_date:
                 continue
 
-            member_emails = [m.user.email for m in project.members if m.user and m.user.email]
+            member_emails = [
+                m.user.email for m in project.members if m.user and m.user.email
+            ]
 
             if not member_emails:
                 continue
@@ -543,24 +551,29 @@ async def send_project_reminders(
                 project_title=project.title,
                 meeting_date=project.next_meeting_date.strftime("%A, %B %d, %Y"),
                 days_until=days_until,
-                project_id=project.id
+                project_id=project.id,
             )
 
             project.meeting_reminder_sent_date = project.next_meeting_date
             meeting_reminders_sent += 1
 
         except Exception as e:
-            logger.error(f"Error sending meeting reminder for project {project.id}: {str(e)}")
+            logger.error(
+                f"Error sending meeting reminder for project {project.id}: {str(e)}"
+            )
             errors.append(f"Meeting reminder for project {project.id}: {str(e)}")
 
     # Deadline reminders
-    deadline_projects = db.query(Project).options(
-        joinedload(Project.members).joinedload(ProjectMember.user)
-    ).filter(
-        Project.deadline_reminder_enabled.is_(True),
-        Project.end_date.isnot(None),
-        Project.end_date >= today
-    ).all()
+    deadline_projects = (
+        db.query(Project)
+        .options(joinedload(Project.members).joinedload(ProjectMember.user))
+        .filter(
+            Project.deadline_reminder_enabled.is_(True),
+            Project.end_date.isnot(None),
+            Project.end_date >= today,
+        )
+        .all()
+    )
 
     for project in deadline_projects:
         try:
@@ -572,7 +585,9 @@ async def send_project_reminders(
             if project.deadline_reminder_sent_date == project.end_date:
                 continue
 
-            member_emails = [m.user.email for m in project.members if m.user and m.user.email]
+            member_emails = [
+                m.user.email for m in project.members if m.user and m.user.email
+            ]
 
             if not member_emails:
                 continue
@@ -582,14 +597,16 @@ async def send_project_reminders(
                 project_title=project.title,
                 deadline_date=project.end_date.strftime("%A, %B %d, %Y"),
                 days_until=days_until,
-                project_id=project.id
+                project_id=project.id,
             )
 
             project.deadline_reminder_sent_date = project.end_date
             deadline_reminders_sent += 1
 
         except Exception as e:
-            logger.error(f"Error sending deadline reminder for project {project.id}: {str(e)}")
+            logger.error(
+                f"Error sending deadline reminder for project {project.id}: {str(e)}"
+            )
             errors.append(f"Deadline reminder for project {project.id}: {str(e)}")
 
     db.commit()
@@ -598,5 +615,5 @@ async def send_project_reminders(
         "success": True,
         "meeting_reminders_sent": meeting_reminders_sent,
         "deadline_reminders_sent": deadline_reminders_sent,
-        "errors": errors if errors else None
+        "errors": errors if errors else None,
     }

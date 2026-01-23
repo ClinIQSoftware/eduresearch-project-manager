@@ -3,12 +3,17 @@
 Handles project join request operations including creation,
 approval, rejection, and status queries.
 """
+
 from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import BadRequestException, ConflictException, NotFoundException
+from app.core.exceptions import (
+    BadRequestException,
+    ConflictException,
+    NotFoundException,
+)
 from app.models.join_request import JoinRequest
 from app.models.user import User
 from app.repositories import (

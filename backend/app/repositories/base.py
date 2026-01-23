@@ -1,4 +1,5 @@
 """Base repository with generic CRUD operations."""
+
 from typing import Generic, List, Optional, Type, TypeVar
 
 from sqlalchemy.orm import Session

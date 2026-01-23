@@ -1,4 +1,5 @@
 """Institution repository for institution-specific database operations."""
+
 from typing import List, Optional
 
 from sqlalchemy import select

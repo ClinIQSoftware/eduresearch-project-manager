@@ -69,8 +69,7 @@ class ReportsOverview(BaseModel):
 
 @router.get("/projects-with-leads", response_model=List[ProjectWithLeadReport])
 def get_projects_with_leads(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get all projects with their lead information."""
     query = db.query(Project).options(joinedload(Project.lead))
@@ -83,32 +82,33 @@ def get_projects_with_leads(
 
     result = []
     for project in projects:
-        result.append(ProjectWithLeadReport(
-            id=project.id,
-            title=project.title,
-            classification=project.classification or None,
-            status=project.status or None,
-            open_to_participants=project.open_to_participants,
-            start_date=str(project.start_date) if project.start_date else None,
-            last_status_change=str(project.last_status_change) if project.last_status_change else None,
-            lead_id=project.lead_id,
-            lead_name=project.lead.name if project.lead else None,
-            lead_email=project.lead.email if project.lead else None
-        ))
+        result.append(
+            ProjectWithLeadReport(
+                id=project.id,
+                title=project.title,
+                classification=project.classification or None,
+                status=project.status or None,
+                open_to_participants=project.open_to_participants,
+                start_date=str(project.start_date) if project.start_date else None,
+                last_status_change=str(project.last_status_change)
+                if project.last_status_change
+                else None,
+                lead_id=project.lead_id,
+                lead_name=project.lead.name if project.lead else None,
+                lead_email=project.lead.email if project.lead else None,
+            )
+        )
 
     return result
 
 
 @router.get("/leads-with-projects", response_model=List[LeadWithProjects])
 def get_leads_with_projects(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get all active leads with their projects."""
     # Get users who are leads of at least one project
-    query = db.query(User).join(
-        Project, Project.lead_id == User.id
-    ).distinct()
+    query = db.query(User).join(Project, Project.lead_id == User.id).distinct()
 
     # Filter by institution
     if not current_user.is_superuser and current_user.institution_id:
@@ -128,32 +128,36 @@ def get_leads_with_projects(
 
         projects = projects_query.all()
 
-        result.append(LeadWithProjects(
-            id=lead.id,
-            name=lead.name,
-            email=lead.email,
-            department_id=lead.department_id,
-            projects=[{
-                "id": p.id,
-                "title": p.title,
-                "status": p.status or None,
-                "classification": p.classification or None
-            } for p in projects]
-        ))
+        result.append(
+            LeadWithProjects(
+                id=lead.id,
+                name=lead.name,
+                email=lead.email,
+                department_id=lead.department_id,
+                projects=[
+                    {
+                        "id": p.id,
+                        "title": p.title,
+                        "status": p.status or None,
+                        "classification": p.classification or None,
+                    }
+                    for p in projects
+                ],
+            )
+        )
 
     return result
 
 
 @router.get("/users-with-projects", response_model=List[UserWithProjects])
 def get_users_with_projects(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get all users with their project involvement."""
     # Get users who are members of at least one project
-    query = db.query(User).join(
-        ProjectMember, ProjectMember.user_id == User.id
-    ).distinct()
+    query = (
+        db.query(User).join(ProjectMember, ProjectMember.user_id == User.id).distinct()
+    )
 
     # Filter by institution
     if not current_user.is_superuser and current_user.institution_id:
@@ -164,37 +168,46 @@ def get_users_with_projects(
     result = []
     for user in users:
         # Get project memberships
-        memberships = db.query(ProjectMember).options(
-            joinedload(ProjectMember.project)
-        ).filter(ProjectMember.user_id == user.id).all()
+        memberships = (
+            db.query(ProjectMember)
+            .options(joinedload(ProjectMember.project))
+            .filter(ProjectMember.user_id == user.id)
+            .all()
+        )
 
         # Filter by institution
         if not current_user.is_superuser and current_user.institution_id:
             memberships = [
-                m for m in memberships
+                m
+                for m in memberships
                 if m.project and m.project.institution_id == current_user.institution_id
             ]
 
-        result.append(UserWithProjects(
-            id=user.id,
-            name=user.name,
-            email=user.email,
-            department_id=user.department_id,
-            projects=[{
-                "id": m.project.id,
-                "title": m.project.title,
-                "role": m.role or "participant",
-                "status": m.project.status or None
-            } for m in memberships if m.project]
-        ))
+        result.append(
+            UserWithProjects(
+                id=user.id,
+                name=user.name,
+                email=user.email,
+                department_id=user.department_id,
+                projects=[
+                    {
+                        "id": m.project.id,
+                        "title": m.project.title,
+                        "role": m.role or "participant",
+                        "status": m.project.status or None,
+                    }
+                    for m in memberships
+                    if m.project
+                ],
+            )
+        )
 
     return result
 
 
 @router.get("/overview", response_model=ReportsOverview)
 def get_reports_overview(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get aggregated statistics for reports dashboard."""
     # Base query filters
@@ -210,41 +223,49 @@ def get_reports_overview(
     total_projects = projects_query.count()
     # Count projects in active phases (recruitment and analysis)
     active_projects = projects_query.filter(
-        Project.status.in_(['recruitment', 'analysis'])
+        Project.status.in_(["recruitment", "analysis"])
     ).count()
 
     # Project status breakdown
-    status_counts = db.query(
-        Project.status, func.count(Project.id)
-    ).filter(*project_filter).group_by(Project.status).all()
-    projects_by_status = {s or 'unknown': c for s, c in status_counts}
+    status_counts = (
+        db.query(Project.status, func.count(Project.id))
+        .filter(*project_filter)
+        .group_by(Project.status)
+        .all()
+    )
+    projects_by_status = {s or "unknown": c for s, c in status_counts}
 
     # Project classification breakdown
-    class_counts = db.query(
-        Project.classification, func.count(Project.id)
-    ).filter(*project_filter).group_by(Project.classification).all()
-    projects_by_classification = {c or 'unclassified': cnt for c, cnt in class_counts}
+    class_counts = (
+        db.query(Project.classification, func.count(Project.id))
+        .filter(*project_filter)
+        .group_by(Project.classification)
+        .all()
+    )
+    projects_by_classification = {c or "unclassified": cnt for c, cnt in class_counts}
 
     # Task counts - get project IDs first
     project_ids = [p.id for p in projects_query.all()]
 
-    tasks_query = db.query(Task).filter(Task.project_id.in_(project_ids)) if project_ids else db.query(Task).filter(False)
+    tasks_query = (
+        db.query(Task).filter(Task.project_id.in_(project_ids))
+        if project_ids
+        else db.query(Task).filter(False)
+    )
 
     total_tasks = tasks_query.count()
-    open_tasks = tasks_query.filter(Task.status.in_(['todo', 'in_progress'])).count()
+    open_tasks = tasks_query.filter(Task.status.in_(["todo", "in_progress"])).count()
 
     # Overdue tasks
     today = datetime.utcnow().date()
     overdue_tasks = tasks_query.filter(
-        Task.status.in_(['todo', 'in_progress']),
-        Task.due_date < today
+        Task.status.in_(["todo", "in_progress"]), Task.due_date < today
     ).count()
 
     # Completed this month
     first_of_month = today.replace(day=1)
     completed_this_month = tasks_query.filter(
-        Task.status == 'completed',
-        Task.updated_at >= first_of_month
+        Task.status == "completed", Task.updated_at >= first_of_month
     ).count()
 
     # Total members
@@ -264,5 +285,5 @@ def get_reports_overview(
         completed_this_month=completed_this_month,
         total_members=total_members,
         projects_by_status=projects_by_status,
-        projects_by_classification=projects_by_classification
+        projects_by_classification=projects_by_classification,
     )

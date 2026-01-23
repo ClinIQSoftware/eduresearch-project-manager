@@ -1,4 +1,5 @@
 """Task model for EduResearch Project Manager."""
+
 from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional
 

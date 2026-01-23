@@ -3,6 +3,7 @@
 Handles email sending operations using database-configured SMTP settings
 and Jinja2 templates for email content rendering.
 """
+
 import logging
 import re
 import smtplib
@@ -329,7 +330,9 @@ class EmailService:
         requester = request.user
 
         if not project or not project.lead:
-            logger.warning("Cannot send join request notification: missing project or lead")
+            logger.warning(
+                "Cannot send join request notification: missing project or lead"
+            )
             return False
 
         context = {
@@ -423,9 +426,7 @@ class EmailService:
             institution_id=project.institution_id,
         )
 
-    def send_task_assigned_notification(
-        self, task: Task, assigned_to: User
-    ) -> bool:
+    def send_task_assigned_notification(self, task: Task, assigned_to: User) -> bool:
         """Send notification when a task is assigned to a user.
 
         Args:

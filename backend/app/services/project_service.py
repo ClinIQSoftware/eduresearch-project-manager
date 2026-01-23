@@ -3,11 +3,16 @@
 Handles project management operations including CRUD,
 membership management, and search functionality.
 """
+
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import BadRequestException, ConflictException, NotFoundException
+from app.core.exceptions import (
+    BadRequestException,
+    ConflictException,
+    NotFoundException,
+)
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.user import User

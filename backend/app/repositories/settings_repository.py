@@ -1,4 +1,5 @@
 """Settings repositories for email and system settings database operations."""
+
 from typing import Optional
 
 from sqlalchemy.orm import Session

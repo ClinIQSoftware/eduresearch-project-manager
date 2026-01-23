@@ -5,13 +5,14 @@ Revises: 006
 Create Date: 2025-01-10
 
 """
+
 from alembic import op
 import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '007'
-down_revision = '006'
+revision = "007"
+down_revision = "006"
 branch_labels = None
 depends_on = None
 
@@ -34,7 +35,7 @@ DEFAULT_TEMPLATES = [
 <p>Please log in to approve or reject this registration:</p>
 <p><a href="{{approval_link}}">{{approval_link}}</a></p>
 </body>
-</html>"""
+</html>""",
     },
     {
         "template_type": "join_request",
@@ -48,7 +49,7 @@ DEFAULT_TEMPLATES = [
 <p>Please log in to approve or reject this request:</p>
 <p><a href="{{project_link}}">{{project_link}}</a></p>
 </body>
-</html>"""
+</html>""",
     },
     {
         "template_type": "task_assignment",
@@ -67,23 +68,28 @@ DEFAULT_TEMPLATES = [
 <p>{{description}}</p>
 <p><a href="{{task_link}}">View Task</a></p>
 </body>
-</html>"""
-    }
+</html>""",
+    },
 ]
 
 
 def upgrade():
     # Create email_templates table
     op.create_table(
-        'email_templates',
-        sa.Column('id', sa.Integer(), primary_key=True, index=True),
-        sa.Column('institution_id', sa.Integer(), sa.ForeignKey('institutions.id'), nullable=True),
-        sa.Column('template_type', sa.String(50), nullable=False),
-        sa.Column('subject', sa.String(255), nullable=False),
-        sa.Column('body', sa.Text(), nullable=False),
-        sa.Column('is_active', sa.Boolean(), default=True),
-        sa.Column('created_at', sa.DateTime(), nullable=True),
-        sa.Column('updated_at', sa.DateTime(), nullable=True),
+        "email_templates",
+        sa.Column("id", sa.Integer(), primary_key=True, index=True),
+        sa.Column(
+            "institution_id",
+            sa.Integer(),
+            sa.ForeignKey("institutions.id"),
+            nullable=True,
+        ),
+        sa.Column("template_type", sa.String(50), nullable=False),
+        sa.Column("subject", sa.String(255), nullable=False),
+        sa.Column("body", sa.Text(), nullable=False),
+        sa.Column("is_active", sa.Boolean(), default=True),
+        sa.Column("created_at", sa.DateTime(), nullable=True),
+        sa.Column("updated_at", sa.DateTime(), nullable=True),
     )
 
     # Insert default templates (global, no institution_id)
@@ -95,4 +101,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table('email_templates')
+    op.drop_table("email_templates")

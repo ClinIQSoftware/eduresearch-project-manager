@@ -1,4 +1,5 @@
 """Project model for EduResearch Project Manager."""
+
 from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional
 
@@ -48,8 +49,12 @@ class Project(Base):
     meeting_reminder_days: Mapped[int] = mapped_column(Integer, default=1)
     deadline_reminder_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     deadline_reminder_days: Mapped[int] = mapped_column(Integer, default=7)
-    meeting_reminder_sent_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    deadline_reminder_sent_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    meeting_reminder_sent_date: Mapped[Optional[date]] = mapped_column(
+        Date, nullable=True
+    )
+    deadline_reminder_sent_date: Mapped[Optional[date]] = mapped_column(
+        Date, nullable=True
+    )
 
     # Foreign keys
     institution_id: Mapped[Optional[int]] = mapped_column(

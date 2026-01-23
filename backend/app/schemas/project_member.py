@@ -1,4 +1,5 @@
 """Project member schemas for EduResearch Project Manager."""
+
 from datetime import datetime
 from typing import Literal, Optional
 
@@ -15,13 +16,17 @@ class ProjectMemberCreate(BaseModel):
     """Schema for adding a member to a project."""
 
     user_id: int
-    role: MemberRole = Field("participant", description="Role in the project: 'lead' or 'participant'")
+    role: MemberRole = Field(
+        "participant", description="Role in the project: 'lead' or 'participant'"
+    )
 
 
 class ProjectMemberUpdate(BaseModel):
     """Schema for updating a project member."""
 
-    role: Optional[MemberRole] = Field(None, description="Role in the project: 'lead' or 'participant'")
+    role: Optional[MemberRole] = Field(
+        None, description="Role in the project: 'lead' or 'participant'"
+    )
 
 
 class ProjectMemberResponse(BaseModel):

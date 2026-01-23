@@ -3,6 +3,7 @@
 Handles institution management operations including CRUD
 and admin user management.
 """
+
 from typing import List, Optional
 
 from sqlalchemy.orm import Session

@@ -1,4 +1,5 @@
 """Project member repository for project membership database operations."""
+
 from typing import List, Optional
 
 from sqlalchemy.orm import Session, joinedload
@@ -44,9 +45,7 @@ class ProjectMemberRepository(BaseRepository[ProjectMember]):
             List of project memberships.
         """
         return (
-            self.db.query(ProjectMember)
-            .filter(ProjectMember.user_id == user_id)
-            .all()
+            self.db.query(ProjectMember).filter(ProjectMember.user_id == user_id).all()
         )
 
     def get_membership(self, project_id: int, user_id: int) -> Optional[ProjectMember]:

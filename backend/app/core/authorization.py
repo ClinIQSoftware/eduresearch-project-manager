@@ -44,12 +44,7 @@ class AuthorizationService:
         if not user.is_superuser:
             raise ForbiddenException("Superuser access required")
 
-    def require_project_lead(
-        self,
-        user: User,
-        project_id: int,
-        db: Session
-    ) -> None:
+    def require_project_lead(self, user: User, project_id: int, db: Session) -> None:
         """
         Require that the user is a lead of the specified project.
 
@@ -77,21 +72,20 @@ class AuthorizationService:
             raise NotFoundException(f"Project with id {project_id} not found")
 
         # Check if user is a lead of this project
-        membership = db.query(ProjectMember).filter(
-            ProjectMember.project_id == project_id,
-            ProjectMember.user_id == user.id,
-            ProjectMember.role == MemberRole.lead
-        ).first()
+        membership = (
+            db.query(ProjectMember)
+            .filter(
+                ProjectMember.project_id == project_id,
+                ProjectMember.user_id == user.id,
+                ProjectMember.role == MemberRole.lead,
+            )
+            .first()
+        )
 
         if not membership:
             raise ForbiddenException("Project lead access required")
 
-    def require_project_member(
-        self,
-        user: User,
-        project_id: int,
-        db: Session
-    ) -> None:
+    def require_project_member(self, user: User, project_id: int, db: Session) -> None:
         """
         Require that the user is a member of the specified project.
 
@@ -120,19 +114,19 @@ class AuthorizationService:
             raise NotFoundException(f"Project with id {project_id} not found")
 
         # Check if user is any type of member of this project
-        membership = db.query(ProjectMember).filter(
-            ProjectMember.project_id == project_id,
-            ProjectMember.user_id == user.id
-        ).first()
+        membership = (
+            db.query(ProjectMember)
+            .filter(
+                ProjectMember.project_id == project_id, ProjectMember.user_id == user.id
+            )
+            .first()
+        )
 
         if not membership:
             raise ForbiddenException("Project member access required")
 
     def require_institution_admin(
-        self,
-        user: User,
-        institution_id: int,
-        db: Session
+        self, user: User, institution_id: int, db: Session
     ) -> None:
         """
         Require that the user is an admin of the specified institution.
@@ -156,7 +150,9 @@ class AuthorizationService:
             return
 
         # Verify institution exists
-        institution = db.query(Institution).filter(Institution.id == institution_id).first()
+        institution = (
+            db.query(Institution).filter(Institution.id == institution_id).first()
+        )
         if not institution:
             raise NotFoundException(f"Institution with id {institution_id} not found")
 
@@ -164,19 +160,14 @@ class AuthorizationService:
         result = db.execute(
             organization_admins.select().where(
                 organization_admins.c.user_id == user.id,
-                organization_admins.c.organization_id == institution_id
+                organization_admins.c.organization_id == institution_id,
             )
         ).first()
 
         if not result:
             raise ForbiddenException("Institution admin access required")
 
-    def is_project_lead(
-        self,
-        user: User,
-        project_id: int,
-        db: Session
-    ) -> bool:
+    def is_project_lead(self, user: User, project_id: int, db: Session) -> bool:
         """
         Check if user is a lead of the specified project (without raising).
 
@@ -195,20 +186,19 @@ class AuthorizationService:
         if user.is_superuser:
             return True
 
-        membership = db.query(ProjectMember).filter(
-            ProjectMember.project_id == project_id,
-            ProjectMember.user_id == user.id,
-            ProjectMember.role == MemberRole.lead
-        ).first()
+        membership = (
+            db.query(ProjectMember)
+            .filter(
+                ProjectMember.project_id == project_id,
+                ProjectMember.user_id == user.id,
+                ProjectMember.role == MemberRole.lead,
+            )
+            .first()
+        )
 
         return membership is not None
 
-    def is_project_member(
-        self,
-        user: User,
-        project_id: int,
-        db: Session
-    ) -> bool:
+    def is_project_member(self, user: User, project_id: int, db: Session) -> bool:
         """
         Check if user is a member of the specified project (without raising).
 
@@ -227,18 +217,18 @@ class AuthorizationService:
         if user.is_superuser:
             return True
 
-        membership = db.query(ProjectMember).filter(
-            ProjectMember.project_id == project_id,
-            ProjectMember.user_id == user.id
-        ).first()
+        membership = (
+            db.query(ProjectMember)
+            .filter(
+                ProjectMember.project_id == project_id, ProjectMember.user_id == user.id
+            )
+            .first()
+        )
 
         return membership is not None
 
     def is_institution_admin(
-        self,
-        user: User,
-        institution_id: int,
-        db: Session
+        self, user: User, institution_id: int, db: Session
     ) -> bool:
         """
         Check if user is an admin of the specified institution (without raising).
@@ -261,7 +251,7 @@ class AuthorizationService:
         result = db.execute(
             organization_admins.select().where(
                 organization_admins.c.user_id == user.id,
-                organization_admins.c.organization_id == institution_id
+                organization_admins.c.organization_id == institution_id,
             )
         ).first()
 

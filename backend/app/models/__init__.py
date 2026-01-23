@@ -1,4 +1,5 @@
 """SQLAlchemy models for EduResearch Project Manager."""
+
 from app.models.institution import Institution
 from app.models.institution_admin import institution_admins
 from app.models.department import Department

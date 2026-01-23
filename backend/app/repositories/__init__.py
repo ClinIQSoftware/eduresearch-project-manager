@@ -3,6 +3,7 @@
 This module provides a repository pattern implementation for database operations,
 offering a clean abstraction over SQLAlchemy models.
 """
+
 from app.repositories.base import BaseRepository
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.file_repository import FileRepository

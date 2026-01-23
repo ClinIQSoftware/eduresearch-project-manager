@@ -6,10 +6,7 @@ from fastapi import UploadFile
 from app.config import settings
 
 
-async def save_uploaded_file(
-    file: UploadFile,
-    project_id: int
-) -> Tuple[str, str, int]:
+async def save_uploaded_file(file: UploadFile, project_id: int) -> Tuple[str, str, int]:
     """
     Save an uploaded file to the uploads directory.
     Returns: (stored_filename, file_path, file_size)
@@ -29,7 +26,9 @@ async def save_uploaded_file(
 
     # Check file size
     if file_size > settings.max_file_size:
-        raise ValueError(f"File size exceeds maximum allowed size of {settings.max_file_size} bytes")
+        raise ValueError(
+            f"File size exceeds maximum allowed size of {settings.max_file_size} bytes"
+        )
 
     async with aiofiles.open(file_path, "wb") as f:
         await f.write(content)

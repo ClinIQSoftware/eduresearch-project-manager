@@ -15,10 +15,7 @@ class AppException(HTTPException):
     detail: str = "An unexpected error occurred"
 
     def __init__(self, detail: str = None):
-        super().__init__(
-            status_code=self.status_code,
-            detail=detail or self.detail
-        )
+        super().__init__(status_code=self.status_code, detail=detail or self.detail)
 
 
 class NotFoundException(AppException):

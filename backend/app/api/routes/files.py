@@ -2,9 +2,18 @@
 
 Handles file upload, download, and management for projects.
 """
+
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    UploadFile,
+    File,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 
@@ -27,23 +36,22 @@ async def upload_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Upload a file to a project. Notifies project lead via email with attachment."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
     # Check if user has access (member or lead)
     if not current_user.is_superuser:
-        if not is_project_lead(db, current_user.id, project_id) and \
-           not is_project_member(db, current_user.id, project_id):
+        if not is_project_lead(
+            db, current_user.id, project_id
+        ) and not is_project_member(db, current_user.id, project_id):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
     file_service = FileService(db)
@@ -51,17 +59,16 @@ async def upload_file(
     try:
         project_file = await file_service.upload_file(project_id, file, current_user)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Email lead with attachment
     if project.lead_id and project.lead_id != current_user.id:
         lead = db.query(User).filter(User.id == project.lead_id).first()
         if lead:
             try:
-                file_content = await file_service.read_file_content(project_file.file_path)
+                file_content = await file_service.read_file_content(
+                    project_file.file_path
+                )
                 email_service = EmailService(db)
                 background_tasks.add_task(
                     email_service.send_file_upload_notification,
@@ -69,7 +76,7 @@ async def upload_file(
                     project.title,
                     current_user.name,
                     file.filename,
-                    file_content
+                    file_content,
                 )
             except Exception:
                 pass  # Don't fail upload if email fails
@@ -81,21 +88,22 @@ async def upload_file(
 def get_project_files(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get all files for a project."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
-    files = db.query(ProjectFile).options(
-        joinedload(ProjectFile.uploaded_by)
-    ).filter(ProjectFile.project_id == project_id).order_by(
-        ProjectFile.uploaded_at.desc()
-    ).all()
+    files = (
+        db.query(ProjectFile)
+        .options(joinedload(ProjectFile.uploaded_by))
+        .filter(ProjectFile.project_id == project_id)
+        .order_by(ProjectFile.uploaded_at.desc())
+        .all()
+    )
 
     return files
 
@@ -104,17 +112,19 @@ def get_project_files(
 def get_file_info(
     file_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get file info by ID."""
-    project_file = db.query(ProjectFile).options(
-        joinedload(ProjectFile.uploaded_by)
-    ).filter(ProjectFile.id == file_id).first()
+    project_file = (
+        db.query(ProjectFile)
+        .options(joinedload(ProjectFile.uploaded_by))
+        .filter(ProjectFile.id == file_id)
+        .first()
+    )
 
     if not project_file:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
         )
 
     return project_file
@@ -124,36 +134,35 @@ def get_file_info(
 async def download_file(
     file_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Download a file."""
     project_file = db.query(ProjectFile).filter(ProjectFile.id == file_id).first()
     if not project_file:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
         )
 
     # Check access
     if not current_user.is_superuser:
-        if not is_project_lead(db, current_user.id, project_file.project_id) and \
-           not is_project_member(db, current_user.id, project_file.project_id):
+        if not is_project_lead(
+            db, current_user.id, project_file.project_id
+        ) and not is_project_member(db, current_user.id, project_file.project_id):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
     import os
+
     if not os.path.exists(project_file.file_path):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found on disk"
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk"
         )
 
     return FileResponse(
         path=project_file.file_path,
         filename=project_file.original_filename,
-        media_type=project_file.content_type or "application/octet-stream"
+        media_type=project_file.content_type or "application/octet-stream",
     )
 
 
@@ -161,29 +170,27 @@ async def download_file(
 def delete_file(
     file_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Delete a file (lead or uploader only)."""
     project_file = db.query(ProjectFile).filter(ProjectFile.id == file_id).first()
     if not project_file:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
         )
 
     project = db.query(Project).filter(Project.id == project_file.project_id).first()
 
     # Check permissions - lead or uploader can delete
     can_delete = (
-        current_user.is_superuser or
-        (project and project.lead_id == current_user.id) or
-        project_file.uploaded_by_id == current_user.id
+        current_user.is_superuser
+        or (project and project.lead_id == current_user.id)
+        or project_file.uploaded_by_id == current_user.id
     )
 
     if not can_delete:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
         )
 
     file_service = FileService(db)
@@ -191,9 +198,6 @@ def delete_file(
     try:
         file_service.delete_file(file_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return {"message": "File deleted successfully"}

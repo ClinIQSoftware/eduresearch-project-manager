@@ -2,12 +2,18 @@
 
 Handles institution CRUD operations and admin management.
 """
+
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_current_superuser, get_db, is_institution_admin
+from app.api.deps import (
+    get_current_user,
+    get_current_superuser,
+    get_db,
+    is_institution_admin,
+)
 from app.models.user import User
 from app.schemas import (
     InstitutionCreate,
@@ -23,8 +29,7 @@ router = APIRouter()
 
 @router.get("", response_model=List[InstitutionResponse])
 def get_institutions(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get institutions the user has access to.
 
@@ -55,7 +60,7 @@ def get_institutions_public(db: Session = Depends(get_db)):
 def create_institution(
     inst_data: InstitutionCreate,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Create a new institution (superuser only)."""
     institution_service = InstitutionService(db)
@@ -63,10 +68,7 @@ def create_institution(
     try:
         institution = institution_service.create_institution(inst_data)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return institution
 
@@ -75,7 +77,7 @@ def create_institution(
 def get_institution(
     institution_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get institution details."""
     institution_service = InstitutionService(db)
@@ -83,15 +85,13 @@ def get_institution(
 
     if not institution:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Institution not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Institution not found"
         )
 
     # Check access
     if not current_user.is_superuser and current_user.institution_id != institution_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
         )
 
     return institution
@@ -102,14 +102,15 @@ def update_institution(
     institution_id: int,
     inst_data: InstitutionUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Update institution (superuser or institution admin)."""
     # Check admin access
-    if not current_user.is_superuser and not is_institution_admin(db, current_user.id, institution_id):
+    if not current_user.is_superuser and not is_institution_admin(
+        db, current_user.id, institution_id
+    ):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
         )
 
     institution_service = InstitutionService(db)
@@ -117,10 +118,7 @@ def update_institution(
     try:
         institution = institution_service.update_institution(institution_id, inst_data)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return institution
 
@@ -129,7 +127,7 @@ def update_institution(
 def delete_institution(
     institution_id: int,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Delete an institution (superuser only).
 
@@ -143,25 +141,25 @@ def delete_institution(
     if users > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot delete institution with {users} user(s). Remove all users first."
+            detail=f"Cannot delete institution with {users} user(s). Remove all users first.",
         )
 
     # Check for projects
     from app.models.project import Project
-    projects = db.query(Project).filter(Project.institution_id == institution_id).count()
+
+    projects = (
+        db.query(Project).filter(Project.institution_id == institution_id).count()
+    )
     if projects > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot delete institution with {projects} project(s). Remove all projects first."
+            detail=f"Cannot delete institution with {projects} project(s). Remove all projects first.",
         )
 
     try:
         institution_service.delete_institution(institution_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return {"message": "Institution deleted successfully"}
 
@@ -170,7 +168,7 @@ def delete_institution(
 def get_institution_admins(
     institution_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get institution admins."""
     institution_service = InstitutionService(db)
@@ -179,24 +177,19 @@ def get_institution_admins(
     institution = institution_service.get_institution(institution_id)
     if not institution:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Institution not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Institution not found"
         )
 
     # Check access
     if not current_user.is_superuser and current_user.institution_id != institution_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
         )
 
     try:
         admins = institution_service.get_admins(institution_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return admins
 
@@ -206,7 +199,7 @@ def add_institution_admin(
     institution_id: int,
     user_id: int,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Add a user as an admin of an institution (superuser only)."""
     institution_service = InstitutionService(db)
@@ -214,10 +207,7 @@ def add_institution_admin(
     try:
         institution_service.add_admin(institution_id, user_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return {"message": "Admin added successfully"}
 
@@ -227,7 +217,7 @@ def remove_institution_admin(
     institution_id: int,
     user_id: int,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Remove a user as an admin of an institution (superuser only)."""
     institution_service = InstitutionService(db)
@@ -235,10 +225,7 @@ def remove_institution_admin(
     try:
         institution_service.remove_admin(institution_id, user_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return {"message": "Admin removed successfully"}
 
@@ -248,7 +235,7 @@ def remove_institution_admin(
 def get_institution_members(
     institution_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get institution members."""
     institution_service = InstitutionService(db)
@@ -256,15 +243,13 @@ def get_institution_members(
     institution = institution_service.get_institution(institution_id)
     if not institution:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Institution not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Institution not found"
         )
 
     # Check access
     if not current_user.is_superuser and current_user.institution_id != institution_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
         )
 
     return db.query(User).filter(User.institution_id == institution_id).all()

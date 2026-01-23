@@ -58,7 +58,7 @@ class Settings(BaseSettings):
                 warnings.warn(
                     "WARNING: Using default secret key in production is insecure! "
                     "Set SECRET_KEY environment variable.",
-                    UserWarning
+                    UserWarning,
                 )
         return v
 

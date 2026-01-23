@@ -3,6 +3,7 @@
 Handles department management operations including CRUD
 and institution-based queries.
 """
+
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
@@ -116,8 +117,6 @@ class DepartmentService:
         """
         institution = self.institution_repo.get_by_id(institution_id)
         if not institution:
-            raise NotFoundException(
-                f"Institution with id {institution_id} not found"
-            )
+            raise NotFoundException(f"Institution with id {institution_id} not found")
 
         return self.department_repo.get_by_institution(institution_id)

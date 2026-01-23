@@ -1,4 +1,5 @@
 """Task schemas for EduResearch Project Manager."""
+
 from datetime import date, datetime
 from typing import Literal, Optional
 

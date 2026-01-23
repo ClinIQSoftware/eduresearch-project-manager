@@ -2,6 +2,7 @@
 
 This module exports all routers for use in the main application.
 """
+
 from app.api.routes.auth import router as auth_router
 from app.api.routes.users import router as users_router
 from app.api.routes.institutions import router as institutions_router

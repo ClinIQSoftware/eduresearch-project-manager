@@ -10,10 +10,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[TimeEntryResponse])
-def get_time_entries(
-    task_id: Optional[int] = None,
-    db: Session = Depends(get_db)
-):
+def get_time_entries(task_id: Optional[int] = None, db: Session = Depends(get_db)):
     query = db.query(TimeEntry)
 
     if task_id:
@@ -33,15 +30,12 @@ def create_time_entry(entry: TimeEntryCreate, db: Session = Depends(get_db)):
     active = db.query(TimeEntry).filter(TimeEntry.end_time.is_(None)).first()
     if active:
         raise HTTPException(
-            status_code=400,
-            detail="There is already an active timer. Stop it first."
+            status_code=400, detail="There is already an active timer. Stop it first."
         )
 
     start_time = entry.start_time or datetime.utcnow()
     db_entry = TimeEntry(
-        task_id=entry.task_id,
-        start_time=start_time,
-        notes=entry.notes
+        task_id=entry.task_id, start_time=start_time, notes=entry.notes
     )
     db.add(db_entry)
     db.commit()
@@ -50,7 +44,9 @@ def create_time_entry(entry: TimeEntryCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{entry_id}", response_model=TimeEntryResponse)
-def update_time_entry(entry_id: int, entry: TimeEntryUpdate, db: Session = Depends(get_db)):
+def update_time_entry(
+    entry_id: int, entry: TimeEntryUpdate, db: Session = Depends(get_db)
+):
     db_entry = db.query(TimeEntry).filter(TimeEntry.id == entry_id).first()
     if not db_entry:
         raise HTTPException(status_code=404, detail="Time entry not found")

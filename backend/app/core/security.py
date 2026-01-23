@@ -28,10 +28,10 @@ def hash_password(password: str) -> str:
         hashed = hash_password("my_secure_password")
     """
     # bcrypt has a 72-byte limit for passwords
-    password_bytes = password.encode('utf-8')[:72]
+    password_bytes = password.encode("utf-8")[:72]
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password_bytes, salt)
-    return hashed.decode('utf-8')
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
@@ -50,8 +50,8 @@ def verify_password(plain: str, hashed: str) -> bool:
             # Password is correct
     """
     # bcrypt has a 72-byte limit for passwords
-    plain_bytes = plain.encode('utf-8')[:72]
-    hashed_bytes = hashed.encode('utf-8')
+    plain_bytes = plain.encode("utf-8")[:72]
+    hashed_bytes = hashed.encode("utf-8")
     return bcrypt.checkpw(plain_bytes, hashed_bytes)
 
 
@@ -86,9 +86,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
-        to_encode,
-        settings.secret_key,
-        algorithm=settings.algorithm
+        to_encode, settings.secret_key, algorithm=settings.algorithm
     )
 
     return encoded_jwt
@@ -113,9 +111,7 @@ def decode_token(token: str) -> Optional[dict]:
     """
     try:
         payload = jwt.decode(
-            token,
-            settings.secret_key,
-            algorithms=[settings.algorithm]
+            token, settings.secret_key, algorithms=[settings.algorithm]
         )
         return payload
     except JWTError:

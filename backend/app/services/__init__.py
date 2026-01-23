@@ -3,6 +3,7 @@
 This module provides service classes that contain business logic,
 orchestrating repositories and implementing business rules.
 """
+
 from app.services.auth_service import AuthService
 from app.services.user_service import UserService
 from app.services.project_service import ProjectService

@@ -1,4 +1,5 @@
 """User repository for user-specific database operations."""
+
 from typing import List, Optional
 
 from sqlalchemy import or_
@@ -47,11 +48,7 @@ class UserRepository(BaseRepository[User]):
         Returns:
             List of users in the specified institution.
         """
-        return (
-            self.db.query(User)
-            .filter(User.institution_id == institution_id)
-            .all()
-        )
+        return self.db.query(User).filter(User.institution_id == institution_id).all()
 
     def get_by_department(self, department_id: int) -> List[User]:
         """Get all users belonging to a department.
@@ -62,11 +59,7 @@ class UserRepository(BaseRepository[User]):
         Returns:
             List of users in the specified department.
         """
-        return (
-            self.db.query(User)
-            .filter(User.department_id == department_id)
-            .all()
-        )
+        return self.db.query(User).filter(User.department_id == department_id).all()
 
     def search(self, query: str) -> List[User]:
         """Search users by email, first name, or last name.

@@ -2,6 +2,7 @@
 
 Handles system and email settings management operations.
 """
+
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -75,9 +76,7 @@ class SettingsService:
 
         return settings
 
-    def get_email_settings(
-        self, institution_id: Optional[int] = None
-    ) -> EmailSettings:
+    def get_email_settings(self, institution_id: Optional[int] = None) -> EmailSettings:
         """Get email settings for an institution or global settings.
 
         If no settings exist, creates default settings.

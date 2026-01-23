@@ -2,6 +2,7 @@
 
 Handles user authentication, registration, and token management.
 """
+
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 
@@ -92,9 +93,7 @@ class AuthService:
         # Check system settings for approval requirement
         system_settings = self.system_settings_repo.get_global()
         require_approval = (
-            system_settings.require_registration_approval
-            if system_settings
-            else False
+            system_settings.require_registration_approval if system_settings else False
         )
 
         # Create user data
@@ -148,7 +147,10 @@ class AuthService:
 
         if existing_user:
             # User exists - check if OAuth matches or link OAuth
-            if existing_user.auth_provider == provider and existing_user.oauth_id == oauth_id:
+            if (
+                existing_user.auth_provider == provider
+                and existing_user.oauth_id == oauth_id
+            ):
                 # Existing OAuth user - just log in
                 pass
             elif existing_user.auth_provider == "local":
@@ -182,9 +184,7 @@ class AuthService:
         # New user - check approval requirements
         system_settings = self.system_settings_repo.get_global()
         require_approval = (
-            system_settings.require_registration_approval
-            if system_settings
-            else False
+            system_settings.require_registration_approval if system_settings else False
         )
 
         user_data = {

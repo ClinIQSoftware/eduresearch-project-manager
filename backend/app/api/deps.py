@@ -3,6 +3,7 @@
 This module provides dependency injection functions for FastAPI routes,
 including authentication, authorization, and database session management.
 """
+
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
@@ -33,8 +34,7 @@ def get_db():
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ) -> User:
     """Get the current authenticated user from JWT token.
 
@@ -60,22 +60,22 @@ def get_current_user(
 
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is deactivated"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Account is deactivated"
         )
 
     if not user.is_approved:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account pending approval"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Account pending approval"
         )
 
     return user
 
 
 def get_current_user_optional(
-    token: Optional[str] = Depends(OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)),
-    db: Session = Depends(get_db)
+    token: Optional[str] = Depends(
+        OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+    ),
+    db: Session = Depends(get_db),
 ) -> Optional[User]:
     """Get the current user if authenticated, otherwise return None.
 
@@ -98,9 +98,7 @@ def get_current_user_optional(
         return None
 
 
-def get_current_superuser(
-    current_user: User = Depends(get_current_user)
-) -> User:
+def get_current_superuser(current_user: User = Depends(get_current_user)) -> User:
     """Require the current user to be a superuser.
 
     Args:
@@ -114,8 +112,7 @@ def get_current_superuser(
     """
     if not current_user.is_superuser:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Superuser access required"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Superuser access required"
         )
     return current_user
 
@@ -138,7 +135,7 @@ def is_institution_admin(db: Session, user_id: int, institution_id: int) -> bool
     result = db.execute(
         organization_admins.select().where(
             organization_admins.c.user_id == user_id,
-            organization_admins.c.organization_id == institution_id
+            organization_admins.c.organization_id == institution_id,
         )
     ).first()
     return result is not None
@@ -155,11 +152,15 @@ def is_project_lead(db: Session, user_id: int, project_id: int) -> bool:
     Returns:
         True if user is a lead of the project.
     """
-    member = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == user_id,
-        ProjectMember.role == MemberRole.lead
-    ).first()
+    member = (
+        db.query(ProjectMember)
+        .filter(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == user_id,
+            ProjectMember.role == MemberRole.lead,
+        )
+        .first()
+    )
     return member is not None
 
 
@@ -174,10 +175,13 @@ def is_project_member(db: Session, user_id: int, project_id: int) -> bool:
     Returns:
         True if user is a member of the project.
     """
-    member = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == user_id
-    ).first()
+    member = (
+        db.query(ProjectMember)
+        .filter(
+            ProjectMember.project_id == project_id, ProjectMember.user_id == user_id
+        )
+        .first()
+    )
     return member is not None
 
 
@@ -191,16 +195,17 @@ def count_project_leads(db: Session, project_id: int) -> int:
     Returns:
         Number of leads for the project.
     """
-    return db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.role == MemberRole.lead
-    ).count()
+    return (
+        db.query(ProjectMember)
+        .filter(
+            ProjectMember.project_id == project_id,
+            ProjectMember.role == MemberRole.lead,
+        )
+        .count()
+    )
 
 
-def get_project_or_404(
-    project_id: int,
-    db: Session = Depends(get_db)
-) -> Project:
+def get_project_or_404(project_id: int, db: Session = Depends(get_db)) -> Project:
     """Get a project by ID or raise 404.
 
     Args:
@@ -216,16 +221,13 @@ def get_project_or_404(
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
     return project
 
 
 def check_admin_access(
-    db: Session,
-    current_user: User,
-    institution_id: Optional[int] = None
+    db: Session, current_user: User, institution_id: Optional[int] = None
 ) -> bool:
     """Check if user has admin access.
 
@@ -248,9 +250,7 @@ def check_admin_access(
 
 
 def require_admin_access(
-    institution_id: Optional[int],
-    current_user: User,
-    db: Session
+    institution_id: Optional[int], current_user: User, db: Session
 ) -> User:
     """Verify admin access and return user or raise 403.
 
@@ -268,12 +268,11 @@ def require_admin_access(
     if not check_admin_access(db, current_user, institution_id):
         if institution_id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Admin access required"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
             )
         else:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Superuser access required"
+                detail="Superuser access required",
             )
     return current_user

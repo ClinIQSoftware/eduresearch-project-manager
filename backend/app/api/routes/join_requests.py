@@ -2,6 +2,7 @@
 
 Handles project join request operations.
 """
+
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -28,7 +29,7 @@ def get_join_requests(
     project_id: Optional[int] = None,
     request_status: Optional[RequestStatusType] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get join requests.
 
@@ -41,15 +42,15 @@ def get_join_requests(
         project = db.query(Project).filter(Project.id == project_id).first()
         if not project:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
             )
 
         # Check if user is lead of this project
-        if not current_user.is_superuser and not is_project_lead(db, current_user.id, project_id):
+        if not current_user.is_superuser and not is_project_lead(
+            db, current_user.id, project_id
+        ):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
         query = query.filter(JoinRequest.project_id == project_id)
@@ -59,10 +60,14 @@ def get_join_requests(
             pass  # Superuser sees all
         else:
             # Get projects where user is lead
-            led_projects = db.query(Project.id).filter(Project.lead_id == current_user.id).subquery()
+            led_projects = (
+                db.query(Project.id)
+                .filter(Project.lead_id == current_user.id)
+                .subquery()
+            )
             query = query.filter(
-                (JoinRequest.project_id.in_(led_projects)) |
-                (JoinRequest.user_id == current_user.id)
+                (JoinRequest.project_id.in_(led_projects))
+                | (JoinRequest.user_id == current_user.id)
             )
 
     if request_status:
@@ -73,8 +78,7 @@ def get_join_requests(
 
 @router.get("/my", response_model=List[JoinRequestWithUser])
 def get_my_join_requests(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get current user's join requests."""
     join_request_service = JoinRequestService(db)
@@ -86,7 +90,7 @@ async def create_join_request(
     request_data: JoinRequestCreate,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Request to join a project. Notifies project lead."""
     join_request_service = JoinRequestService(db)
@@ -95,13 +99,10 @@ async def create_join_request(
         join_request = join_request_service.create_request(
             project_id=request_data.project_id,
             user=current_user,
-            message=request_data.message
+            message=request_data.message,
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Notify lead
     project = db.query(Project).filter(Project.id == request_data.project_id).first()
@@ -115,7 +116,7 @@ async def create_join_request(
                 project.title,
                 current_user.name,
                 current_user.email,
-                request_data.message
+                request_data.message,
             )
 
     return join_request
@@ -126,7 +127,7 @@ async def approve_join_request(
     request_id: int,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Approve a join request (project lead)."""
     join_request_service = JoinRequestService(db)
@@ -135,24 +136,22 @@ async def approve_join_request(
     join_request = db.query(JoinRequest).filter(JoinRequest.id == request_id).first()
     if not join_request:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Join request not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Join request not found"
         )
 
     # Verify lead access
-    if not current_user.is_superuser and not is_project_lead(db, current_user.id, join_request.project_id):
+    if not current_user.is_superuser and not is_project_lead(
+        db, current_user.id, join_request.project_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only project lead can respond"
+            detail="Only project lead can respond",
         )
 
     try:
         approved_request = join_request_service.approve_request(request_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Notify requester
     requester = db.query(User).filter(User.id == join_request.user_id).first()
@@ -163,7 +162,7 @@ async def approve_join_request(
             email_service.send_join_request_response,
             requester.email,
             project.title,
-            True  # approved
+            True,  # approved
         )
 
     return approved_request
@@ -174,7 +173,7 @@ async def reject_join_request(
     request_id: int,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Reject a join request (project lead)."""
     join_request_service = JoinRequestService(db)
@@ -183,24 +182,22 @@ async def reject_join_request(
     join_request = db.query(JoinRequest).filter(JoinRequest.id == request_id).first()
     if not join_request:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Join request not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Join request not found"
         )
 
     # Verify lead access
-    if not current_user.is_superuser and not is_project_lead(db, current_user.id, join_request.project_id):
+    if not current_user.is_superuser and not is_project_lead(
+        db, current_user.id, join_request.project_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only project lead can respond"
+            detail="Only project lead can respond",
         )
 
     try:
         rejected_request = join_request_service.reject_request(request_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Notify requester
     requester = db.query(User).filter(User.id == join_request.user_id).first()
@@ -211,7 +208,7 @@ async def reject_join_request(
             email_service.send_join_request_response,
             requester.email,
             project.title,
-            False  # rejected
+            False,  # rejected
         )
 
     return rejected_request
@@ -224,17 +221,18 @@ async def respond_to_join_request(
     response_data: RespondToJoinRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Approve or reject a join request (lead only)."""
     if response_data.status == RequestStatus.approved:
-        return await approve_join_request(request_id, background_tasks, current_user, db)
+        return await approve_join_request(
+            request_id, background_tasks, current_user, db
+        )
     elif response_data.status == RequestStatus.rejected:
         return await reject_join_request(request_id, background_tasks, current_user, db)
     else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid status"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status"
         )
 
 
@@ -242,26 +240,24 @@ async def respond_to_join_request(
 def cancel_join_request(
     request_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Cancel a pending join request (requester only)."""
     join_request = db.query(JoinRequest).filter(JoinRequest.id == request_id).first()
     if not join_request:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Join request not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Join request not found"
         )
 
     if join_request.user_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
         )
 
     if join_request.status != RequestStatus.pending:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot cancel processed request"
+            detail="Cannot cancel processed request",
         )
 
     db.delete(join_request)

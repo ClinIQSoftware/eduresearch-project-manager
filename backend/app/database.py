@@ -6,10 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./eduresearch.db"
-)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./eduresearch.db")
 
 # SQLite needs special handling for foreign keys and check constraints
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}

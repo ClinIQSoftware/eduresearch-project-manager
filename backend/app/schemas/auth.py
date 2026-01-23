@@ -1,4 +1,5 @@
 """Authentication schemas for EduResearch Project Manager."""
+
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -38,7 +39,7 @@ class PasswordChange(BaseModel):
         json_schema_extra={
             "example": {
                 "current_password": "oldpassword123",
-                "new_password": "newpassword123"
+                "new_password": "newpassword123",
             }
         }
     )

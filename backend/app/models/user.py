@@ -1,4 +1,5 @@
 """User model for EduResearch Project Manager."""
+
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
@@ -11,6 +12,7 @@ from app.database import Base
 
 class AuthProvider:
     """Constants for authentication providers."""
+
     local = "local"
     google = "google"
     microsoft = "microsoft"
@@ -113,5 +115,8 @@ class User(Base):
         "UserKeyword", back_populates="user", cascade="all, delete-orphan"
     )
     alert_preference: Mapped[Optional["UserAlertPreference"]] = relationship(
-        "UserAlertPreference", back_populates="user", cascade="all, delete-orphan", uselist=False
+        "UserAlertPreference",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
