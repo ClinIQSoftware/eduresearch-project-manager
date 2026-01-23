@@ -3,12 +3,10 @@
 Handles user login, registration, profile management, and OAuth flows.
 """
 import asyncio
-from datetime import timedelta
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
@@ -57,7 +55,7 @@ def get_institution_admins(db: Session, institution_id: int):
     """Get all admins (including superusers) for an institution."""
     if not institution_id:
         # Get all superusers for users without institution
-        return db.query(User).filter(User.is_superuser == True, User.is_active == True).all()
+        return db.query(User).filter(User.is_superuser.is_(True), User.is_active.is_(True)).all()
 
     # Get institution admins
     admins = db.query(User).join(
@@ -65,11 +63,11 @@ def get_institution_admins(db: Session, institution_id: int):
         User.id == organization_admins.c.user_id
     ).filter(
         organization_admins.c.organization_id == institution_id,
-        User.is_active == True
+        User.is_active.is_(True)
     ).all()
 
     # Also include superusers
-    superusers = db.query(User).filter(User.is_superuser == True, User.is_active == True).all()
+    superusers = db.query(User).filter(User.is_superuser.is_(True), User.is_active.is_(True)).all()
 
     # Combine and deduplicate
     admin_ids = {a.id for a in admins}

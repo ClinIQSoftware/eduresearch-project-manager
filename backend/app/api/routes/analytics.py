@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
-from typing import List
 from app.api.deps import get_db
 from app.models.task import Task
 from app.models.time_entry import TimeEntry

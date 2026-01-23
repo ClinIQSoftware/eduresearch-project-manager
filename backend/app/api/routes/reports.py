@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from app.api.deps import get_db, get_current_user
 from app.models.project import Project
-from app.models.project_member import ProjectMember, MemberRole
+from app.models.project_member import ProjectMember
 from app.models.task import Task
 from app.models.user import User
 from pydantic import BaseModel

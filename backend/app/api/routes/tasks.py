@@ -11,7 +11,6 @@ from app.api.deps import get_current_user, get_db, is_project_member as check_pr
 from app.models.task import Task
 from app.schemas.task import TaskStatus, TaskPriority
 from app.models.project import Project
-from app.models.project_member import ProjectMember
 from app.models.user import User
 from app.schemas import (
     TaskCreate,

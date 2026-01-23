@@ -138,8 +138,6 @@ def delete_institution(
     institution_service = InstitutionService(db)
 
     # Check for users
-    from app.repositories import UserRepository
-    user_repo = UserRepository(db)
     # We need to check if any users belong to this institution
     users = db.query(User).filter(User.institution_id == institution_id).count()
     if users > 0:

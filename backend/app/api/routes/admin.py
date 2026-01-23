@@ -31,7 +31,7 @@ from app.schemas import (
     SystemSettingsUpdate,
     BulkUploadResult,
 )
-from app.services import UserService, EmailService
+from app.services import EmailService
 from app.core.security import hash_password
 
 
@@ -203,7 +203,7 @@ def delete_user_permanently(
     if user.is_superuser:
         # Count other superusers
         other_superusers = db.query(User).filter(
-            User.is_superuser == True,
+            User.is_superuser.is_(True),
             User.id != user_id
         ).count()
         if other_superusers == 0:
@@ -396,7 +396,7 @@ def get_pending_users(
         else:
             raise HTTPException(status_code=403, detail="Superuser access required")
 
-    query = db.query(User).filter(User.is_approved == False)
+    query = db.query(User).filter(User.is_approved.is_(False))
 
     if institution_id:
         query = query.filter(User.institution_id == institution_id)

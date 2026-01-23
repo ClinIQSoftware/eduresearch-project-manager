@@ -2,7 +2,6 @@
 
 Handles file upload, storage, and retrieval operations for project files.
 """
-import os
 import uuid
 from pathlib import Path
 from typing import List, Optional

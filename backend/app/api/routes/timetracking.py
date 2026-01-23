@@ -24,13 +24,13 @@ def get_time_entries(
 
 @router.get("/active", response_model=Optional[TimeEntryResponse])
 def get_active_timer(db: Session = Depends(get_db)):
-    return db.query(TimeEntry).filter(TimeEntry.end_time == None).first()
+    return db.query(TimeEntry).filter(TimeEntry.end_time.is_(None)).first()
 
 
 @router.post("/", response_model=TimeEntryResponse)
 def create_time_entry(entry: TimeEntryCreate, db: Session = Depends(get_db)):
     # Check if there's already an active timer
-    active = db.query(TimeEntry).filter(TimeEntry.end_time == None).first()
+    active = db.query(TimeEntry).filter(TimeEntry.end_time.is_(None)).first()
     if active:
         raise HTTPException(
             status_code=400,

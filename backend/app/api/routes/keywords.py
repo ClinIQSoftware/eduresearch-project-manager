@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 from app.api.deps import get_db, get_current_user
 from app.models.project import Project
 from app.models.user import User

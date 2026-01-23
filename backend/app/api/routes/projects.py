@@ -3,19 +3,17 @@
 Handles project CRUD operations, membership management, and search.
 """
 import logging
-from datetime import date, timedelta
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import (
     get_current_user,
     get_db,
     is_project_lead,
-    is_project_member,
     count_project_leads,
 )
 from app.config import settings
@@ -520,7 +518,7 @@ async def send_project_reminders(
     meeting_projects = db.query(Project).options(
         joinedload(Project.members).joinedload(ProjectMember.user)
     ).filter(
-        Project.meeting_reminder_enabled == True,
+        Project.meeting_reminder_enabled.is_(True),
         Project.next_meeting_date.isnot(None),
         Project.next_meeting_date >= today
     ).all()
@@ -559,7 +557,7 @@ async def send_project_reminders(
     deadline_projects = db.query(Project).options(
         joinedload(Project.members).joinedload(ProjectMember.user)
     ).filter(
-        Project.deadline_reminder_enabled == True,
+        Project.deadline_reminder_enabled.is_(True),
         Project.end_date.isnot(None),
         Project.end_date >= today
     ).all()
