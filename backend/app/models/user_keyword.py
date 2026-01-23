@@ -6,10 +6,13 @@ from app.database import Base
 
 class UserKeyword(Base):
     """Stores individual keywords representing topics of interest for each user."""
+
     __tablename__ = "user_keywords"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     keyword = Column(String(100), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

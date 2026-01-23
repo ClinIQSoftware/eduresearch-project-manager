@@ -70,3 +70,9 @@ logs/
 # Database
 *.db
 *.sqlite3
+
+# Claude Code local config and skills
+.claude/
+
+# Git worktrees
+.worktrees/

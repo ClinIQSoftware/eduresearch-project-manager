@@ -1,0 +1,52 @@
+{% extends "email/base.html" %}
+
+{% block title %}Project Update: {{ project_title }}{% endblock %}
+
+{% block content %}
+<h2>Project Update</h2>
+
+<p>Hello {{ user_name }},</p>
+
+<p>There's been an update to a project you're involved with on EduResearch Project Manager.</p>
+
+<div class="info-box">
+    <div style="margin-bottom: 12px;">
+        <div class="label">Project</div>
+        <div class="value">{{ project_title }}</div>
+    </div>
+    <div>
+        <div class="label">Update Type</div>
+        <div class="value">{{ update_type }}</div>
+    </div>
+</div>
+
+<div class="highlight">
+    <p>
+        {% if update_type == 'status_change' %}
+        The project status has been updated. Please check the project page for the current status and any related changes.
+        {% elif update_type == 'new_member' %}
+        A new member has joined the project. Visit the project page to see the updated team roster.
+        {% elif update_type == 'member_removed' %}
+        A team member has left the project. The project page reflects the current team composition.
+        {% elif update_type == 'deadline_change' %}
+        Project deadlines have been updated. Please review the new timeline on the project page.
+        {% elif update_type == 'new_task' %}
+        New tasks have been added to the project. Check the project page to see if any tasks are relevant to you.
+        {% elif update_type == 'milestone_completed' %}
+        A project milestone has been completed! Visit the project page to see the progress.
+        {% elif update_type == 'description_updated' %}
+        The project description or details have been updated. Review the changes on the project page.
+        {% else %}
+        There have been changes to the project. Please visit the project page for more details.
+        {% endif %}
+    </p>
+</div>
+
+<p>Stay up to date with the latest project developments by visiting the project page.</p>
+
+<div class="btn-container">
+    <a href="{{ project_url }}" class="btn btn-primary">View Project</a>
+</div>
+
+<p style="font-size: 14px; color: #6B7280;">You're receiving this notification because you're a member of this project. You can manage your notification preferences in your account settings.</p>
+{% endblock %}

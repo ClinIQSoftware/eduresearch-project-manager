@@ -105,7 +105,7 @@ export const getProjects = (params?: {
   open_to_participants?: boolean;
 }) => api.get<ProjectWithLead[]>('/projects', { params });
 
-export const getMyProjects = () => api.get<ProjectWithLead[]>('/projects/my-projects');
+export const getMyProjects = () => api.get<ProjectWithLead[]>('/projects/my');
 
 export const getUpcomingDeadlines = (weeks?: number) =>
   api.get<ProjectWithLead[]>('/projects/upcoming-deadlines', { params: { weeks } });
@@ -174,13 +174,13 @@ export const cancelJoinRequest = (requestId: number) =>
 export const uploadFile = (projectId: number, file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-  return api.post<ProjectFile>(`/projects/${projectId}/files`, formData, {
+  return api.post<ProjectFile>(`/files/project/${projectId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
 
 export const getProjectFiles = (projectId: number) =>
-  api.get<ProjectFile[]>(`/projects/${projectId}/files`);
+  api.get<ProjectFile[]>(`/files/project/${projectId}`);
 
 export const downloadFile = (fileId: number) =>
   api.get(`/files/${fileId}/download`, { responseType: 'blob' });
@@ -196,6 +196,22 @@ export const getLeadsWithProjects = () =>
 
 export const getUsersWithProjects = () =>
   api.get<UserWithProjects[]>('/reports/users-with-projects');
+
+// Reports Overview
+export interface ReportsOverview {
+  total_projects: number;
+  active_projects: number;
+  total_tasks: number;
+  open_tasks: number;
+  overdue_tasks: number;
+  completed_this_month: number;
+  total_members: number;
+  projects_by_status: Record<string, number>;
+  projects_by_classification: Record<string, number>;
+}
+
+export const getReportsOverview = () =>
+  api.get<ReportsOverview>('/reports/overview');
 
 // Admin
 export const getAdminUsers = (institutionId?: number) =>
@@ -266,10 +282,10 @@ export const leaveProject = (projectId: number) =>
 import type { TaskStatus, TaskPriority } from '../types';
 
 export const getTasks = (params?: { status?: string; priority?: string; project_id?: number; assigned_to_id?: number }) =>
-  api.get<Task[]>('/tasks', { params });
+  api.get<Task[]>('/tasks/', { params });
 
 export const getProjectTasks = (projectId: number) =>
-  api.get<Task[]>('/tasks', { params: { project_id: projectId } });
+  api.get<Task[]>('/tasks/', { params: { project_id: projectId } });
 
 export const createTask = (data: {
   title: string;
@@ -279,7 +295,7 @@ export const createTask = (data: {
   due_date?: string;
   project_id?: number;
   assigned_to_id?: number;
-}) => api.post<Task>('/tasks', data);
+}) => api.post<Task>('/tasks/', data);
 
 export const updateTask = (taskId: number, data: {
   title?: string;
@@ -294,10 +310,10 @@ export const deleteTask = (taskId: number) => api.delete(`/tasks/${taskId}`);
 
 // Legacy - Time Entries
 export const getTimeEntries = (params?: { task_id?: number }) =>
-  api.get<TimeEntry[]>('/time-entries', { params });
+  api.get<TimeEntry[]>('/time-entries/', { params });
 export const getActiveTimer = () => api.get<TimeEntry | null>('/time-entries/active');
 export const startTimer = (data: { task_id?: number; notes?: string }) =>
-  api.post<TimeEntry>('/time-entries', data);
+  api.post<TimeEntry>('/time-entries/', data);
 export const stopTimer = (id: number) => api.post<TimeEntry>(`/time-entries/${id}/stop`);
 export const deleteTimeEntry = (id: number) => api.delete(`/time-entries/${id}`);
 

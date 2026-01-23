@@ -1,20 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List, Optional
 from datetime import datetime, timedelta
-from app.database import get_db
+from app.api.deps import get_db, get_current_user
 from app.models.project import Project
 from app.models.user import User
 from app.models.user_keyword import UserKeyword
 from app.models.user_alert_preference import UserAlertPreference
 from app.schemas.keyword import (
-    KeywordCreate, KeywordResponse, KeywordListResponse, KeywordBulkUpdate,
-    AlertPreferenceUpdate, AlertPreferenceResponse, MatchedProjectResponse,
-    SendAlertsRequest
+    KeywordCreate,
+    KeywordResponse,
+    KeywordListResponse,
+    KeywordBulkUpdate,
+    AlertPreferenceUpdate,
+    AlertPreferenceResponse,
+    MatchedProjectResponse,
+    SendAlertsRequest,
 )
-from app.dependencies import get_current_user
-from app.services.email import email_service
+from app.services import EmailService
 from app.config import settings
 
 router = APIRouter()
@@ -22,7 +26,9 @@ router = APIRouter()
 MAX_KEYWORDS_PER_USER = 20
 
 
-def get_matched_keywords_for_project(project: Project, keywords: List[str]) -> List[str]:
+def get_matched_keywords_for_project(
+    project: Project, keywords: List[str]
+) -> List[str]:
     """Return which keywords match a project's title or description."""
     matched = []
     title = (project.title or "").lower()
@@ -47,22 +53,30 @@ def search_projects_by_keywords(db: Session, keywords: List[str]) -> List[Projec
         conditions.append(Project.title.ilike(pattern))
         conditions.append(Project.description.ilike(pattern))
 
-    return db.query(Project).options(
-        joinedload(Project.lead),
-        joinedload(Project.institution),
-        joinedload(Project.department)
-    ).filter(or_(*conditions)).order_by(Project.created_at.desc()).all()
+    return (
+        db.query(Project)
+        .options(
+            joinedload(Project.lead),
+            joinedload(Project.institution),
+            joinedload(Project.department),
+        )
+        .filter(or_(*conditions))
+        .order_by(Project.created_at.desc())
+        .all()
+    )
 
 
 @router.get("", response_model=KeywordListResponse)
 def get_keywords(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get current user's keywords."""
-    keywords = db.query(UserKeyword).filter(
-        UserKeyword.user_id == current_user.id
-    ).order_by(UserKeyword.created_at.desc()).all()
+    keywords = (
+        db.query(UserKeyword)
+        .filter(UserKeyword.user_id == current_user.id)
+        .order_by(UserKeyword.created_at.desc())
+        .all()
+    )
 
     return KeywordListResponse(keywords=keywords)
 
@@ -71,36 +85,32 @@ def get_keywords(
 def add_keyword(
     keyword_data: KeywordCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Add a new keyword. Max 20 keywords per user."""
     # Check limit
-    count = db.query(UserKeyword).filter(
-        UserKeyword.user_id == current_user.id
-    ).count()
+    count = db.query(UserKeyword).filter(UserKeyword.user_id == current_user.id).count()
 
     if count >= MAX_KEYWORDS_PER_USER:
         raise HTTPException(
             status_code=400,
-            detail=f"Maximum of {MAX_KEYWORDS_PER_USER} keywords allowed"
+            detail=f"Maximum of {MAX_KEYWORDS_PER_USER} keywords allowed",
         )
 
     # Check for duplicate
-    existing = db.query(UserKeyword).filter(
-        UserKeyword.user_id == current_user.id,
-        UserKeyword.keyword.ilike(keyword_data.keyword)
-    ).first()
+    existing = (
+        db.query(UserKeyword)
+        .filter(
+            UserKeyword.user_id == current_user.id,
+            UserKeyword.keyword.ilike(keyword_data.keyword),
+        )
+        .first()
+    )
 
     if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="Keyword already exists"
-        )
+        raise HTTPException(status_code=400, detail="Keyword already exists")
 
-    keyword = UserKeyword(
-        user_id=current_user.id,
-        keyword=keyword_data.keyword.strip()
-    )
+    keyword = UserKeyword(user_id=current_user.id, keyword=keyword_data.keyword.strip())
     db.add(keyword)
     db.commit()
     db.refresh(keyword)
@@ -112,13 +122,14 @@ def add_keyword(
 def delete_keyword(
     keyword_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Delete a keyword."""
-    keyword = db.query(UserKeyword).filter(
-        UserKeyword.id == keyword_id,
-        UserKeyword.user_id == current_user.id
-    ).first()
+    keyword = (
+        db.query(UserKeyword)
+        .filter(UserKeyword.id == keyword_id, UserKeyword.user_id == current_user.id)
+        .first()
+    )
 
     if not keyword:
         raise HTTPException(status_code=404, detail="Keyword not found")
@@ -133,19 +144,17 @@ def delete_keyword(
 def bulk_update_keywords(
     data: KeywordBulkUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Replace all keywords with new list. Max 20 keywords."""
     if len(data.keywords) > MAX_KEYWORDS_PER_USER:
         raise HTTPException(
             status_code=400,
-            detail=f"Maximum of {MAX_KEYWORDS_PER_USER} keywords allowed"
+            detail=f"Maximum of {MAX_KEYWORDS_PER_USER} keywords allowed",
         )
 
     # Delete existing keywords
-    db.query(UserKeyword).filter(
-        UserKeyword.user_id == current_user.id
-    ).delete()
+    db.query(UserKeyword).filter(UserKeyword.user_id == current_user.id).delete()
 
     # Add new keywords (deduplicated)
     seen = set()
@@ -154,10 +163,7 @@ def bulk_update_keywords(
         kw_lower = kw.lower().strip()
         if kw_lower and kw_lower not in seen:
             seen.add(kw_lower)
-            keyword = UserKeyword(
-                user_id=current_user.id,
-                keyword=kw.strip()
-            )
+            keyword = UserKeyword(user_id=current_user.id, keyword=kw.strip())
             db.add(keyword)
             new_keywords.append(keyword)
 
@@ -172,20 +178,19 @@ def bulk_update_keywords(
 
 @router.get("/preferences", response_model=AlertPreferenceResponse)
 def get_alert_preferences(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Get user's alert preferences. Creates default if not exists."""
-    pref = db.query(UserAlertPreference).filter(
-        UserAlertPreference.user_id == current_user.id
-    ).first()
+    pref = (
+        db.query(UserAlertPreference)
+        .filter(UserAlertPreference.user_id == current_user.id)
+        .first()
+    )
 
     if not pref:
         # Create default preferences
         pref = UserAlertPreference(
-            user_id=current_user.id,
-            alert_frequency="weekly",
-            dashboard_new_weeks=2
+            user_id=current_user.id, alert_frequency="weekly", dashboard_new_weeks=2
         )
         db.add(pref)
         db.commit()
@@ -198,12 +203,14 @@ def get_alert_preferences(
 def update_alert_preferences(
     data: AlertPreferenceUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Update alert preferences."""
-    pref = db.query(UserAlertPreference).filter(
-        UserAlertPreference.user_id == current_user.id
-    ).first()
+    pref = (
+        db.query(UserAlertPreference)
+        .filter(UserAlertPreference.user_id == current_user.id)
+        .first()
+    )
 
     if not pref:
         pref = UserAlertPreference(user_id=current_user.id)
@@ -225,13 +232,13 @@ def get_matched_projects(
     limit: int = 50,
     offset: int = 0,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get all projects matching user's saved keywords."""
     # Get user's keywords
-    user_keywords = db.query(UserKeyword).filter(
-        UserKeyword.user_id == current_user.id
-    ).all()
+    user_keywords = (
+        db.query(UserKeyword).filter(UserKeyword.user_id == current_user.id).all()
+    )
 
     if not user_keywords:
         return []
@@ -241,7 +248,7 @@ def get_matched_projects(
 
     # Add matched keywords to each project
     results = []
-    for project in projects[offset:offset + limit]:
+    for project in projects[offset : offset + limit]:
         matched = get_matched_keywords_for_project(project, keyword_list)
         # Convert to dict and add matched_keywords
         project_dict = {
@@ -262,7 +269,7 @@ def get_matched_projects(
             "institution": project.institution,
             "department": project.department,
             "lead": project.lead,
-            "matched_keywords": matched
+            "matched_keywords": matched,
         }
         results.append(project_dict)
 
@@ -271,23 +278,30 @@ def get_matched_projects(
 
 @router.get("/matched-projects/new", response_model=List[MatchedProjectResponse])
 def get_new_matched_projects(
-    weeks: Optional[int] = Query(default=None, ge=1, le=52, description="Number of weeks to look back (overrides user preference)"),
+    weeks: Optional[int] = Query(
+        default=None,
+        ge=1,
+        le=52,
+        description="Number of weeks to look back (overrides user preference)",
+    ),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get new matched projects for dashboard (within specified or user's configured week range)."""
     # Use provided weeks or fall back to user's preferences
     if weeks is None:
-        pref = db.query(UserAlertPreference).filter(
-            UserAlertPreference.user_id == current_user.id
-        ).first()
+        pref = (
+            db.query(UserAlertPreference)
+            .filter(UserAlertPreference.user_id == current_user.id)
+            .first()
+        )
         weeks = pref.dashboard_new_weeks if pref else 2
     cutoff_date = datetime.utcnow() - timedelta(weeks=weeks)
 
     # Get user's keywords
-    user_keywords = db.query(UserKeyword).filter(
-        UserKeyword.user_id == current_user.id
-    ).all()
+    user_keywords = (
+        db.query(UserKeyword).filter(UserKeyword.user_id == current_user.id).all()
+    )
 
     if not user_keywords:
         return []
@@ -302,14 +316,18 @@ def get_new_matched_projects(
         conditions.append(Project.description.ilike(pattern))
 
     # Search with date filter
-    projects = db.query(Project).options(
-        joinedload(Project.lead),
-        joinedload(Project.institution),
-        joinedload(Project.department)
-    ).filter(
-        or_(*conditions),
-        Project.created_at >= cutoff_date
-    ).order_by(Project.created_at.desc()).limit(10).all()
+    projects = (
+        db.query(Project)
+        .options(
+            joinedload(Project.lead),
+            joinedload(Project.institution),
+            joinedload(Project.department),
+        )
+        .filter(or_(*conditions), Project.created_at >= cutoff_date)
+        .order_by(Project.created_at.desc())
+        .limit(10)
+        .all()
+    )
 
     # Add matched keywords
     results = []
@@ -333,7 +351,7 @@ def get_new_matched_projects(
             "institution": project.institution,
             "department": project.department,
             "lead": project.lead,
-            "matched_keywords": matched
+            "matched_keywords": matched,
         }
         results.append(project_dict)
 
@@ -341,20 +359,14 @@ def get_new_matched_projects(
 
 
 @router.post("/send-alerts")
-async def send_scheduled_alerts(
-    data: SendAlertsRequest,
-    db: Session = Depends(get_db)
-):
+async def send_scheduled_alerts(data: SendAlertsRequest, db: Session = Depends(get_db)):
     """
     Cron-triggered endpoint to send scheduled keyword alert emails.
     Requires cron_secret for authentication.
     """
     # Validate cron secret
     if not settings.cron_secret or data.cron_secret != settings.cron_secret:
-        raise HTTPException(
-            status_code=403,
-            detail="Invalid cron secret"
-        )
+        raise HTTPException(status_code=403, detail="Invalid cron secret")
 
     # Get users with matching frequency who have keywords
     query = db.query(UserAlertPreference).filter(
@@ -376,9 +388,9 @@ async def send_scheduled_alerts(
                 continue
 
             # Get user's keywords
-            user_keywords = db.query(UserKeyword).filter(
-                UserKeyword.user_id == pref.user_id
-            ).all()
+            user_keywords = (
+                db.query(UserKeyword).filter(UserKeyword.user_id == pref.user_id).all()
+            )
 
             if not user_keywords:
                 continue
@@ -386,7 +398,9 @@ async def send_scheduled_alerts(
             keyword_list = [kw.keyword for kw in user_keywords]
 
             # Get new projects since last alert
-            since_date = pref.last_alert_sent_at or (datetime.utcnow() - timedelta(days=30))
+            since_date = pref.last_alert_sent_at or (
+                datetime.utcnow() - timedelta(days=30)
+            )
 
             # Build conditions
             conditions = []
@@ -396,13 +410,14 @@ async def send_scheduled_alerts(
                 conditions.append(Project.description.ilike(pattern))
 
             # Query new matching projects
-            projects_query = db.query(Project).options(
-                joinedload(Project.lead),
-                joinedload(Project.institution),
-                joinedload(Project.department)
-            ).filter(
-                or_(*conditions),
-                Project.created_at >= since_date
+            projects_query = (
+                db.query(Project)
+                .options(
+                    joinedload(Project.lead),
+                    joinedload(Project.institution),
+                    joinedload(Project.department),
+                )
+                .filter(or_(*conditions), Project.created_at >= since_date)
             )
 
             # Exclude previously sent projects
@@ -425,17 +440,38 @@ async def send_scheduled_alerts(
             project_data = []
             for project in new_projects:
                 matched = get_matched_keywords_for_project(project, keyword_list)
-                project_data.append({
-                    "project": project,
-                    "matched_keywords": matched
-                })
+                project_data.append({"project": project, "matched_keywords": matched})
 
-            # Send email
-            await email_service.send_keyword_alert(
-                to_email=user.email,
-                user_name=user.name,
-                projects=project_data,
-                frequency=pref.alert_frequency
+            # Build email content
+            project_list_html = ""
+            for item in project_data:
+                p = item["project"]
+                kws = ", ".join(item["matched_keywords"])
+                project_list_html += (
+                    f"<li><strong>{p.title}</strong> - matched keywords: {kws}</li>"
+                )
+
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2>New Projects Matching Your Keywords</h2>
+                <p>Hello {user.name},</p>
+                <p>We found {len(new_projects)} new project(s) matching your keywords:</p>
+                <ul>{project_list_html}</ul>
+                <p><a href="{settings.frontend_url}/projects">View Projects</a></p>
+                <hr>
+                <p style="color: #666; font-size: 12px;">EduResearch Project Manager</p>
+            </body>
+            </html>
+            """
+
+            # Send email using EmailService
+            email_svc = EmailService(db)
+            email_svc.send_email(
+                to=user.email,
+                subject=f"New Projects Matching Your Keywords ({pref.alert_frequency} digest)",
+                html_content=html_content,
+                institution_id=user.institution_id,
             )
 
             # Update tracking
@@ -449,9 +485,9 @@ async def send_scheduled_alerts(
             errors.append(f"User {pref.user_id}: {str(e)}")
 
     return {
-        "message": f"Processed alerts",
+        "message": "Processed alerts",
         "alerts_sent": alerts_sent,
-        "errors": errors if errors else None
+        "errors": errors if errors else None,
     }
 
 

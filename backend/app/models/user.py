@@ -1,61 +1,122 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Enum
-from sqlalchemy.orm import relationship
+"""User model for EduResearch Project Manager."""
+
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
+
+from sqlalchemy import Boolean, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
 from app.database import Base
-from app.models.organization import organization_admins
-import enum
 
 
-class AuthProvider(str, enum.Enum):
+class AuthProvider:
+    """Constants for authentication providers."""
+
     local = "local"
     google = "google"
     microsoft = "microsoft"
 
 
+if TYPE_CHECKING:
+    from app.models.department import Department
+    from app.models.institution import Institution
+    from app.models.join_request import JoinRequest
+    from app.models.project import Project
+    from app.models.project_file import ProjectFile
+    from app.models.project_member import ProjectMember
+    from app.models.task import Task
+    from app.models.user_keyword import UserKeyword
+    from app.models.user_alert_preference import UserAlertPreference
+
+
 class User(Base):
+    """Represents a user in the system."""
+
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=True)  # Nullable for OAuth users
-    first_name = Column(String(255), nullable=False)
-    last_name = Column(String(255), nullable=False)
-    phone = Column(String(50), nullable=True)
-    bio = Column(String(2000), nullable=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False, index=True
+    )
+    password_hash: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )  # Nullable for OAuth users
+    first_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    bio: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
 
-    is_active = Column(Boolean, default=True)
-    is_superuser = Column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Approval fields for registration approval workflow
-    is_approved = Column(Boolean, default=True)  # False for pending users when approval required
-    approved_at = Column(DateTime(timezone=True), nullable=True)
-    approved_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    is_approved: Mapped[bool] = mapped_column(Boolean, default=True)
+    approved_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    approved_by_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
-    auth_provider = Column(Enum(AuthProvider), default=AuthProvider.local)
-    oauth_id = Column(String(255), nullable=True)  # OAuth provider user ID
+    # Authentication provider
+    auth_provider: Mapped[str] = mapped_column(
+        String(20), default="local"
+    )  # 'local', 'google', 'microsoft'
+    oauth_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # Institution and Department relationships
-    institution_id = Column(Integer, ForeignKey("institutions.id"), nullable=True)
-    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)
+    institution_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("institutions.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    department_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        default=func.now(), server_default=func.now()
+    )
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        onupdate=func.now(), nullable=True
+    )
 
     @property
-    def name(self):
-        """Computed property for full name (backwards compatibility)."""
+    def name(self) -> str:
+        """Computed property for full name."""
         return f"{self.first_name} {self.last_name}".strip()
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
     # Relationships
-    institution_entity = relationship("Institution", back_populates="users")
-    department_entity = relationship("Department", back_populates="users")
-    admin_of_institutions = relationship("Institution", secondary=organization_admins, back_populates="admins")
-    led_projects = relationship("Project", back_populates="lead", foreign_keys="Project.lead_id")
-    project_memberships = relationship("ProjectMember", back_populates="user", cascade="all, delete-orphan")
-    join_requests = relationship("JoinRequest", back_populates="user", cascade="all, delete-orphan")
-    uploaded_files = relationship("ProjectFile", back_populates="uploaded_by", cascade="all, delete-orphan")
-    approved_by = relationship("User", remote_side=[id], foreign_keys=[approved_by_id])
-
-    # Keyword tracking relationships
-    keywords = relationship("UserKeyword", back_populates="user", cascade="all, delete-orphan")
-    alert_preference = relationship("UserAlertPreference", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    institution: Mapped[Optional["Institution"]] = relationship(
+        "Institution", back_populates="users", foreign_keys=[institution_id]
+    )
+    department: Mapped[Optional["Department"]] = relationship(
+        "Department", back_populates="users"
+    )
+    approved_by: Mapped[Optional["User"]] = relationship(
+        "User", remote_side=[id], foreign_keys=[approved_by_id]
+    )
+    led_projects: Mapped[List["Project"]] = relationship(
+        "Project", back_populates="lead", foreign_keys="Project.lead_id"
+    )
+    project_memberships: Mapped[List["ProjectMember"]] = relationship(
+        "ProjectMember", back_populates="user", cascade="all, delete-orphan"
+    )
+    created_tasks: Mapped[List["Task"]] = relationship(
+        "Task", back_populates="created_by", foreign_keys="Task.created_by_id"
+    )
+    assigned_tasks: Mapped[List["Task"]] = relationship(
+        "Task", back_populates="assigned_to", foreign_keys="Task.assigned_to_id"
+    )
+    join_requests: Mapped[List["JoinRequest"]] = relationship(
+        "JoinRequest", back_populates="user", cascade="all, delete-orphan"
+    )
+    uploaded_files: Mapped[List["ProjectFile"]] = relationship(
+        "ProjectFile", back_populates="uploaded_by", cascade="all, delete-orphan"
+    )
+    keywords: Mapped[List["UserKeyword"]] = relationship(
+        "UserKeyword", back_populates="user", cascade="all, delete-orphan"
+    )
+    alert_preference: Mapped[Optional["UserAlertPreference"]] = relationship(
+        "UserAlertPreference",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )

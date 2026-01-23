@@ -1,53 +1,84 @@
-from datetime import timedelta
+"""Authentication routes for EduResearch Project Manager.
+
+Handles user login, registration, profile management, and OAuth flows.
+"""
+
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+
+from authlib.integrations.starlette_client import OAuth
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from authlib.integrations.starlette_client import OAuth
 from starlette.requests import Request
-from app.database import get_db
+
+from app.api.deps import get_current_user, get_db
 from app.config import settings
-from app.schemas.user import (
-    UserCreate, UserResponse, UserUpdate, Token, LoginRequest, PasswordChange
-)
-from app.services.auth import (
-    authenticate_user, create_user, create_oauth_user,
-    get_user_by_email, create_access_token, get_password_hash,
-    verify_password
-)
-from app.services.email import email_service
-from app.dependencies import get_current_user
 from app.models.user import User, AuthProvider
-from app.models.system_settings import SystemSettings
-from app.models.organization import Institution, organization_admins
+from app.models.institution import Institution
+from app.models.organization import organization_admins
 from app.models.department import Department
+from app.schemas import (
+    LoginRequest,
+    PasswordChange,
+    Token,
+    UserCreate,
+    UserResponse,
+    UserUpdate,
+)
+from app.services import AuthService, UserService, SettingsService, EmailService
 
+router = APIRouter()
 
-def get_system_settings(db: Session) -> SystemSettings:
-    """Get global system settings."""
-    settings_obj = db.query(SystemSettings).filter(
-        SystemSettings.institution_id == None
-    ).first()
-    return settings_obj
+# OAuth setup
+oauth = OAuth()
+
+if settings.google_client_id:
+    oauth.register(
+        name="google",
+        client_id=settings.google_client_id,
+        client_secret=settings.google_client_secret,
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
+
+if settings.microsoft_client_id:
+    oauth.register(
+        name="microsoft",
+        client_id=settings.microsoft_client_id,
+        client_secret=settings.microsoft_client_secret,
+        authorize_url=f"https://login.microsoftonline.com/{settings.microsoft_tenant_id}/oauth2/v2.0/authorize",
+        access_token_url=f"https://login.microsoftonline.com/{settings.microsoft_tenant_id}/oauth2/v2.0/token",
+        client_kwargs={"scope": "openid email profile"},
+    )
 
 
 def get_institution_admins(db: Session, institution_id: int):
     """Get all admins (including superusers) for an institution."""
     if not institution_id:
         # Get all superusers for users without institution
-        return db.query(User).filter(User.is_superuser == True, User.is_active == True).all()
+        return (
+            db.query(User)
+            .filter(User.is_superuser.is_(True), User.is_active.is_(True))
+            .all()
+        )
 
-    # Get institution admins and superusers
-    admins = db.query(User).join(
-        organization_admins,
-        User.id == organization_admins.c.user_id
-    ).filter(
-        organization_admins.c.institution_id == institution_id,
-        User.is_active == True
-    ).all()
+    # Get institution admins
+    admins = (
+        db.query(User)
+        .join(organization_admins, User.id == organization_admins.c.user_id)
+        .filter(
+            organization_admins.c.organization_id == institution_id,
+            User.is_active.is_(True),
+        )
+        .all()
+    )
 
     # Also include superusers
-    superusers = db.query(User).filter(User.is_superuser == True, User.is_active == True).all()
+    superusers = (
+        db.query(User)
+        .filter(User.is_superuser.is_(True), User.is_active.is_(True))
+        .all()
+    )
 
     # Combine and deduplicate
     admin_ids = {a.id for a in admins}
@@ -58,11 +89,7 @@ def get_institution_admins(db: Session, institution_id: int):
     return admins
 
 
-def send_approval_emails(
-    background_tasks: BackgroundTasks,
-    db: Session,
-    user: User
-):
+def send_approval_emails(background_tasks: BackgroundTasks, db: Session, user: User):
     """Send approval request emails to institution admins."""
     admins = get_institution_admins(db, user.institution_id)
 
@@ -70,7 +97,9 @@ def send_approval_emails(
     institution_name = None
     department_name = None
     if user.institution_id:
-        inst = db.query(Institution).filter(Institution.id == user.institution_id).first()
+        inst = (
+            db.query(Institution).filter(Institution.id == user.institution_id).first()
+        )
         institution_name = inst.name if inst else None
     if user.department_id:
         dept = db.query(Department).filter(Department.id == user.department_id).first()
@@ -78,6 +107,7 @@ def send_approval_emails(
 
     user_name = f"{user.first_name} {user.last_name}".strip()
 
+    email_service = EmailService(db)
     for admin in admins:
         background_tasks.add_task(
             email_service.send_user_approval_request,
@@ -85,7 +115,7 @@ def send_approval_emails(
             user_name,
             user.email,
             institution_name,
-            department_name
+            department_name,
         )
 
 
@@ -97,7 +127,9 @@ async def send_approval_emails_async(db: Session, user: User):
     institution_name = None
     department_name = None
     if user.institution_id:
-        inst = db.query(Institution).filter(Institution.id == user.institution_id).first()
+        inst = (
+            db.query(Institution).filter(Institution.id == user.institution_id).first()
+        )
         institution_name = inst.name if inst else None
     if user.department_id:
         dept = db.query(Department).filter(Department.id == user.department_id).first()
@@ -105,109 +137,70 @@ async def send_approval_emails_async(db: Session, user: User):
 
     user_name = f"{user.first_name} {user.last_name}".strip()
 
+    email_service = EmailService(db)
     for admin in admins:
         asyncio.create_task(
             email_service.send_user_approval_request(
-                admin.email,
-                user_name,
-                user.email,
-                institution_name,
-                department_name
+                admin.email, user_name, user.email, institution_name, department_name
             )
         )
 
 
-router = APIRouter()
+@router.post("/login", response_model=Token)
+def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+    """Login with email and password.
 
-# OAuth setup
-oauth = OAuth()
+    Returns a JWT access token on successful authentication.
+    """
+    auth_service = AuthService(db)
+    settings_service = SettingsService(db)
 
-if settings.google_client_id:
-    oauth.register(
-        name='google',
-        client_id=settings.google_client_id,
-        client_secret=settings.google_client_secret,
-        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-        client_kwargs={'scope': 'openid email profile'}
-    )
+    try:
+        user, token = auth_service.login(login_data.email, login_data.password)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-if settings.microsoft_client_id:
-    oauth.register(
-        name='microsoft',
-        client_id=settings.microsoft_client_id,
-        client_secret=settings.microsoft_client_secret,
-        authorize_url=f'https://login.microsoftonline.com/{settings.microsoft_tenant_id}/oauth2/v2.0/authorize',
-        access_token_url=f'https://login.microsoftonline.com/{settings.microsoft_tenant_id}/oauth2/v2.0/token',
-        client_kwargs={'scope': 'openid email profile'}
-    )
+    # Check registration approval mode
+    if not user.is_approved:
+        system_settings = settings_service.get_system_settings()
+        approval_mode = getattr(system_settings, "registration_approval_mode", "block")
+
+        if approval_mode == "block":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is pending approval. Please wait for an administrator to approve your registration.",
+            )
+
+    return {"access_token": token, "token_type": "bearer"}
 
 
 @router.post("/register", response_model=UserResponse)
 def register(
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Register a new user with email and password."""
-    existing_user = get_user_by_email(db, user_data.email)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
+    """Register a new user with email and password.
 
-    # Check if registration approval is required
-    sys_settings = get_system_settings(db)
-    require_approval = sys_settings.require_registration_approval if sys_settings else False
+    If registration approval is required, the user will be created
+    in a pending state and admins will be notified.
+    """
+    auth_service = AuthService(db)
 
-    user = create_user(
-        db=db,
-        email=user_data.email,
-        password=user_data.password,
-        first_name=user_data.first_name,
-        last_name=user_data.last_name,
-        phone=user_data.phone,
-        bio=user_data.bio,
-        institution_id=user_data.institution_id,
-        department_id=user_data.department_id,
-        is_approved=not require_approval  # Pending if approval required
-    )
+    try:
+        user = auth_service.register(user_data)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # Send approval request emails if needed
     if not user.is_approved:
         send_approval_emails(background_tasks, db, user)
 
     return user
-
-
-@router.post("/login", response_model=Token)
-def login(login_data: LoginRequest, db: Session = Depends(get_db)):
-    """Login with email and password."""
-    user = authenticate_user(db, login_data.email, login_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Check if user is approved
-    if not user.is_approved:
-        sys_settings = get_system_settings(db)
-        approval_mode = sys_settings.registration_approval_mode if sys_settings else "block"
-
-        if approval_mode == "block":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Your account is pending approval. Please wait for an administrator to approve your registration."
-            )
-        # If "limited" mode, allow login but frontend should handle restricted access
-
-    access_token = create_access_token(
-        data={"sub": str(user.id)},
-        expires_delta=timedelta(minutes=settings.access_token_expire_minutes)
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.get("/me", response_model=UserResponse)
@@ -220,54 +213,34 @@ def get_me(current_user: User = Depends(get_current_user)):
 def update_me(
     user_data: UserUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Update current user profile."""
-    update_data = user_data.model_dump(exclude_unset=True)
+    user_service = UserService(db)
 
-    # Check if email is being changed and if it's already taken
-    if "email" in update_data and update_data["email"] != current_user.email:
-        existing_user = get_user_by_email(db, update_data["email"])
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
-            )
+    try:
+        updated_user = user_service.update_profile(current_user, user_data)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    for key, value in update_data.items():
-        setattr(current_user, key, value)
-
-    db.commit()
-    db.refresh(current_user)
-    return current_user
+    return updated_user
 
 
 @router.post("/change-password")
 def change_password(
     password_data: PasswordChange,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Change current user's password."""
-    # OAuth users cannot change password
-    if current_user.auth_provider != AuthProvider.local:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password cannot be changed for OAuth users"
-        )
+    auth_service = AuthService(db)
 
-    # Verify current password
-    if not current_user.password_hash or not verify_password(
-        password_data.current_password, current_user.password_hash
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect"
+    try:
+        auth_service.change_password(
+            current_user, password_data.current_password, password_data.new_password
         )
-
-    # Update password
-    current_user.password_hash = get_password_hash(password_data.new_password)
-    db.commit()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return {"message": "Password changed successfully"}
 
@@ -278,7 +251,7 @@ async def google_login(request: Request):
     if not settings.google_client_id:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Google OAuth not configured"
+            detail="Google OAuth not configured",
         )
     redirect_uri = f"{settings.backend_url}/api/auth/google/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
@@ -287,77 +260,81 @@ async def google_login(request: Request):
 @router.get("/google/callback")
 async def google_callback(request: Request, db: Session = Depends(get_db)):
     """Handle Google OAuth callback."""
+    auth_service = AuthService(db)
+    settings_service = SettingsService(db)
+
     try:
         token = await oauth.google.authorize_access_token(request)
-        user_info = token.get('userinfo')
+        user_info = token.get("userinfo")
 
         if not user_info:
             raise HTTPException(status_code=400, detail="Failed to get user info")
 
-        email = user_info.get('email')
-        given_name = user_info.get('given_name', '')
-        family_name = user_info.get('family_name', '')
+        email = user_info.get("email")
+        given_name = user_info.get("given_name", "")
+        family_name = user_info.get("family_name", "")
         if not given_name and not family_name:
-            # Fallback to full name or email
-            full_name = user_info.get('name', email.split('@')[0])
-            parts = full_name.split(' ', 1)
+            full_name = user_info.get("name", email.split("@")[0])
+            parts = full_name.split(" ", 1)
             given_name = parts[0]
-            family_name = parts[1] if len(parts) > 1 else ''
-        oauth_id = user_info.get('sub')
+            family_name = parts[1] if len(parts) > 1 else ""
+        oauth_id = user_info.get("sub")
 
         # Check if user exists
-        user = get_user_by_email(db, email)
-        is_new_user = False
-        if not user:
-            # Check if registration approval is required
-            sys_settings = get_system_settings(db)
-            require_approval = sys_settings.require_registration_approval if sys_settings else False
+        from app.services import UserService
 
-            # Create new user
-            user = create_oauth_user(
-                db=db,
-                email=email,
-                first_name=given_name,
-                last_name=family_name,
-                auth_provider="google",
-                oauth_id=oauth_id,
-                is_approved=not require_approval
-            )
-            is_new_user = True
+        user_service = UserService(db)
+        existing_user = user_service.get_user_by_email(email)
 
-            # Send approval request emails if needed
-            if not user.is_approved:
-                await send_approval_emails_async(db, user)
+        if existing_user:
+            if existing_user.auth_provider != AuthProvider.google:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Email already registered with different authentication method",
+                )
+            user = existing_user
+            access_token = auth_service.create_token(user)
+        else:
+            # Register via OAuth
+            try:
+                user, access_token = auth_service.register_oauth(
+                    email=email,
+                    first_name=given_name,
+                    last_name=family_name,
+                    provider="google",
+                    oauth_id=oauth_id,
+                )
+            except Exception as e:
+                # User created but pending approval
+                if "pending approval" in str(e).lower():
+                    await send_approval_emails_async(
+                        db, user_service.get_user_by_email(email)
+                    )
+                    return RedirectResponse(
+                        url=f"{settings.frontend_url}/login?error=Your account is pending approval"
+                    )
+                raise
 
-        elif user.auth_provider != AuthProvider.google:
-            # User exists but with different auth method
-            raise HTTPException(
-                status_code=400,
-                detail="Email already registered with different authentication method"
-            )
-
-        # Check if user is approved
+        # Check approval status
         if not user.is_approved:
-            sys_settings = get_system_settings(db)
-            approval_mode = sys_settings.registration_approval_mode if sys_settings else "block"
+            system_settings = settings_service.get_system_settings()
+            approval_mode = getattr(
+                system_settings, "registration_approval_mode", "block"
+            )
 
             if approval_mode == "block":
                 return RedirectResponse(
                     url=f"{settings.frontend_url}/login?error=Your account is pending approval"
                 )
 
-        # Create access token
-        access_token = create_access_token(data={"sub": str(user.id)})
-
-        # Redirect to frontend with token
         return RedirectResponse(
             url=f"{settings.frontend_url}/auth/callback?token={access_token}"
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        return RedirectResponse(
-            url=f"{settings.frontend_url}/login?error={str(e)}"
-        )
+        return RedirectResponse(url=f"{settings.frontend_url}/login?error={str(e)}")
 
 
 @router.get("/microsoft")
@@ -366,7 +343,7 @@ async def microsoft_login(request: Request):
     if not settings.microsoft_client_id:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Microsoft OAuth not configured"
+            detail="Microsoft OAuth not configured",
         )
     redirect_uri = f"{settings.backend_url}/api/auth/microsoft/callback"
     return await oauth.microsoft.authorize_redirect(request, redirect_uri)
@@ -375,75 +352,83 @@ async def microsoft_login(request: Request):
 @router.get("/microsoft/callback")
 async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
     """Handle Microsoft OAuth callback."""
+    auth_service = AuthService(db)
+    settings_service = SettingsService(db)
+
     try:
         token = await oauth.microsoft.authorize_access_token(request)
 
         # Get user info from Microsoft Graph
         import httpx
+
         async with httpx.AsyncClient() as client:
             resp = await client.get(
-                'https://graph.microsoft.com/v1.0/me',
-                headers={'Authorization': f'Bearer {token["access_token"]}'}
+                "https://graph.microsoft.com/v1.0/me",
+                headers={"Authorization": f"Bearer {token['access_token']}"},
             )
             user_info = resp.json()
 
-        email = user_info.get('mail') or user_info.get('userPrincipalName')
-        given_name = user_info.get('givenName', '')
-        family_name = user_info.get('surname', '')
+        email = user_info.get("mail") or user_info.get("userPrincipalName")
+        given_name = user_info.get("givenName", "")
+        family_name = user_info.get("surname", "")
         if not given_name and not family_name:
-            # Fallback to display name or email
-            full_name = user_info.get('displayName', email.split('@')[0])
-            parts = full_name.split(' ', 1)
+            full_name = user_info.get("displayName", email.split("@")[0])
+            parts = full_name.split(" ", 1)
             given_name = parts[0]
-            family_name = parts[1] if len(parts) > 1 else ''
-        oauth_id = user_info.get('id')
+            family_name = parts[1] if len(parts) > 1 else ""
+        oauth_id = user_info.get("id")
 
         # Check if user exists
-        user = get_user_by_email(db, email)
-        is_new_user = False
-        if not user:
-            # Check if registration approval is required
-            sys_settings = get_system_settings(db)
-            require_approval = sys_settings.require_registration_approval if sys_settings else False
+        from app.services import UserService
 
-            user = create_oauth_user(
-                db=db,
-                email=email,
-                first_name=given_name,
-                last_name=family_name,
-                auth_provider="microsoft",
-                oauth_id=oauth_id,
-                is_approved=not require_approval
-            )
-            is_new_user = True
+        user_service = UserService(db)
+        existing_user = user_service.get_user_by_email(email)
 
-            # Send approval request emails if needed
-            if not user.is_approved:
-                await send_approval_emails_async(db, user)
+        if existing_user:
+            if existing_user.auth_provider != AuthProvider.microsoft:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Email already registered with different authentication method",
+                )
+            user = existing_user
+            access_token = auth_service.create_token(user)
+        else:
+            # Register via OAuth
+            try:
+                user, access_token = auth_service.register_oauth(
+                    email=email,
+                    first_name=given_name,
+                    last_name=family_name,
+                    provider="microsoft",
+                    oauth_id=oauth_id,
+                )
+            except Exception as e:
+                if "pending approval" in str(e).lower():
+                    await send_approval_emails_async(
+                        db, user_service.get_user_by_email(email)
+                    )
+                    return RedirectResponse(
+                        url=f"{settings.frontend_url}/login?error=Your account is pending approval"
+                    )
+                raise
 
-        elif user.auth_provider != AuthProvider.microsoft:
-            raise HTTPException(
-                status_code=400,
-                detail="Email already registered with different authentication method"
-            )
-
-        # Check if user is approved
+        # Check approval status
         if not user.is_approved:
-            sys_settings = get_system_settings(db)
-            approval_mode = sys_settings.registration_approval_mode if sys_settings else "block"
+            system_settings = settings_service.get_system_settings()
+            approval_mode = getattr(
+                system_settings, "registration_approval_mode", "block"
+            )
 
             if approval_mode == "block":
                 return RedirectResponse(
                     url=f"{settings.frontend_url}/login?error=Your account is pending approval"
                 )
 
-        access_token = create_access_token(data={"sub": str(user.id)})
-
         return RedirectResponse(
             url=f"{settings.frontend_url}/auth/callback?token={access_token}"
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        return RedirectResponse(
-            url=f"{settings.frontend_url}/login?error={str(e)}"
-        )
+        return RedirectResponse(url=f"{settings.frontend_url}/login?error={str(e)}")

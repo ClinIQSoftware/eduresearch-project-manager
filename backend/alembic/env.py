@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import Base
-from app.models import *  # Import all models to register them with Base
+from app.models import *  # noqa: F403 - Import all models to register them with Base
 
 # Alembic Config object
 config = context.config
@@ -21,11 +21,11 @@ if config.config_file_name is not None:
 # Set target metadata for autogenerate
 target_metadata = Base.metadata
 
+
 # Get database URL from environment
 def get_url():
     return os.getenv(
-        "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/eduresearch"
+        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/eduresearch"
     )
 
 
@@ -68,10 +68,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

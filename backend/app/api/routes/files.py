@@ -1,156 +1,203 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+"""File routes for EduResearch Project Manager.
+
+Handles file upload, download, and management for projects.
+"""
+
+from typing import List
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    UploadFile,
+    File,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
-from typing import List
-from app.database import get_db
+
+from app.api.deps import get_current_user, get_db, is_project_lead, is_project_member
 from app.models.project_file import ProjectFile
 from app.models.project import Project
 from app.models.user import User
-from app.schemas.file import FileUploadResponse, FileWithUploader
-from app.dependencies import get_current_user, is_project_member, is_project_lead
-from app.services.files import save_uploaded_file, read_file, delete_file, get_content_type
-from app.services.email import email_service
-from app.config import settings
+from app.schemas import (
+    FileUploadResponse,
+    FileWithUploader,
+)
+from app.services import FileService, EmailService
 
 router = APIRouter()
 
 
-@router.post("/projects/{project_id}/files", response_model=FileUploadResponse)
+@router.post("/project/{project_id}", response_model=FileUploadResponse)
 async def upload_file(
     project_id: int,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Upload a file to a project. Notifies project lead via email with attachment."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
     # Check if user has access (member or lead)
     if not current_user.is_superuser:
-        if not is_project_lead(db, current_user.id, project_id) and \
-           not is_project_member(db, current_user.id, project_id):
-            raise HTTPException(status_code=403, detail="Access denied")
+        if not is_project_lead(
+            db, current_user.id, project_id
+        ) and not is_project_member(db, current_user.id, project_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
+    file_service = FileService(db)
 
     try:
-        # Save file
-        stored_filename, file_path, file_size = await save_uploaded_file(file, project_id)
-        content_type = get_content_type(file.filename)
+        project_file = await file_service.upload_file(project_id, file, current_user)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-        # Create database record
-        project_file = ProjectFile(
-            project_id=project_id,
-            uploaded_by_id=current_user.id,
-            filename=stored_filename,
-            original_filename=file.filename,
-            file_path=file_path,
-            file_size=file_size,
-            content_type=content_type
-        )
-        db.add(project_file)
-        db.commit()
-        db.refresh(project_file)
-
-        # Email lead with attachment
-        if project.lead_id and project.lead_id != current_user.id:
-            lead = db.query(User).filter(User.id == project.lead_id).first()
-            if lead:
-                file_content = await read_file(file_path)
+    # Email lead with attachment
+    if project.lead_id and project.lead_id != current_user.id:
+        lead = db.query(User).filter(User.id == project.lead_id).first()
+        if lead:
+            try:
+                file_content = await file_service.read_file_content(
+                    project_file.file_path
+                )
+                email_service = EmailService(db)
                 background_tasks.add_task(
                     email_service.send_file_upload_notification,
                     lead.email,
                     project.title,
                     current_user.name,
                     file.filename,
-                    file_content
+                    file_content,
                 )
+            except Exception:
+                pass  # Don't fail upload if email fails
 
-        return project_file
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
+    return project_file
 
 
-@router.get("/projects/{project_id}/files", response_model=List[FileWithUploader])
+@router.get("/project/{project_id}", response_model=List[FileWithUploader])
 def get_project_files(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Get all files for a project."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
-    files = db.query(ProjectFile).options(
-        joinedload(ProjectFile.uploaded_by)
-    ).filter(ProjectFile.project_id == project_id).order_by(
-        ProjectFile.uploaded_at.desc()
-    ).all()
+    files = (
+        db.query(ProjectFile)
+        .options(joinedload(ProjectFile.uploaded_by))
+        .filter(ProjectFile.project_id == project_id)
+        .order_by(ProjectFile.uploaded_at.desc())
+        .all()
+    )
 
     return files
 
 
-@router.get("/files/{file_id}/download")
+@router.get("/{file_id}", response_model=FileWithUploader)
+def get_file_info(
+    file_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get file info by ID."""
+    project_file = (
+        db.query(ProjectFile)
+        .options(joinedload(ProjectFile.uploaded_by))
+        .filter(ProjectFile.id == file_id)
+        .first()
+    )
+
+    if not project_file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
+        )
+
+    return project_file
+
+
+@router.get("/{file_id}/download")
 async def download_file(
     file_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Download a file."""
     project_file = db.query(ProjectFile).filter(ProjectFile.id == file_id).first()
     if not project_file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
+        )
 
     # Check access
     if not current_user.is_superuser:
-        if not is_project_lead(db, current_user.id, project_file.project_id) and \
-           not is_project_member(db, current_user.id, project_file.project_id):
-            raise HTTPException(status_code=403, detail="Access denied")
+        if not is_project_lead(
+            db, current_user.id, project_file.project_id
+        ) and not is_project_member(db, current_user.id, project_file.project_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
 
     import os
+
     if not os.path.exists(project_file.file_path):
-        raise HTTPException(status_code=404, detail="File not found on disk")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk"
+        )
 
     return FileResponse(
         path=project_file.file_path,
         filename=project_file.original_filename,
-        media_type=project_file.content_type or "application/octet-stream"
+        media_type=project_file.content_type or "application/octet-stream",
     )
 
 
-@router.delete("/files/{file_id}")
-def delete_project_file(
+@router.delete("/{file_id}")
+def delete_file(
     file_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Delete a file (lead or uploader only)."""
     project_file = db.query(ProjectFile).filter(ProjectFile.id == file_id).first()
     if not project_file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
+        )
 
     project = db.query(Project).filter(Project.id == project_file.project_id).first()
 
     # Check permissions - lead or uploader can delete
     can_delete = (
-        current_user.is_superuser or
-        project.lead_id == current_user.id or
-        project_file.uploaded_by_id == current_user.id
+        current_user.is_superuser
+        or (project and project.lead_id == current_user.id)
+        or project_file.uploaded_by_id == current_user.id
     )
 
     if not can_delete:
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+        )
 
-    # Delete from filesystem
-    delete_file(project_file.file_path)
+    file_service = FileService(db)
 
-    # Delete from database
-    db.delete(project_file)
-    db.commit()
+    try:
+        file_service.delete_file(file_id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return {"message": "File deleted successfully"}

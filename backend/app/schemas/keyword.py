@@ -29,12 +29,16 @@ class KeywordBulkUpdate(BaseModel):
 
 
 class AlertPreferenceBase(BaseModel):
-    alert_frequency: str = Field(default="weekly", pattern="^(disabled|daily|weekly|monthly)$")
+    alert_frequency: str = Field(
+        default="weekly", pattern="^(disabled|daily|weekly|monthly)$"
+    )
     dashboard_new_weeks: int = Field(default=2, ge=1, le=8)
 
 
 class AlertPreferenceUpdate(BaseModel):
-    alert_frequency: Optional[str] = Field(default=None, pattern="^(disabled|daily|weekly|monthly)$")
+    alert_frequency: Optional[str] = Field(
+        default=None, pattern="^(disabled|daily|weekly|monthly)$"
+    )
     dashboard_new_weeks: Optional[int] = Field(default=None, ge=1, le=8)
 
 
@@ -48,6 +52,7 @@ class AlertPreferenceResponse(AlertPreferenceBase):
 
 class MatchedProjectResponse(ProjectWithLead):
     """Project response with list of keywords that matched."""
+
     matched_keywords: List[str] = []
 
     class Config:
@@ -56,10 +61,12 @@ class MatchedProjectResponse(ProjectWithLead):
 
 class ProjectSearchParams(BaseModel):
     """Parameters for manual project search."""
+
     q: str = Field(..., min_length=1, max_length=200, description="Search query")
 
 
 class SendAlertsRequest(BaseModel):
     """Request body for cron-triggered alert sending."""
+
     cron_secret: str
     frequency: Optional[str] = Field(default=None, pattern="^(daily|weekly|monthly)$")

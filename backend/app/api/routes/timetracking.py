@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-from app.database import get_db
+from app.api.deps import get_db
 from app.models.time_entry import TimeEntry
 from app.schemas.time_entry import TimeEntryCreate, TimeEntryUpdate, TimeEntryResponse
 
@@ -10,10 +10,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[TimeEntryResponse])
-def get_time_entries(
-    task_id: Optional[int] = None,
-    db: Session = Depends(get_db)
-):
+def get_time_entries(task_id: Optional[int] = None, db: Session = Depends(get_db)):
     query = db.query(TimeEntry)
 
     if task_id:
@@ -24,24 +21,21 @@ def get_time_entries(
 
 @router.get("/active", response_model=Optional[TimeEntryResponse])
 def get_active_timer(db: Session = Depends(get_db)):
-    return db.query(TimeEntry).filter(TimeEntry.end_time == None).first()
+    return db.query(TimeEntry).filter(TimeEntry.end_time.is_(None)).first()
 
 
 @router.post("/", response_model=TimeEntryResponse)
 def create_time_entry(entry: TimeEntryCreate, db: Session = Depends(get_db)):
     # Check if there's already an active timer
-    active = db.query(TimeEntry).filter(TimeEntry.end_time == None).first()
+    active = db.query(TimeEntry).filter(TimeEntry.end_time.is_(None)).first()
     if active:
         raise HTTPException(
-            status_code=400,
-            detail="There is already an active timer. Stop it first."
+            status_code=400, detail="There is already an active timer. Stop it first."
         )
 
     start_time = entry.start_time or datetime.utcnow()
     db_entry = TimeEntry(
-        task_id=entry.task_id,
-        start_time=start_time,
-        notes=entry.notes
+        task_id=entry.task_id, start_time=start_time, notes=entry.notes
     )
     db.add(db_entry)
     db.commit()
@@ -50,7 +44,9 @@ def create_time_entry(entry: TimeEntryCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{entry_id}", response_model=TimeEntryResponse)
-def update_time_entry(entry_id: int, entry: TimeEntryUpdate, db: Session = Depends(get_db)):
+def update_time_entry(
+    entry_id: int, entry: TimeEntryUpdate, db: Session = Depends(get_db)
+):
     db_entry = db.query(TimeEntry).filter(TimeEntry.id == entry_id).first()
     if not db_entry:
         raise HTTPException(status_code=404, detail="Time entry not found")

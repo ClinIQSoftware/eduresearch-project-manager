@@ -1,0 +1,53 @@
+{% extends "email/base.html" %}
+
+{% block title %}Project Join Request {{ 'Approved' if approved else 'Update' }}{% endblock %}
+
+{% block content %}
+<h2>Join Request {{ 'Approved' if approved else 'Not Approved' }}</h2>
+
+<p>Hello {{ user_name }},</p>
+
+{% if approved %}
+<div class="alert alert-success">
+    <strong>Good news!</strong> Your request has been approved.
+</div>
+
+<p>Your request to join <strong>{{ project_title }}</strong> has been approved by the project lead.</p>
+
+<p>As a project member, you can now:</p>
+<ul style="color: #4B5563; margin: 16px 0; padding-left: 24px;">
+    <li style="margin-bottom: 8px;">View all project details and resources</li>
+    <li style="margin-bottom: 8px;">Collaborate with team members</li>
+    <li style="margin-bottom: 8px;">Receive task assignments</li>
+    <li style="margin-bottom: 8px;">Participate in project discussions</li>
+</ul>
+
+<div class="btn-container">
+    <a href="{{ project_url }}" class="btn btn-success">Go to Project</a>
+</div>
+
+<p style="font-size: 14px; color: #6B7280;">Welcome to the team! We look forward to your contributions.</p>
+
+{% else %}
+<div class="alert alert-error">
+    <strong>Request Not Approved</strong>
+</div>
+
+<p>We regret to inform you that your request to join <strong>{{ project_title }}</strong> has not been approved at this time.</p>
+
+<p>This could be due to various reasons, such as:</p>
+<ul style="color: #4B5563; margin: 16px 0; padding-left: 24px;">
+    <li style="margin-bottom: 8px;">The project team is currently at capacity</li>
+    <li style="margin-bottom: 8px;">The project requires specific expertise or qualifications</li>
+    <li style="margin-bottom: 8px;">The project is in a phase that doesn't allow new members</li>
+</ul>
+
+<p>Don't be discouraged! There are many other projects on the platform that might be a good fit. You can browse available projects and submit new join requests.</p>
+
+<div class="btn-container">
+    <a href="{{ project_url }}" class="btn btn-primary">Browse Projects</a>
+</div>
+
+<p style="font-size: 14px; color: #6B7280;">Thank you for your interest in collaborative research.</p>
+{% endif %}
+{% endblock %}

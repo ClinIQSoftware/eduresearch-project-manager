@@ -1,22 +1,35 @@
-from pydantic import BaseModel
-from datetime import datetime, date
-from typing import Optional, List
-from app.models.project import ProjectClassification, ProjectStatus
-from app.schemas.user import UserBrief
-from app.schemas.institution import InstitutionBrief
+"""Project schemas for EduResearch Project Manager."""
+
+from datetime import date, datetime
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
+
 from app.schemas.department import DepartmentBrief
+from app.schemas.institution import InstitutionBrief
+from app.schemas.user import UserBrief
+
+
+# Type aliases for project fields
+ProjectClassification = Literal[
+    "research", "education", "quality_improvement", "administrative"
+]
+ProjectStatus = Literal["preparation", "recruitment", "analysis", "writing"]
+MemberRole = Literal["lead", "participant"]
 
 
 class ProjectBase(BaseModel):
-    title: str
-    description: Optional[str] = None
-    color: Optional[str] = "#3B82F6"
-    classification: ProjectClassification = ProjectClassification.research
-    status: ProjectStatus = ProjectStatus.preparation
+    """Base project schema with common fields."""
+
+    title: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=2000)
+    classification: ProjectClassification = "research"
+    status: ProjectStatus = "preparation"
     open_to_participants: bool = True
+    color: Optional[str] = Field("#3B82F6", max_length=7)
     start_date: Optional[date] = None
-    end_date: Optional[date] = None  # Deadline/target completion date
-    next_meeting_date: Optional[date] = None  # Next project discussion meeting
+    end_date: Optional[date] = None
+    next_meeting_date: Optional[date] = None
     # Email reminder settings
     meeting_reminder_enabled: bool = False
     meeting_reminder_days: int = 1
@@ -25,17 +38,21 @@ class ProjectBase(BaseModel):
 
 
 class ProjectCreate(ProjectBase):
+    """Schema for creating a project."""
+
     institution_id: Optional[int] = None
     department_id: Optional[int] = None
 
 
 class ProjectUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    color: Optional[str] = None
+    """Schema for updating a project - all fields optional."""
+
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=2000)
     classification: Optional[ProjectClassification] = None
     status: Optional[ProjectStatus] = None
     open_to_participants: Optional[bool] = None
+    color: Optional[str] = Field(None, max_length=7)
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     next_meeting_date: Optional[date] = None
@@ -49,45 +66,52 @@ class ProjectUpdate(BaseModel):
 
 
 class ProjectResponse(ProjectBase):
+    """Schema for project response."""
+
     id: int
+    lead_id: Optional[int] = None
     institution_id: Optional[int] = None
     department_id: Optional[int] = None
-    lead_id: Optional[int] = None
     last_status_change: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    institution: Optional[InstitutionBrief] = None
-    department: Optional[DepartmentBrief] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProjectWithLead(ProjectResponse):
+    """Project response with lead user information."""
+
     lead: Optional[UserBrief] = None
+    institution: Optional[InstitutionBrief] = None
+    department: Optional[DepartmentBrief] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
+# Forward reference for ProjectMemberResponse - will be defined after import
 class ProjectMemberInfo(BaseModel):
+    """Project member info for nested responses."""
+
     id: int
     user_id: int
-    role: str
+    role: MemberRole
     joined_at: datetime
     user: UserBrief
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProjectDetail(ProjectWithLead):
+    """Detailed project response with members."""
+
     members: List[ProjectMemberInfo] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AddProjectMemberRequest(BaseModel):
+    """Schema for adding a member to a project."""
+
     user_id: int
-    role: str = "participant"
+    role: MemberRole = "participant"
