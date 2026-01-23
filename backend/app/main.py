@@ -21,6 +21,7 @@ from app.api.routes import (
     reports_router,
     analytics_router,
     timetracking_router,
+    notifications_router,
 )
 from app.config import settings
 
@@ -89,6 +90,11 @@ app.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics"]
 # Time tracking routes
 app.include_router(
     timetracking_router, prefix="/api/time-entries", tags=["Time Tracking"]
+)
+
+# Notifications routes
+app.include_router(
+    notifications_router, prefix="/api/notifications", tags=["Notifications"]
 )
 
 

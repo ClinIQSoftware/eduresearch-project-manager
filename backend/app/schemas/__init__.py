@@ -141,6 +141,20 @@ from app.schemas.keyword import (
     SendAlertsRequest,
 )
 
+# Notification schemas
+from app.schemas.notification import (
+    NotificationCreate,
+    NotificationListResponse,
+    NotificationPreferenceBase,
+    NotificationPreferenceCreate,
+    NotificationPreferenceResponse,
+    NotificationPreferencesBulkUpdate,
+    NotificationPreferencesListResponse,
+    NotificationPreferenceUpdate,
+    NotificationResponse,
+    UnreadCountResponse,
+)
+
 
 __all__ = [
     # Auth
@@ -245,4 +259,15 @@ __all__ = [
     "MatchedProjectResponse",
     "ProjectSearchParams",
     "SendAlertsRequest",
+    # Notification
+    "NotificationCreate",
+    "NotificationListResponse",
+    "NotificationPreferenceBase",
+    "NotificationPreferenceCreate",
+    "NotificationPreferenceResponse",
+    "NotificationPreferencesBulkUpdate",
+    "NotificationPreferencesListResponse",
+    "NotificationPreferenceUpdate",
+    "NotificationResponse",
+    "UnreadCountResponse",
 ]
