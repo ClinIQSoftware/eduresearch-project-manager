@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     # Cron job authentication for scheduled tasks
     cron_secret: Optional[str] = None
 
+    # Multi-tenancy
+    base_domain: str = "localhost:3000"  # e.g., "eduresearch.app" for production
+
+    # Default Platform Admin (seeded on first run)
+    platform_admin_email: str = "platform-admin@eduresearch.app"
+    platform_admin_password: str = "PlatformAdmin123!"
+    platform_admin_name: str = "Platform Administrator"
+
     class Config:
         env_file = ".env"
         extra = "ignore"
