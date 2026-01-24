@@ -14,7 +14,7 @@ export default function PlatformAdminLayout() {
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="bg-indigo-600 -mx-4 -mt-4 px-4 py-6 sm:-mx-6 sm:-mt-6 sm:px-6 md:-mx-8 md:-mt-8 md:px-8">
+      <div className="bg-indigo-600 rounded-lg px-6 py-6">
         <h1 className="text-xl sm:text-2xl font-bold text-white">Platform Administration</h1>
         <p className="text-indigo-200 text-sm mt-1">Manage enterprises and platform-wide settings</p>
       </div>
