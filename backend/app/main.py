@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.middleware import TenantMiddleware
 from app.api.routes import (
     auth_router,
     users_router,
@@ -45,6 +46,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Tenant resolution middleware
+app.add_middleware(TenantMiddleware)
 
 # Auth routes
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
