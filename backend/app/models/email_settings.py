@@ -1,9 +1,11 @@
 """EmailSettings model for EduResearch Project Manager."""
 
+import uuid
 from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -22,6 +24,15 @@ class EmailSettings(Base):
         unique=True,
         index=True,
     )  # NULL for global settings
+
+    # Multi-tenancy
+    enterprise_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("enterprises.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
     smtp_host: Mapped[str] = mapped_column(String(255), default="smtp.gmail.com")
     smtp_port: Mapped[int] = mapped_column(Integer, default=587)
     smtp_user: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

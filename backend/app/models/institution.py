@@ -1,9 +1,11 @@
 """Institution model for EduResearch Project Manager."""
 
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import String
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -23,6 +25,15 @@ class Institution(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+
+    # Multi-tenancy
+    enterprise_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("enterprises.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         default=func.now(), server_default=func.now()
     )

@@ -1,9 +1,11 @@
 """JoinRequest model for EduResearch Project Manager."""
 
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -42,6 +44,15 @@ class JoinRequest(Base):
     status: Mapped[str] = mapped_column(
         String(20), default="pending"
     )  # 'pending', 'approved', 'rejected'
+
+    # Multi-tenancy
+    enterprise_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("enterprises.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         default=func.now(), server_default=func.now()
     )
