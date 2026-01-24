@@ -24,8 +24,15 @@ export default function Login() {
 
     try {
       const response = await loginApi(email, password);
-      await login(response.data.access_token);
-      navigate(from, { replace: true });
+      const isPlatformAdmin = response.data.is_platform_admin || false;
+      await login(response.data.access_token, isPlatformAdmin);
+
+      // Redirect based on user type
+      if (isPlatformAdmin) {
+        navigate('/platform-admin', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Login failed');
     } finally {
