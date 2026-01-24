@@ -6,12 +6,14 @@ Handles project CRUD operations, membership management, and search.
 import logging
 from datetime import date
 from typing import List, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import (
+    get_current_enterprise_id,
     get_current_user,
     get_db,
     is_project_lead,
@@ -149,6 +151,7 @@ def create_project(
     project_data: ProjectCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Create a new project. Creator becomes the lead."""
     project_service = ProjectService(db)
@@ -158,7 +161,7 @@ def create_project(
         project_data.institution_id = current_user.institution_id
 
     try:
-        project = project_service.create_project(project_data, current_user)
+        project = project_service.create_project(project_data, current_user, enterprise_id)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

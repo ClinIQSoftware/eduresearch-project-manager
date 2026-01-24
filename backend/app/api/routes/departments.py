@@ -4,11 +4,12 @@ Handles department CRUD operations.
 """
 
 from typing import List, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db, is_institution_admin
+from app.api.deps import get_current_enterprise_id, get_current_user, get_db, is_institution_admin
 from app.models.user import User
 from app.schemas import (
     DepartmentCreate,
@@ -69,6 +70,7 @@ def create_department(
     dept_data: DepartmentCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Create a new department (superuser or institution admin only)."""
     # Check permissions
@@ -82,7 +84,7 @@ def create_department(
     department_service = DepartmentService(db)
 
     try:
-        department = department_service.create_department(dept_data)
+        department = department_service.create_department(dept_data, enterprise_id)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

@@ -4,11 +4,13 @@ Handles institution CRUD operations and admin management.
 """
 
 from typing import List
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import (
+    get_current_enterprise_id,
     get_current_user,
     get_current_superuser,
     get_db,
@@ -61,12 +63,13 @@ def create_institution(
     inst_data: InstitutionCreate,
     current_user: User = Depends(get_current_superuser),
     db: Session = Depends(get_db),
+    enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Create a new institution (superuser only)."""
     institution_service = InstitutionService(db)
 
     try:
-        institution = institution_service.create_institution(inst_data)
+        institution = institution_service.create_institution(inst_data, enterprise_id)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
