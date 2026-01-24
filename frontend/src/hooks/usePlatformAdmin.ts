@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../utils/queryKeys';
-import { platformAdminApi } from '../api/platformAdmin';
+import { platformAdminApi, PlatformEmailSettingsUpdate } from '../api/platformAdmin';
 import type { EnterpriseCreateData, EnterpriseUpdateData } from '../types';
 
 // Platform Stats
@@ -82,6 +82,40 @@ export function useDeleteEnterprise() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.platformAdmin.enterprises.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.platformAdmin.stats() });
+    },
+  });
+}
+
+// Platform Email Settings
+export function usePlatformEmailSettings() {
+  return useQuery({
+    queryKey: ['platformEmailSettings'],
+    queryFn: async () => {
+      const response = await platformAdminApi.getEmailSettings();
+      return response.data;
+    },
+  });
+}
+
+export function useUpdatePlatformEmailSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: PlatformEmailSettingsUpdate) => {
+      const response = await platformAdminApi.updateEmailSettings(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platformEmailSettings'] });
+    },
+  });
+}
+
+export function usePlatformTestEmail() {
+  return useMutation({
+    mutationFn: async (to: string) => {
+      const response = await platformAdminApi.sendTestEmail(to);
+      return response.data;
     },
   });
 }

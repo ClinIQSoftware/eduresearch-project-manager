@@ -98,3 +98,35 @@ class PlatformStatsResponse(BaseModel):
     total_users: int = 0
     total_projects: int = 0
     total_institutions: int = 0
+
+
+# Platform Email Settings schemas
+class PlatformEmailSettingsResponse(BaseModel):
+    """Schema for platform-wide email settings response."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    smtp_host: str
+    smtp_port: int
+    smtp_user: Optional[str] = None
+    from_email: Optional[str] = None
+    from_name: str
+    is_active: bool
+
+
+class PlatformEmailSettingsUpdate(BaseModel):
+    """Schema for updating platform-wide email settings."""
+
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    from_email: Optional[str] = None
+    from_name: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class TestEmailRequest(BaseModel):
+    """Schema for test email request."""
+
+    to: EmailStr

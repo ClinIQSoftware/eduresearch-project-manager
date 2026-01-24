@@ -18,6 +18,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.models.email_settings import EmailSettings
 from app.models.enterprise import Enterprise
 from app.models.institution import Institution
 from app.models.platform_admin import PlatformAdmin
@@ -30,8 +31,12 @@ from app.schemas.platform_admin import (
     EnterpriseUpdate,
     PlatformAdminLogin,
     PlatformAdminResponse,
+    PlatformEmailSettingsResponse,
+    PlatformEmailSettingsUpdate,
     PlatformStatsResponse,
+    TestEmailRequest,
 )
+from app.services.email_service import EmailService
 
 router = APIRouter()
 
@@ -399,3 +404,107 @@ def delete_enterprise(
     db.commit()
 
     return None
+
+
+# Platform Email Settings endpoints
+@router.get("/settings/email", response_model=PlatformEmailSettingsResponse)
+def get_platform_email_settings(
+    request: Request,
+    db: Session = Depends(get_platform_db),
+):
+    """Get platform-wide default email settings.
+
+    These settings are inherited by all enterprises that don't have
+    their own email configuration.
+    """
+    require_platform_admin(request)
+
+    email_settings = (
+        db.query(EmailSettings)
+        .filter(
+            EmailSettings.enterprise_id.is_(None),
+            EmailSettings.institution_id.is_(None),
+        )
+        .first()
+    )
+
+    if not email_settings:
+        # Return defaults if no settings exist yet
+        return PlatformEmailSettingsResponse(
+            smtp_host="smtp.gmail.com",
+            smtp_port=587,
+            smtp_user=None,
+            from_email=None,
+            from_name="EduResearch Project Manager",
+            is_active=False,
+        )
+
+    return email_settings
+
+
+@router.put("/settings/email", response_model=PlatformEmailSettingsResponse)
+def update_platform_email_settings(
+    request: Request,
+    settings_data: PlatformEmailSettingsUpdate,
+    db: Session = Depends(get_platform_db),
+):
+    """Update platform-wide default email settings.
+
+    These settings are inherited by all enterprises that don't have
+    their own email configuration.
+    """
+    require_platform_admin(request)
+
+    email_settings = (
+        db.query(EmailSettings)
+        .filter(
+            EmailSettings.enterprise_id.is_(None),
+            EmailSettings.institution_id.is_(None),
+        )
+        .first()
+    )
+
+    if not email_settings:
+        # Create new platform settings
+        email_settings = EmailSettings(
+            enterprise_id=None,
+            institution_id=None,
+        )
+        db.add(email_settings)
+
+    # Update fields if provided
+    update_data = settings_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(email_settings, field, value)
+
+    db.commit()
+    db.refresh(email_settings)
+
+    return email_settings
+
+
+@router.post("/settings/email/test")
+def test_platform_email(
+    request: Request,
+    test_data: TestEmailRequest,
+    db: Session = Depends(get_platform_db),
+):
+    """Send a test email using platform default settings.
+
+    This verifies that SMTP settings are configured correctly.
+    """
+    require_platform_admin(request)
+
+    email_service = EmailService(db)
+    success = email_service.test_email_settings(
+        to=test_data.to,
+        institution_id=None,
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to send test email. Check SMTP settings.",
+        )
+
+    return {"message": f"Test email sent to {test_data.to}"}

@@ -1,6 +1,7 @@
 """Settings repositories for email and system settings database operations."""
 
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -49,6 +50,46 @@ class EmailSettingsRepository(BaseRepository[EmailSettings]):
         return (
             self.db.query(EmailSettings)
             .filter(EmailSettings.institution_id.is_(None))
+            .first()
+        )
+
+    def get_for_enterprise(
+        self, enterprise_id: Optional[UUID]
+    ) -> Optional[EmailSettings]:
+        """Get email settings for a specific enterprise (without institution override).
+
+        Args:
+            enterprise_id: The enterprise UUID.
+
+        Returns:
+            The email settings if found, None otherwise.
+        """
+        if enterprise_id is None:
+            return None
+
+        return (
+            self.db.query(EmailSettings)
+            .filter(
+                EmailSettings.enterprise_id == enterprise_id,
+                EmailSettings.institution_id.is_(None),
+            )
+            .first()
+        )
+
+    def get_platform_default(self) -> Optional[EmailSettings]:
+        """Get platform-wide default email settings.
+
+        Platform defaults have both enterprise_id and institution_id as NULL.
+
+        Returns:
+            The platform default email settings if found, None otherwise.
+        """
+        return (
+            self.db.query(EmailSettings)
+            .filter(
+                EmailSettings.enterprise_id.is_(None),
+                EmailSettings.institution_id.is_(None),
+            )
             .first()
         )
 

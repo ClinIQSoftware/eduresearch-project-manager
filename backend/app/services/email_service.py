@@ -11,6 +11,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from typing import List, Optional
+from uuid import UUID
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy.orm import Session
@@ -47,12 +48,20 @@ class EmailService:
         )
 
     def _get_email_settings(
-        self, institution_id: Optional[int] = None
+        self,
+        institution_id: Optional[int] = None,
+        enterprise_id: Optional[UUID] = None,
     ) -> Optional[EmailSettings]:
-        """Get email settings for an institution or global settings.
+        """Get email settings using hierarchical fallback.
+
+        Resolution order:
+        1. Institution-specific settings (if institution_id provided)
+        2. Enterprise-specific settings (if enterprise_id provided)
+        3. Platform default settings
 
         Args:
             institution_id: Optional institution ID for institution-specific settings.
+            enterprise_id: Optional enterprise UUID for enterprise-specific settings.
 
         Returns:
             EmailSettings if found and active, None otherwise.
@@ -65,10 +74,18 @@ class EmailService:
             if email_settings and email_settings.is_active:
                 return email_settings
 
-        # Fall back to global settings
-        global_settings = self.email_settings_repo.get_global()
-        if global_settings and global_settings.is_active:
-            return global_settings
+        # Try enterprise-specific settings
+        if enterprise_id:
+            email_settings = self.email_settings_repo.get_for_enterprise(
+                enterprise_id
+            )
+            if email_settings and email_settings.is_active:
+                return email_settings
+
+        # Fall back to platform default settings
+        platform_settings = self.email_settings_repo.get_platform_default()
+        if platform_settings and platform_settings.is_active:
+            return platform_settings
 
         return None
 
@@ -120,6 +137,7 @@ class EmailService:
         subject: str,
         html_content: str,
         institution_id: Optional[int] = None,
+        enterprise_id: Optional[UUID] = None,
     ) -> bool:
         """Send an email using configured SMTP settings.
 
@@ -128,11 +146,12 @@ class EmailService:
             subject: Email subject.
             html_content: HTML email body.
             institution_id: Optional institution ID for settings lookup.
+            enterprise_id: Optional enterprise UUID for settings lookup.
 
         Returns:
             True if email was sent successfully, False otherwise.
         """
-        email_settings = self._get_email_settings(institution_id)
+        email_settings = self._get_email_settings(institution_id, enterprise_id)
 
         if not email_settings:
             logger.warning("No active email settings found, skipping email send")
