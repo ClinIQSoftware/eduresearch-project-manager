@@ -5,12 +5,13 @@ including authentication, authorization, and database session management.
 """
 
 from typing import Optional
+from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.database import SessionLocal, get_tenant_session, get_platform_session
 from app.models.user import User
 from app.models.project import Project
 from app.models.project_member import ProjectMember, MemberRole
@@ -276,3 +277,20 @@ def require_admin_access(
                 detail="Superuser access required",
             )
     return current_user
+
+
+def get_tenant_db(request: Request) -> Session:
+    """Dependency for tenant-scoped database access."""
+    yield from get_tenant_session(request)
+
+
+def get_platform_db() -> Session:
+    """Dependency for platform admin database access (no RLS)."""
+    yield from get_platform_session()
+
+
+def get_current_enterprise_id(request: Request) -> UUID:
+    """Get current enterprise ID from request state."""
+    if not hasattr(request.state, "enterprise_id") or not request.state.enterprise_id:
+        raise HTTPException(status_code=400, detail="Enterprise context required")
+    return request.state.enterprise_id
