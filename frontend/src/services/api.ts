@@ -51,7 +51,7 @@ export const register = (data: {
 }) => api.post<User>('/auth/register', data);
 
 export const login = (email: string, password: string) =>
-  api.post<{ access_token: string; token_type: string }>('/auth/login', { email, password });
+  api.post<{ access_token: string; token_type: string; is_platform_admin?: boolean }>('/auth/login', { email, password });
 
 export const getCurrentUser = () => api.get<User>('/auth/me');
 

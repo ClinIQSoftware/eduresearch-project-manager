@@ -1,33 +1,177 @@
+import { useState, useEffect } from 'react';
+import {
+  usePlatformEmailSettings,
+  useUpdatePlatformEmailSettings,
+  usePlatformTestEmail,
+} from '../../hooks/usePlatformAdmin';
+import { getErrorMessage } from '../../utils/errorHandling';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
+import { Checkbox } from '../../components/ui/Checkbox';
+import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
 export default function SettingsTab() {
-  return (
-    <Card>
-      <div className="text-center py-8">
-        <div className="text-gray-400 mb-2">
-          <svg
-            className="mx-auto h-12 w-12"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-        </div>
-        <h3 className="text-lg font-medium text-gray-700">Platform Settings</h3>
-        <p className="text-gray-500 mt-1">Platform-wide settings will be available here.</p>
+  const { data: settings, isLoading } = usePlatformEmailSettings();
+  const updateSettings = useUpdatePlatformEmailSettings();
+  const testEmail = usePlatformTestEmail();
+
+  const [form, setForm] = useState({
+    smtp_host: '',
+    smtp_port: 587,
+    smtp_user: '',
+    smtp_password: '',
+    from_email: '',
+    from_name: '',
+    is_active: false,
+  });
+  const [testTo, setTestTo] = useState('');
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (settings) {
+      setForm({
+        smtp_host: settings.smtp_host || '',
+        smtp_port: settings.smtp_port || 587,
+        smtp_user: settings.smtp_user || '',
+        smtp_password: '',
+        from_email: settings.from_email || '',
+        from_name: settings.from_name || '',
+        is_active: settings.is_active,
+      });
+    }
+  }, [settings]);
+
+  const handleSave = async () => {
+    try {
+      const data: Record<string, unknown> = {
+        ...form,
+        smtp_user: form.smtp_user || null,
+        from_email: form.from_email || null,
+      };
+      if (!form.smtp_password) delete data.smtp_password;
+      await updateSettings.mutateAsync(data);
+      setForm((f) => ({ ...f, smtp_password: '' }));
+      setMessage({ type: 'success', text: 'Settings saved successfully' });
+    } catch (error) {
+      setMessage({ type: 'error', text: getErrorMessage(error) });
+    }
+  };
+
+  const handleTest = async () => {
+    if (!testTo) {
+      return setMessage({ type: 'error', text: 'Enter a test email address' });
+    }
+    try {
+      await testEmail.mutateAsync(testTo);
+      setMessage({ type: 'success', text: `Test email sent to ${testTo}` });
+    } catch (error) {
+      setMessage({ type: 'error', text: getErrorMessage(error) });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="py-8">
+        <LoadingSpinner size="lg" />
       </div>
-    </Card>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-blue-800">Platform Default Settings</h3>
+        <p className="text-sm text-blue-600 mt-1">
+          These settings are inherited by all enterprises that don't have their own
+          email configuration.
+        </p>
+      </div>
+
+      {message && (
+        <div
+          className={`p-3 rounded-lg ${
+            message.type === 'success'
+              ? 'bg-green-50 text-green-600'
+              : 'bg-red-50 text-red-600'
+          }`}
+        >
+          {message.text}
+        </div>
+      )}
+
+      <Card title="SMTP Configuration">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="SMTP Host"
+            value={form.smtp_host}
+            onChange={(v) => setForm({ ...form, smtp_host: v })}
+            placeholder="smtp.gmail.com"
+          />
+          <Input
+            label="SMTP Port"
+            type="number"
+            value={String(form.smtp_port)}
+            onChange={(v) => setForm({ ...form, smtp_port: parseInt(v) || 587 })}
+          />
+          <Input
+            label="SMTP Username"
+            value={form.smtp_user}
+            onChange={(v) => setForm({ ...form, smtp_user: v })}
+            placeholder="your-email@gmail.com"
+          />
+          <Input
+            label="SMTP Password"
+            type="password"
+            value={form.smtp_password}
+            onChange={(v) => setForm({ ...form, smtp_password: v })}
+            placeholder="Leave blank to keep existing"
+          />
+          <Input
+            label="From Email"
+            type="email"
+            value={form.from_email}
+            onChange={(v) => setForm({ ...form, from_email: v })}
+            placeholder="noreply@domain.com"
+          />
+          <Input
+            label="From Name"
+            value={form.from_name}
+            onChange={(v) => setForm({ ...form, from_name: v })}
+            placeholder="EduResearch Project Manager"
+          />
+        </div>
+        <div className="mt-4 flex items-center justify-between">
+          <Checkbox
+            label="Enable email notifications"
+            checked={form.is_active}
+            onChange={(v) => setForm({ ...form, is_active: v })}
+          />
+          <Button onClick={handleSave} loading={updateSettings.isPending}>
+            Save Settings
+          </Button>
+        </div>
+      </Card>
+
+      <Card title="Test Email">
+        <div className="flex gap-4 items-end">
+          <div className="flex-1">
+            <Input
+              label="Recipient Email"
+              type="email"
+              value={testTo}
+              onChange={setTestTo}
+              placeholder="test@example.com"
+            />
+          </div>
+          <Button onClick={handleTest} loading={testEmail.isPending}>
+            Send Test
+          </Button>
+        </div>
+      </Card>
+    </div>
   );
 }

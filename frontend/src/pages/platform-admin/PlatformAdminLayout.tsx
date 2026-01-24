@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 
 const platformAdminTabs = [
   { to: '/platform-admin/enterprises', label: 'Enterprises' },
-  { to: '/platform-admin/settings', label: 'Settings' },
+  { to: '/platform-admin/settings', label: 'Email & Settings' },
 ];
 
 export default function PlatformAdminLayout() {
