@@ -312,3 +312,39 @@ export interface EnterpriseConfig {
   favicon_url: string | null;
   features: Record<string, boolean>;
 }
+
+// Platform Admin Types
+export interface PlatformStats {
+  total_enterprises: number;
+  active_enterprises: number;
+  total_users: number;
+  total_projects: number;
+  total_institutions: number;
+}
+
+export interface EnterpriseListItem {
+  id: string;
+  slug: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  subdomain_url: string | null;
+  user_count: number;
+  project_count: number;
+}
+
+export interface EnterpriseDetail extends EnterpriseListItem {
+  updated_at: string | null;
+  institution_count: number;
+  storage_used_mb: number;
+}
+
+export interface EnterpriseCreateData {
+  slug: string;
+  name: string;
+}
+
+export interface EnterpriseUpdateData {
+  name?: string;
+  is_active?: boolean;
+}

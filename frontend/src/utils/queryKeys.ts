@@ -81,6 +81,17 @@ export const queryKeys = {
     emailSettings: (institutionId?: number) => [...queryKeys.admin.all, 'emailSettings', institutionId] as const,
     emailTemplates: (institutionId?: number) => [...queryKeys.admin.all, 'emailTemplates', institutionId] as const,
   },
+
+  // Platform Admin
+  platformAdmin: {
+    all: ['platformAdmin'] as const,
+    stats: () => [...queryKeys.platformAdmin.all, 'stats'] as const,
+    enterprises: {
+      all: () => [...queryKeys.platformAdmin.all, 'enterprises'] as const,
+      list: () => [...queryKeys.platformAdmin.enterprises.all(), 'list'] as const,
+      detail: (id: string) => [...queryKeys.platformAdmin.enterprises.all(), 'detail', id] as const,
+    },
+  },
 };
 
 export default queryKeys;
