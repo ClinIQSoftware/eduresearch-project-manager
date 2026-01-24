@@ -155,6 +155,20 @@ from app.schemas.enterprise import (
     EnterpriseUpdate,
 )
 
+# Platform Admin schemas
+from app.schemas.platform_admin import (
+    EnterpriseCreate as PlatformEnterpriseCreate,
+    EnterpriseDetailResponse,
+    EnterpriseListItem,
+    EnterpriseUpdate as PlatformEnterpriseUpdate,
+    PlatformAdminBase,
+    PlatformAdminCreate,
+    PlatformAdminLogin,
+    PlatformAdminResponse,
+    PlatformAdminUpdate,
+    PlatformStatsResponse,
+)
+
 
 __all__ = [
     # Auth
@@ -270,4 +284,15 @@ __all__ = [
     "EnterpriseResponse",
     "EnterpriseSmtpUpdate",
     "EnterpriseUpdate",
+    # Platform Admin
+    "EnterpriseDetailResponse",
+    "EnterpriseListItem",
+    "PlatformAdminBase",
+    "PlatformAdminCreate",
+    "PlatformAdminLogin",
+    "PlatformAdminResponse",
+    "PlatformAdminUpdate",
+    "PlatformEnterpriseCreate",
+    "PlatformEnterpriseUpdate",
+    "PlatformStatsResponse",
 ]
