@@ -1,7 +1,9 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { usePlatformStats } from '../../hooks/usePlatformAdmin';
+import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { Button } from '../../components/ui/Button';
 
 const platformAdminTabs = [
   { to: '/platform-admin/enterprises', label: 'Enterprises' },
@@ -10,60 +12,74 @@ const platformAdminTabs = [
 
 export default function PlatformAdminLayout() {
   const { data: stats, isLoading } = usePlatformStats();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Header */}
-      <div className="bg-indigo-600 rounded-lg px-6 py-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-white">Platform Administration</h1>
-        <p className="text-indigo-200 text-sm mt-1">Manage enterprises and platform-wide settings</p>
-      </div>
-
-      {/* Stats Cards */}
-      {isLoading ? (
-        <div className="py-4">
-          <LoadingSpinner size="sm" />
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4 md:space-y-6">
+        {/* Header */}
+        <div className="bg-indigo-600 rounded-lg px-6 py-6 flex justify-between items-start">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">Platform Administration</h1>
+            <p className="text-indigo-200 text-sm mt-1">Manage enterprises and platform-wide settings</p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={handleLogout}>
+            Logout
+          </Button>
         </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {[
-            { label: 'Total Enterprises', value: stats?.total_enterprises ?? 0 },
-            { label: 'Active', value: stats?.active_enterprises ?? 0, color: 'text-green-600' },
-            { label: 'Users', value: stats?.total_users ?? 0, color: 'text-blue-600' },
-            { label: 'Projects', value: stats?.total_projects ?? 0, color: 'text-purple-600' },
-            { label: 'Institutions', value: stats?.total_institutions ?? 0, color: 'text-indigo-600' },
-          ].map((stat) => (
-            <Card key={stat.label}>
-              <p className="text-xs text-gray-500">{stat.label}</p>
-              <p className={`text-xl font-bold ${stat.color || ''}`}>{stat.value}</p>
-            </Card>
-          ))}
+
+        {/* Stats Cards */}
+        {isLoading ? (
+          <div className="py-4">
+            <LoadingSpinner size="sm" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {[
+              { label: 'Total Enterprises', value: stats?.total_enterprises ?? 0 },
+              { label: 'Active', value: stats?.active_enterprises ?? 0, color: 'text-green-600' },
+              { label: 'Users', value: stats?.total_users ?? 0, color: 'text-blue-600' },
+              { label: 'Projects', value: stats?.total_projects ?? 0, color: 'text-purple-600' },
+              { label: 'Institutions', value: stats?.total_institutions ?? 0, color: 'text-indigo-600' },
+            ].map((stat) => (
+              <Card key={stat.label}>
+                <p className="text-xs text-gray-500">{stat.label}</p>
+                <p className={`text-xl font-bold ${stat.color || ''}`}>{stat.value}</p>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex flex-wrap gap-x-6 gap-y-1">
+            {platformAdminTabs.map((tab) => (
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                className={({ isActive }) =>
+                  `py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                    isActive
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`
+                }
+              >
+                {tab.label}
+              </NavLink>
+            ))}
+          </nav>
         </div>
-      )}
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex flex-wrap gap-x-6 gap-y-1">
-          {platformAdminTabs.map((tab) => (
-            <NavLink
-              key={tab.to}
-              to={tab.to}
-              className={({ isActive }) =>
-                `py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  isActive
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`
-              }
-            >
-              {tab.label}
-            </NavLink>
-          ))}
-        </nav>
+        {/* Tab Content */}
+        <Outlet />
       </div>
-
-      {/* Tab Content */}
-      <Outlet />
     </div>
   );
 }

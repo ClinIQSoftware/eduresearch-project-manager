@@ -151,8 +151,49 @@ async def send_approval_emails_async(db: Session, user: User):
 def login(login_data: LoginRequest, db: Session = Depends(get_db)):
     """Login with email and password.
 
+    Checks platform_admins table first, then falls back to users table.
     Returns a JWT access token on successful authentication.
     """
+    from app.models.platform_admin import PlatformAdmin
+    from app.core.security import verify_password, create_access_token
+
+    # First check if this is a platform admin
+    platform_admin = (
+        db.query(PlatformAdmin)
+        .filter(PlatformAdmin.email == login_data.email)
+        .first()
+    )
+
+    if platform_admin:
+        if not platform_admin.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is deactivated",
+            )
+
+        if not verify_password(login_data.password, platform_admin.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Create token with platform admin flag
+        token = create_access_token(
+            data={
+                "sub": str(platform_admin.id),
+                "email": platform_admin.email,
+                "is_platform_admin": True,
+            }
+        )
+
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "is_platform_admin": True,
+        }
+
+    # Fall back to regular user authentication
     auth_service = AuthService(db)
     settings_service = SettingsService(db)
 
@@ -176,7 +217,7 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
                 detail="Your account is pending approval. Please wait for an administrator to approve your registration.",
             )
 
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": token, "token_type": "bearer", "is_platform_admin": False}
 
 
 @router.post("/register", response_model=UserResponse)

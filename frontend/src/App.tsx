@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { TenantProvider } from './contexts/TenantContext';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import PlatformAdminProtectedRoute from './components/auth/PlatformAdminProtectedRoute';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -199,7 +200,14 @@ function App() {
         </Route>
 
         {/* Platform Admin Routes */}
-        <Route path="/platform-admin" element={<PlatformAdminLayout />}>
+        <Route
+          path="/platform-admin"
+          element={
+            <PlatformAdminProtectedRoute>
+              <PlatformAdminLayout />
+            </PlatformAdminProtectedRoute>
+          }
+        >
           <Route index element={<Navigate to="/platform-admin/enterprises" replace />} />
           <Route path="enterprises" element={<EnterprisesTab />} />
           <Route path="settings" element={<SettingsTab />} />

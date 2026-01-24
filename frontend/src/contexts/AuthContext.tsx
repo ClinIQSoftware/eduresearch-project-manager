@@ -7,21 +7,49 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (token: string) => Promise<void>;
+  isPlatformAdmin: boolean;
+  login: (token: string, isPlatformAdmin?: boolean) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function parseJwt(token: string): Record<string, unknown> | null {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState<boolean>(() => {
+    const stored = localStorage.getItem('isPlatformAdmin');
+    return stored === 'true';
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (token) {
-      fetchUser();
+      // Check if token is for platform admin
+      const payload = parseJwt(token);
+      if (payload?.is_platform_admin) {
+        setIsPlatformAdmin(true);
+        setIsLoading(false);
+      } else {
+        fetchUser();
+      }
     } else {
       setIsLoading(false);
     }
@@ -39,20 +67,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function login(newToken: string) {
+  async function login(newToken: string, platformAdmin = false) {
     localStorage.setItem('token', newToken);
+    localStorage.setItem('isPlatformAdmin', platformAdmin ? 'true' : 'false');
     setToken(newToken);
-    await fetchUser();
+    setIsPlatformAdmin(platformAdmin);
+
+    if (!platformAdmin) {
+      await fetchUser();
+    } else {
+      setIsLoading(false);
+    }
   }
 
   function logout() {
     localStorage.removeItem('token');
+    localStorage.removeItem('isPlatformAdmin');
     setToken(null);
     setUser(null);
+    setIsPlatformAdmin(false);
   }
 
   async function refreshUser() {
-    if (token) {
+    if (token && !isPlatformAdmin) {
       await fetchUser();
     }
   }
@@ -63,7 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         token,
         isLoading,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user || isPlatformAdmin,
+        isPlatformAdmin,
         login,
         logout,
         refreshUser,

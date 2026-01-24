@@ -17,6 +17,7 @@ class TokenResponse(BaseModel):
 
     access_token: str
     token_type: str = "bearer"
+    is_platform_admin: bool = False
 
 
 # Alias for backwards compatibility
