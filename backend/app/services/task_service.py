@@ -5,6 +5,7 @@ assignment, and status tracking.
 """
 
 from typing import List, Optional
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -27,20 +28,30 @@ class TaskService:
         self.db = db
         self.task_repo = TaskRepository(db)
 
-    def create_task(self, data: TaskCreate, created_by: User) -> Task:
+    def create_task(
+        self, data: TaskCreate, created_by: User, enterprise_id: UUID
+    ) -> Task:
         """Create a new task.
 
         Args:
             data: Task creation data.
             created_by: The user creating the task.
+            enterprise_id: The enterprise/tenant ID this task belongs to.
 
         Returns:
             The newly created Task.
         """
         task_data = data.model_dump()
+        title = task_data.pop("title")
+        project_id = task_data.pop("project_id")
         task_data["created_by_id"] = created_by.id
 
-        task = self.task_repo.create(task_data)
+        task = self.task_repo.create(
+            title=title,
+            project_id=project_id,
+            enterprise_id=enterprise_id,
+            **task_data,
+        )
         return task
 
     def update_task(self, task_id: int, data: TaskUpdate) -> Task:

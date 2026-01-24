@@ -1,9 +1,11 @@
 """Task model for EduResearch Project Manager."""
 
+import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import Date, ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -35,6 +37,15 @@ class Task(Base):
     project_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
     )
+
+    # Multi-tenancy
+    enterprise_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("enterprises.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
     assigned_to_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )

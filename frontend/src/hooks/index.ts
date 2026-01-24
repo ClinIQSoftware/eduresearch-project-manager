@@ -8,3 +8,4 @@ export * from './useJoinRequests';
 export * from './useFiles';
 export * from './useAdmin';
 export * from './useReports';
+export * from './usePlatformAdmin';

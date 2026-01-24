@@ -286,3 +286,65 @@ export interface AlertPreference {
 export interface MatchedProject extends ProjectWithLead {
   matched_keywords: string[];
 }
+
+// Enterprise types
+export interface EnterpriseBranding {
+  enterprise_name: string;
+  logo_url: string | null;
+  primary_color: string;
+  favicon_url: string | null;
+}
+
+export interface EnterpriseConfig {
+  google_oauth_enabled: boolean;
+  google_client_id: string | null;
+  microsoft_oauth_enabled: boolean;
+  microsoft_client_id: string | null;
+  saml_enabled: boolean;
+  saml_metadata_url: string | null;
+  smtp_host: string | null;
+  smtp_port: number;
+  smtp_user: string | null;
+  smtp_from_email: string | null;
+  smtp_from_name: string | null;
+  logo_url: string | null;
+  primary_color: string;
+  favicon_url: string | null;
+  features: Record<string, boolean>;
+}
+
+// Platform Admin Types
+export interface PlatformStats {
+  total_enterprises: number;
+  active_enterprises: number;
+  total_users: number;
+  total_projects: number;
+  total_institutions: number;
+}
+
+export interface EnterpriseListItem {
+  id: string;
+  slug: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  subdomain_url: string | null;
+  user_count: number;
+  project_count: number;
+}
+
+export interface EnterpriseDetail extends EnterpriseListItem {
+  updated_at: string | null;
+  institution_count: number;
+  storage_used_mb: number;
+}
+
+export interface EnterpriseCreateData {
+  slug: string;
+  name: string;
+}
+
+export interface EnterpriseUpdateData {
+  name?: string;
+  is_active?: boolean;
+}

@@ -5,6 +5,7 @@ and institution-based queries.
 """
 
 from typing import List, Optional
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -27,11 +28,14 @@ class DepartmentService:
         self.department_repo = DepartmentRepository(db)
         self.institution_repo = InstitutionRepository(db)
 
-    def create_department(self, data: DepartmentCreate) -> Department:
+    def create_department(
+        self, data: DepartmentCreate, enterprise_id: UUID
+    ) -> Department:
         """Create a new department.
 
         Args:
             data: Department creation data.
+            enterprise_id: The enterprise/tenant ID this department belongs to.
 
         Returns:
             The newly created Department.
@@ -47,7 +51,14 @@ class DepartmentService:
             )
 
         department_data = data.model_dump()
-        department = self.department_repo.create(department_data)
+        name = department_data.pop("name")
+        institution_id = department_data.pop("institution_id")
+        department = self.department_repo.create(
+            name=name,
+            institution_id=institution_id,
+            enterprise_id=enterprise_id,
+            **department_data,
+        )
         return department
 
     def update_department(

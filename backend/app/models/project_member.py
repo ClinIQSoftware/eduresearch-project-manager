@@ -1,9 +1,11 @@
 """ProjectMember model for EduResearch Project Manager."""
 
+import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -40,6 +42,15 @@ class ProjectMember(Base):
     role: Mapped[str] = mapped_column(
         String(20), default="participant"
     )  # 'lead' or 'participant'
+
+    # Multi-tenancy
+    enterprise_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("enterprises.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
     joined_at: Mapped[datetime] = mapped_column(
         default=func.now(), server_default=func.now()
     )

@@ -1,7 +1,8 @@
 """Task repository for task-specific database operations."""
 
 from datetime import date
-from typing import List
+from typing import Any, List
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -19,6 +20,36 @@ class TaskRepository(BaseRepository[Task]):
             db: SQLAlchemy database session.
         """
         super().__init__(db, Task)
+
+    def create(
+        self,
+        *,
+        title: str,
+        project_id: int,
+        enterprise_id: UUID,
+        **kwargs: Any,
+    ) -> Task:
+        """Create a new task.
+
+        Args:
+            title: Task title.
+            project_id: ID of the project this task belongs to.
+            enterprise_id: The enterprise/tenant ID this task belongs to.
+            **kwargs: Additional optional fields.
+
+        Returns:
+            The newly created task.
+        """
+        task = Task(
+            title=title,
+            project_id=project_id,
+            enterprise_id=enterprise_id,
+            **kwargs,
+        )
+        self.db.add(task)
+        self.db.commit()
+        self.db.refresh(task)
+        return task
 
     def get_by_project(self, project_id: int) -> List[Task]:
         """Get all tasks for a project.

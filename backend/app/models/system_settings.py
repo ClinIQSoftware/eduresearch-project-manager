@@ -1,9 +1,11 @@
 """SystemSettings model for EduResearch Project Manager."""
 
+import uuid
 from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import Boolean, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -22,6 +24,14 @@ class SystemSettings(Base):
         unique=True,
         index=True,
     )  # NULL for global settings
+
+    # Multi-tenancy
+    enterprise_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("enterprises.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
 
     # Registration Settings
     require_registration_approval: Mapped[bool] = mapped_column(Boolean, default=False)

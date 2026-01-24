@@ -5,6 +5,7 @@ membership management, and search functionality.
 """
 
 from typing import List, Optional
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -33,24 +34,32 @@ class ProjectService:
         self.project_repo = ProjectRepository(db)
         self.member_repo = ProjectMemberRepository(db)
 
-    def create_project(self, data: ProjectCreate, creator: User) -> Project:
+    def create_project(
+        self, data: ProjectCreate, creator: User, enterprise_id: UUID
+    ) -> Project:
         """Create a new project and add the creator as lead.
 
         Args:
             data: Project creation data.
             creator: The user creating the project.
+            enterprise_id: The enterprise/tenant ID this project belongs to.
 
         Returns:
             The newly created Project.
         """
         project_data = data.model_dump()
-        project_data["lead_id"] = creator.id
+        title = project_data.pop("title")
 
-        project = self.project_repo.create(project_data)
+        project = self.project_repo.create(
+            title=title,
+            lead_id=creator.id,
+            enterprise_id=enterprise_id,
+            **project_data,
+        )
 
         # Add creator as lead member
         self.member_repo.add_member(
-            project_id=project.id, user_id=creator.id, role="lead"
+            project_id=project.id, user_id=creator.id, enterprise_id=enterprise_id, role="lead"
         )
 
         return project
@@ -175,13 +184,14 @@ class ProjectService:
         return self.project_repo.get_upcoming_meetings(days)
 
     def add_member(
-        self, project_id: int, user_id: int, role: str = "participant"
+        self, project_id: int, user_id: int, enterprise_id: UUID, role: str = "participant"
     ) -> ProjectMember:
         """Add a user as a member of a project.
 
         Args:
             project_id: The project ID.
             user_id: The user ID to add.
+            enterprise_id: The enterprise/tenant ID this membership belongs to.
             role: The role for the member (default: 'participant').
 
         Returns:
@@ -198,7 +208,7 @@ class ProjectService:
         if self.member_repo.is_member(project_id, user_id):
             raise ConflictException("User is already a member of this project")
 
-        return self.member_repo.add_member(project_id, user_id, role)
+        return self.member_repo.add_member(project_id, user_id, enterprise_id, role)
 
     def remove_member(self, project_id: int, user_id: int) -> bool:
         """Remove a user from a project.

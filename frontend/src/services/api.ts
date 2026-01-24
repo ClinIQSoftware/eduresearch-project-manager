@@ -6,7 +6,8 @@ import type {
   ProjectClassification, ProjectStatus, RequestStatus,
   SystemSettings, BulkUploadResult, UserBrief,
   EmailSettings, EmailTemplate,
-  UserKeyword, AlertPreference, MatchedProject
+  UserKeyword, AlertPreference, MatchedProject,
+  EnterpriseBranding, EnterpriseConfig
 } from '../types';
 
 // Use environment variable for API URL, fallback to /api for local dev with proxy
@@ -374,5 +375,12 @@ export const searchProjects = (query: string, filters?: {
   status?: ProjectStatus;
   open_to_participants?: boolean;
 }) => api.get<ProjectWithLead[]>('/projects/search', { params: { q: query, ...filters } });
+
+// Enterprise
+export const getEnterpriseBranding = () =>
+  api.get<EnterpriseBranding>('/enterprise/branding');
+
+export const getEnterpriseConfig = () =>
+  api.get<EnterpriseConfig>('/enterprise/config');
 
 export default api;

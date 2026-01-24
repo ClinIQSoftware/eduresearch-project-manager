@@ -4,11 +4,13 @@ Handles task CRUD operations and assignment.
 """
 
 from typing import List, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import (
+    get_current_enterprise_id,
     get_current_user,
     get_db,
     is_project_member as check_project_member,
@@ -142,6 +144,7 @@ def create_task(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Create a new task."""
     # If task is for a project, verify user is a member
@@ -168,7 +171,7 @@ def create_task(
     task_service = TaskService(db)
 
     try:
-        task = task_service.create_task(task_data, current_user)
+        task = task_service.create_task(task_data, current_user, enterprise_id)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

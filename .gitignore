@@ -76,3 +76,4 @@ logs/
 
 # Git worktrees
 .worktrees/
+.worktrees/

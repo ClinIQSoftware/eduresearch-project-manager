@@ -9,6 +9,7 @@ export * from './departments';
 export * from './joinRequests';
 export * from './files';
 export * from './admin';
+export * from './platformAdmin';
 
 // Re-export with namespaces for cleaner imports
 import * as authApi from './auth';
@@ -19,6 +20,7 @@ import * as departmentsApi from './departments';
 import * as joinRequestsApi from './joinRequests';
 import * as filesApi from './files';
 import * as adminApi from './admin';
+import * as platformAdminApi from './platformAdmin';
 
 export {
   authApi,
@@ -29,4 +31,5 @@ export {
   joinRequestsApi,
   filesApi,
   adminApi,
+  platformAdminApi,
 };

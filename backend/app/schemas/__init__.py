@@ -141,6 +141,34 @@ from app.schemas.keyword import (
     SendAlertsRequest,
 )
 
+# Enterprise schemas
+from app.schemas.enterprise import (
+    EnterpriseBase,
+    EnterpriseBrandingResponse,
+    EnterpriseBrandingUpdate,
+    EnterpriseConfigResponse,
+    EnterpriseCreate,
+    EnterpriseListResponse,
+    EnterpriseOAuthUpdate,
+    EnterpriseResponse,
+    EnterpriseSmtpUpdate,
+    EnterpriseUpdate,
+)
+
+# Platform Admin schemas
+from app.schemas.platform_admin import (
+    EnterpriseCreate as PlatformEnterpriseCreate,
+    EnterpriseDetailResponse,
+    EnterpriseListItem,
+    EnterpriseUpdate as PlatformEnterpriseUpdate,
+    PlatformAdminBase,
+    PlatformAdminCreate,
+    PlatformAdminLogin,
+    PlatformAdminResponse,
+    PlatformAdminUpdate,
+    PlatformStatsResponse,
+)
+
 
 __all__ = [
     # Auth
@@ -245,4 +273,26 @@ __all__ = [
     "MatchedProjectResponse",
     "ProjectSearchParams",
     "SendAlertsRequest",
+    # Enterprise
+    "EnterpriseBase",
+    "EnterpriseBrandingResponse",
+    "EnterpriseBrandingUpdate",
+    "EnterpriseConfigResponse",
+    "EnterpriseCreate",
+    "EnterpriseListResponse",
+    "EnterpriseOAuthUpdate",
+    "EnterpriseResponse",
+    "EnterpriseSmtpUpdate",
+    "EnterpriseUpdate",
+    # Platform Admin
+    "EnterpriseDetailResponse",
+    "EnterpriseListItem",
+    "PlatformAdminBase",
+    "PlatformAdminCreate",
+    "PlatformAdminLogin",
+    "PlatformAdminResponse",
+    "PlatformAdminUpdate",
+    "PlatformEnterpriseCreate",
+    "PlatformEnterpriseUpdate",
+    "PlatformStatsResponse",
 ]

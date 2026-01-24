@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { TenantProvider } from './contexts/TenantContext';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';
@@ -36,10 +37,12 @@ import {
   EmailTemplatesTab,
   ImportTab,
 } from './pages/admin';
+import { PlatformAdminLayout, EnterprisesTab, SettingsTab } from './pages/platform-admin';
 
 function App() {
   return (
-    <AuthProvider>
+    <TenantProvider>
+      <AuthProvider>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -194,8 +197,16 @@ function App() {
           <Route path="email-templates" element={<EmailTemplatesTab />} />
           <Route path="import" element={<ImportTab />} />
         </Route>
+
+        {/* Platform Admin Routes */}
+        <Route path="/platform-admin" element={<PlatformAdminLayout />}>
+          <Route index element={<Navigate to="/platform-admin/enterprises" replace />} />
+          <Route path="enterprises" element={<EnterprisesTab />} />
+          <Route path="settings" element={<SettingsTab />} />
+        </Route>
       </Routes>
-    </AuthProvider>
+      </AuthProvider>
+    </TenantProvider>
   );
 }
 

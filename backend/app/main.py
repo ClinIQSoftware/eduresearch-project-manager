@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.middleware import TenantMiddleware
 from app.api.routes import (
     auth_router,
     users_router,
@@ -21,6 +22,8 @@ from app.api.routes import (
     reports_router,
     analytics_router,
     timetracking_router,
+    enterprise_router,
+    platform_admin_router,
 )
 from app.config import settings
 
@@ -45,6 +48,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Tenant resolution middleware
+app.add_middleware(TenantMiddleware)
 
 # Auth routes
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])
@@ -89,6 +95,16 @@ app.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics"]
 # Time tracking routes
 app.include_router(
     timetracking_router, prefix="/api/time-entries", tags=["Time Tracking"]
+)
+
+# Enterprise routes
+app.include_router(
+    enterprise_router, prefix="/api/enterprise", tags=["Enterprise"]
+)
+
+# Platform Admin routes
+app.include_router(
+    platform_admin_router, prefix="/api/platform", tags=["Platform Admin"]
 )
 
 

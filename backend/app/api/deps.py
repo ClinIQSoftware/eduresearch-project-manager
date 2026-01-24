@@ -5,12 +5,14 @@ including authentication, authorization, and database session management.
 """
 
 from typing import Optional
+from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.core.security import decode_token
+from app.database import SessionLocal, get_tenant_session, get_platform_session
 from app.models.user import User
 from app.models.project import Project
 from app.models.project_member import ProjectMember, MemberRole
@@ -34,11 +36,14 @@ def get_db():
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+    request: Request,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
 ) -> User:
     """Get the current authenticated user from JWT token.
 
     Args:
+        request: The FastAPI request object.
         token: JWT access token from Authorization header.
         db: Database session.
 
@@ -47,6 +52,7 @@ def get_current_user(
 
     Raises:
         HTTPException: If token is invalid or user is not active/approved.
+        HTTPException: If JWT enterprise_id doesn't match subdomain enterprise_id.
     """
     auth_service = AuthService(db)
     user = auth_service.get_user_from_token(token)
@@ -67,6 +73,19 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Account pending approval"
         )
+
+    # Validate JWT enterprise_id matches subdomain enterprise_id
+    if hasattr(request.state, "enterprise_id") and request.state.enterprise_id:
+        payload = decode_token(token)
+        if payload:
+            jwt_enterprise_id = payload.get("enterprise_id")
+            if jwt_enterprise_id:
+                subdomain_enterprise_id = str(request.state.enterprise_id)
+                if jwt_enterprise_id != subdomain_enterprise_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Token not valid for this enterprise",
+                    )
 
     return user
 
@@ -276,3 +295,20 @@ def require_admin_access(
                 detail="Superuser access required",
             )
     return current_user
+
+
+def get_tenant_db(request: Request) -> Session:
+    """Dependency for tenant-scoped database access."""
+    yield from get_tenant_session(request)
+
+
+def get_platform_db() -> Session:
+    """Dependency for platform admin database access (no RLS)."""
+    yield from get_platform_session()
+
+
+def get_current_enterprise_id(request: Request) -> UUID:
+    """Get current enterprise ID from request state."""
+    if not hasattr(request.state, "enterprise_id") or not request.state.enterprise_id:
+        raise HTTPException(status_code=400, detail="Enterprise context required")
+    return request.state.enterprise_id

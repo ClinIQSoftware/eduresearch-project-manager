@@ -1,5 +1,10 @@
+import uuid
 from datetime import datetime
+from typing import Optional
+
 from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime
+from sqlalchemy.dialects.postgresql import UUID
+
 from app.database import Base
 
 
@@ -8,6 +13,15 @@ class EmailTemplate(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     institution_id = Column(Integer, ForeignKey("institutions.id"), nullable=True)
+
+    # Multi-tenancy
+    enterprise_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("enterprises.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
     template_type = Column(
         String(50), nullable=False
     )  # user_approval_request, join_request, task_assignment

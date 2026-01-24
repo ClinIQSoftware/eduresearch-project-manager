@@ -4,6 +4,7 @@ Handles user login, registration, profile management, and OAuth flows.
 """
 
 import asyncio
+from uuid import UUID
 
 from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -11,7 +12,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_enterprise_id, get_current_user, get_db
 from app.config import settings
 from app.models.user import User, AuthProvider
 from app.models.institution import Institution
@@ -183,6 +184,7 @@ def register(
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Register a new user with email and password.
 
@@ -192,7 +194,7 @@ def register(
     auth_service = AuthService(db)
 
     try:
-        user = auth_service.register(user_data)
+        user = auth_service.register(user_data, enterprise_id)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -258,7 +260,11 @@ async def google_login(request: Request):
 
 
 @router.get("/google/callback")
-async def google_callback(request: Request, db: Session = Depends(get_db)):
+async def google_callback(
+    request: Request,
+    db: Session = Depends(get_db),
+    enterprise_id: UUID = Depends(get_current_enterprise_id),
+):
     """Handle Google OAuth callback."""
     auth_service = AuthService(db)
     settings_service = SettingsService(db)
@@ -303,6 +309,7 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
                     last_name=family_name,
                     provider="google",
                     oauth_id=oauth_id,
+                    enterprise_id=enterprise_id,
                 )
             except Exception as e:
                 # User created but pending approval
@@ -350,7 +357,11 @@ async def microsoft_login(request: Request):
 
 
 @router.get("/microsoft/callback")
-async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
+async def microsoft_callback(
+    request: Request,
+    db: Session = Depends(get_db),
+    enterprise_id: UUID = Depends(get_current_enterprise_id),
+):
     """Handle Microsoft OAuth callback."""
     auth_service = AuthService(db)
     settings_service = SettingsService(db)
@@ -401,6 +412,7 @@ async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
                     last_name=family_name,
                     provider="microsoft",
                     oauth_id=oauth_id,
+                    enterprise_id=enterprise_id,
                 )
             except Exception as e:
                 if "pending approval" in str(e).lower():

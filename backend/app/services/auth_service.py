@@ -5,6 +5,7 @@ Handles user authentication, registration, and token management.
 
 from datetime import datetime, timezone
 from typing import Optional, Tuple
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -73,11 +74,12 @@ class AuthService:
         token = self.create_token(user)
         return user, token
 
-    def register(self, data: UserCreate) -> User:
+    def register(self, data: UserCreate, enterprise_id: UUID) -> User:
         """Register a new user.
 
         Args:
             data: User creation data.
+            enterprise_id: The enterprise/tenant ID this user belongs to.
 
         Returns:
             The newly created User.
@@ -96,12 +98,8 @@ class AuthService:
             system_settings.require_registration_approval if system_settings else False
         )
 
-        # Create user data
-        user_data = {
-            "email": data.email,
-            "password_hash": hash_password(data.password),
-            "first_name": data.first_name,
-            "last_name": data.last_name,
+        # Build optional kwargs
+        optional_kwargs = {
             "phone": data.phone,
             "bio": data.bio,
             "institution_id": data.institution_id,
@@ -111,9 +109,16 @@ class AuthService:
         }
 
         if not require_approval:
-            user_data["approved_at"] = datetime.now(timezone.utc)
+            optional_kwargs["approved_at"] = datetime.now(timezone.utc)
 
-        user = self.user_repo.create(user_data)
+        user = self.user_repo.create(
+            email=data.email,
+            password_hash=hash_password(data.password),
+            first_name=data.first_name,
+            last_name=data.last_name,
+            enterprise_id=enterprise_id,
+            **optional_kwargs,
+        )
         return user
 
     def register_oauth(
@@ -123,6 +128,7 @@ class AuthService:
         last_name: str,
         provider: str,
         oauth_id: str,
+        enterprise_id: UUID,
     ) -> Tuple[User, str]:
         """Register or login a user via OAuth.
 
@@ -136,6 +142,7 @@ class AuthService:
             last_name: User's last name from OAuth provider.
             provider: OAuth provider name ('google' or 'microsoft').
             oauth_id: Unique ID from OAuth provider.
+            enterprise_id: The enterprise/tenant ID this user belongs to.
 
         Returns:
             Tuple of (User, access_token string).
@@ -187,20 +194,23 @@ class AuthService:
             system_settings.require_registration_approval if system_settings else False
         )
 
-        user_data = {
-            "email": email,
-            "password_hash": None,
-            "first_name": first_name,
-            "last_name": last_name,
+        optional_kwargs = {
             "auth_provider": provider,
             "oauth_id": oauth_id,
             "is_approved": not require_approval,
         }
 
         if not require_approval:
-            user_data["approved_at"] = datetime.now(timezone.utc)
+            optional_kwargs["approved_at"] = datetime.now(timezone.utc)
 
-        user = self.user_repo.create(user_data)
+        user = self.user_repo.create(
+            email=email,
+            password_hash=None,
+            first_name=first_name,
+            last_name=last_name,
+            enterprise_id=enterprise_id,
+            **optional_kwargs,
+        )
 
         if not user.is_approved:
             raise BadRequestException(
@@ -251,7 +261,10 @@ class AuthService:
         Returns:
             The encoded JWT token string.
         """
-        return create_access_token(data={"sub": str(user.id)})
+        token_data = {"sub": str(user.id)}
+        if user.enterprise_id:
+            token_data["enterprise_id"] = str(user.enterprise_id)
+        return create_access_token(data=token_data)
 
     def get_user_from_token(self, token: str) -> Optional[User]:
         """Get a user from a JWT token.

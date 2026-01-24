@@ -1,8 +1,12 @@
+import json
+import uuid
+
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from app.database import Base
-import json
 
 
 class UserAlertPreference(Base):
@@ -14,6 +18,15 @@ class UserAlertPreference(Base):
     user_id = Column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
     )
+
+    # Multi-tenancy
+    enterprise_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("enterprises.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
     alert_frequency = Column(String(20), default="weekly")
     dashboard_new_weeks = Column(
         Integer, default=2
