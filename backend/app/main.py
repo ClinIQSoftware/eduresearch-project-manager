@@ -22,6 +22,7 @@ from app.api.routes import (
     reports_router,
     analytics_router,
     timetracking_router,
+    enterprise_router,
 )
 from app.config import settings
 
@@ -93,6 +94,11 @@ app.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics"]
 # Time tracking routes
 app.include_router(
     timetracking_router, prefix="/api/time-entries", tags=["Time Tracking"]
+)
+
+# Enterprise routes
+app.include_router(
+    enterprise_router, prefix="/api/enterprise", tags=["Enterprise"]
 )
 
 
