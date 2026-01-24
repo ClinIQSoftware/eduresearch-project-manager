@@ -1,6 +1,7 @@
 """Project member repository for project membership database operations."""
 
 from typing import List, Optional
+from uuid import UUID
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -94,13 +95,14 @@ class ProjectMemberRepository(BaseRepository[ProjectMember]):
         return membership is not None and membership.role == "lead"
 
     def add_member(
-        self, project_id: int, user_id: int, role: str = "participant"
+        self, project_id: int, user_id: int, enterprise_id: UUID, role: str = "participant"
     ) -> ProjectMember:
         """Add a user as a member of a project.
 
         Args:
             project_id: The project ID.
             user_id: The user ID to add.
+            enterprise_id: The enterprise/tenant ID this membership belongs to.
             role: The role for the member (default: 'participant').
 
         Returns:
@@ -113,6 +115,7 @@ class ProjectMemberRepository(BaseRepository[ProjectMember]):
         membership = ProjectMember(
             project_id=project_id,
             user_id=user_id,
+            enterprise_id=enterprise_id,
             role=role,
         )
         self.db.add(membership)

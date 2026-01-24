@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
+from app.core.security import decode_token
 from app.database import SessionLocal, get_tenant_session, get_platform_session
 from app.models.user import User
 from app.models.project import Project
@@ -35,11 +36,14 @@ def get_db():
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+    request: Request,
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
 ) -> User:
     """Get the current authenticated user from JWT token.
 
     Args:
+        request: The FastAPI request object.
         token: JWT access token from Authorization header.
         db: Database session.
 
@@ -48,6 +52,7 @@ def get_current_user(
 
     Raises:
         HTTPException: If token is invalid or user is not active/approved.
+        HTTPException: If JWT enterprise_id doesn't match subdomain enterprise_id.
     """
     auth_service = AuthService(db)
     user = auth_service.get_user_from_token(token)
@@ -68,6 +73,19 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Account pending approval"
         )
+
+    # Validate JWT enterprise_id matches subdomain enterprise_id
+    if hasattr(request.state, "enterprise_id") and request.state.enterprise_id:
+        payload = decode_token(token)
+        if payload:
+            jwt_enterprise_id = payload.get("enterprise_id")
+            if jwt_enterprise_id:
+                subdomain_enterprise_id = str(request.state.enterprise_id)
+                if jwt_enterprise_id != subdomain_enterprise_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Token not valid for this enterprise",
+                    )
 
     return user
 

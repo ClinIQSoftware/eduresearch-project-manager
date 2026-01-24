@@ -308,6 +308,7 @@ def add_project_member(
     member_data: AddProjectMemberRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Add member to project (lead only)."""
     project_service = ProjectService(db)
@@ -336,7 +337,7 @@ def add_project_member(
     role = member_data.role if member_data.role else "participant"
 
     try:
-        project_service.add_member(project_id, member_data.user_id, role)
+        project_service.add_member(project_id, member_data.user_id, enterprise_id, role)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

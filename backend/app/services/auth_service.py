@@ -261,7 +261,10 @@ class AuthService:
         Returns:
             The encoded JWT token string.
         """
-        return create_access_token(data={"sub": str(user.id)})
+        token_data = {"sub": str(user.id)}
+        if user.enterprise_id:
+            token_data["enterprise_id"] = str(user.enterprise_id)
+        return create_access_token(data=token_data)
 
     def get_user_from_token(self, token: str) -> Optional[User]:
         """Get a user from a JWT token.
