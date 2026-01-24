@@ -4,7 +4,6 @@ Provides endpoints for platform-level administration operations including
 enterprise management, platform statistics, and admin authentication.
 """
 
-import os
 from typing import List
 from uuid import UUID
 
@@ -13,6 +12,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_platform_db
+from app.config import settings
 from app.core.security import (
     create_access_token,
     hash_password,
@@ -37,9 +37,6 @@ router = APIRouter()
 
 # Reserved slugs that cannot be used for enterprises
 RESERVED_SLUGS = {"admin", "api", "www", "app", "static", "assets"}
-
-# Base domain for generating subdomain URLs
-BASE_DOMAIN = os.getenv("BASE_DOMAIN", "localhost:3000")
 
 
 def require_platform_admin(request: Request) -> None:
@@ -67,7 +64,9 @@ def generate_subdomain_url(slug: str) -> str:
     Returns:
         The full subdomain URL.
     """
-    return f"https://{slug}.{BASE_DOMAIN}"
+    base_domain = settings.base_domain
+    protocol = "http" if "localhost" in base_domain else "https"
+    return f"{protocol}://{slug}.{base_domain}"
 
 
 @router.post("/auth/login")
