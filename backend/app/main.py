@@ -23,6 +23,7 @@ from app.api.routes import (
     analytics_router,
     timetracking_router,
     enterprise_router,
+    platform_admin_router,
 )
 from app.config import settings
 
@@ -99,6 +100,11 @@ app.include_router(
 # Enterprise routes
 app.include_router(
     enterprise_router, prefix="/api/enterprise", tags=["Enterprise"]
+)
+
+# Platform Admin routes
+app.include_router(
+    platform_admin_router, prefix="/api/platform", tags=["Platform Admin"]
 )
 
 

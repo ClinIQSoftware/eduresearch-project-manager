@@ -17,6 +17,7 @@ from app.api.routes.reports import router as reports_router
 from app.api.routes.analytics import router as analytics_router
 from app.api.routes.timetracking import router as timetracking_router
 from app.api.routes.enterprise import router as enterprise_router
+from app.api.routes.platform_admin import router as platform_admin_router
 
 __all__ = [
     "auth_router",
@@ -33,4 +34,5 @@ __all__ = [
     "analytics_router",
     "timetracking_router",
     "enterprise_router",
+    "platform_admin_router",
 ]
