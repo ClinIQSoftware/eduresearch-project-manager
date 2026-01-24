@@ -141,6 +141,20 @@ from app.schemas.keyword import (
     SendAlertsRequest,
 )
 
+# Enterprise schemas
+from app.schemas.enterprise import (
+    EnterpriseBase,
+    EnterpriseBrandingResponse,
+    EnterpriseBrandingUpdate,
+    EnterpriseConfigResponse,
+    EnterpriseCreate,
+    EnterpriseListResponse,
+    EnterpriseOAuthUpdate,
+    EnterpriseResponse,
+    EnterpriseSmtpUpdate,
+    EnterpriseUpdate,
+)
+
 
 __all__ = [
     # Auth
@@ -245,4 +259,15 @@ __all__ = [
     "MatchedProjectResponse",
     "ProjectSearchParams",
     "SendAlertsRequest",
+    # Enterprise
+    "EnterpriseBase",
+    "EnterpriseBrandingResponse",
+    "EnterpriseBrandingUpdate",
+    "EnterpriseConfigResponse",
+    "EnterpriseCreate",
+    "EnterpriseListResponse",
+    "EnterpriseOAuthUpdate",
+    "EnterpriseResponse",
+    "EnterpriseSmtpUpdate",
+    "EnterpriseUpdate",
 ]
