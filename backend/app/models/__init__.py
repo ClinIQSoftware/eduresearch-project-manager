@@ -6,6 +6,7 @@ from app.models.institution import Institution
 from app.models.institution_admin import institution_admins
 from app.models.department import Department
 from app.models.user import User
+from app.models.platform_admin import PlatformAdmin
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.task import Task
@@ -26,6 +27,7 @@ __all__ = [
     "Institution",
     "Department",
     "User",
+    "PlatformAdmin",
     # Projects
     "Project",
     "ProjectMember",
