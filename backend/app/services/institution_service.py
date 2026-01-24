@@ -5,6 +5,7 @@ and admin user management.
 """
 
 from typing import List, Optional
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -28,17 +29,25 @@ class InstitutionService:
         self.institution_repo = InstitutionRepository(db)
         self.user_repo = UserRepository(db)
 
-    def create_institution(self, data: InstitutionCreate) -> Institution:
+    def create_institution(
+        self, data: InstitutionCreate, enterprise_id: UUID
+    ) -> Institution:
         """Create a new institution.
 
         Args:
             data: Institution creation data.
+            enterprise_id: The enterprise/tenant ID this institution belongs to.
 
         Returns:
             The newly created Institution.
         """
         institution_data = data.model_dump()
-        institution = self.institution_repo.create(institution_data)
+        name = institution_data.pop("name")
+        institution = self.institution_repo.create(
+            name=name,
+            enterprise_id=enterprise_id,
+            **institution_data,
+        )
         return institution
 
     def update_institution(

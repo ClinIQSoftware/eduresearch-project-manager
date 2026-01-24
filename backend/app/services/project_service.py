@@ -5,6 +5,7 @@ membership management, and search functionality.
 """
 
 from typing import List, Optional
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -33,20 +34,28 @@ class ProjectService:
         self.project_repo = ProjectRepository(db)
         self.member_repo = ProjectMemberRepository(db)
 
-    def create_project(self, data: ProjectCreate, creator: User) -> Project:
+    def create_project(
+        self, data: ProjectCreate, creator: User, enterprise_id: UUID
+    ) -> Project:
         """Create a new project and add the creator as lead.
 
         Args:
             data: Project creation data.
             creator: The user creating the project.
+            enterprise_id: The enterprise/tenant ID this project belongs to.
 
         Returns:
             The newly created Project.
         """
         project_data = data.model_dump()
-        project_data["lead_id"] = creator.id
+        title = project_data.pop("title")
 
-        project = self.project_repo.create(project_data)
+        project = self.project_repo.create(
+            title=title,
+            lead_id=creator.id,
+            enterprise_id=enterprise_id,
+            **project_data,
+        )
 
         # Add creator as lead member
         self.member_repo.add_member(
