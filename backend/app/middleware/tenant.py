@@ -15,6 +15,9 @@ from app.models.enterprise import Enterprise
 SLUG_PATTERN = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
 RESERVED_SLUGS = {"admin", "api", "www", "app", "static", "assets"}
 
+# Known hosting provider domains where subdomain is NOT an enterprise slug
+HOSTING_DOMAINS = {"onrender.com", "render.com", "herokuapp.com", "railway.app"}
+
 
 class TenantMiddleware(BaseHTTPMiddleware):
     """Middleware to resolve tenant from subdomain."""
@@ -74,6 +77,12 @@ class TenantMiddleware(BaseHTTPMiddleware):
         # Handle localhost
         if host in ("localhost", "127.0.0.1"):
             return "localhost"
+
+        # Check if this is a known hosting provider domain
+        # e.g., eduresearch-backend.onrender.com -> treat as localhost (use default)
+        for hosting_domain in HOSTING_DOMAINS:
+            if host.endswith(f".{hosting_domain}"):
+                return "localhost"
 
         # Extract first part of domain
         parts = host.split(".")
