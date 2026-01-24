@@ -1,6 +1,7 @@
 """SQLAlchemy models for EduResearch Project Manager."""
 
 from app.models.enterprise import Enterprise
+from app.models.enterprise_config import EnterpriseConfig
 from app.models.institution import Institution
 from app.models.institution_admin import institution_admins
 from app.models.department import Department
@@ -21,6 +22,7 @@ from app.models.organization import organization_admins
 __all__ = [
     # Core entities
     "Enterprise",
+    "EnterpriseConfig",
     "Institution",
     "Department",
     "User",
