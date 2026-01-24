@@ -1,7 +1,8 @@
 """Project repository for project-specific database operations."""
 
 from datetime import date, timedelta
-from typing import List, Optional
+from typing import Any, List, Optional
+from uuid import UUID
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
@@ -21,6 +22,36 @@ class ProjectRepository(BaseRepository[Project]):
             db: SQLAlchemy database session.
         """
         super().__init__(db, Project)
+
+    def create(
+        self,
+        *,
+        title: str,
+        lead_id: int,
+        enterprise_id: UUID,
+        **kwargs: Any,
+    ) -> Project:
+        """Create a new project.
+
+        Args:
+            title: Project title.
+            lead_id: ID of the user leading the project.
+            enterprise_id: The enterprise/tenant ID this project belongs to.
+            **kwargs: Additional optional fields.
+
+        Returns:
+            The newly created project.
+        """
+        project = Project(
+            title=title,
+            lead_id=lead_id,
+            enterprise_id=enterprise_id,
+            **kwargs,
+        )
+        self.db.add(project)
+        self.db.commit()
+        self.db.refresh(project)
+        return project
 
     def get_with_details(self, id: int) -> Optional[Project]:
         """Get a project with all related data eagerly loaded.

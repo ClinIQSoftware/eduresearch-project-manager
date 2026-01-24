@@ -1,6 +1,7 @@
 """User repository for user-specific database operations."""
 
-from typing import List, Optional
+from typing import Any, List, Optional
+from uuid import UUID
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -19,6 +20,42 @@ class UserRepository(BaseRepository[User]):
             db: SQLAlchemy database session.
         """
         super().__init__(db, User)
+
+    def create(
+        self,
+        *,
+        email: str,
+        password_hash: str,
+        first_name: str,
+        last_name: str,
+        enterprise_id: UUID,
+        **kwargs: Any,
+    ) -> User:
+        """Create a new user.
+
+        Args:
+            email: User's email address.
+            password_hash: Hashed password.
+            first_name: User's first name.
+            last_name: User's last name.
+            enterprise_id: The enterprise/tenant ID this user belongs to.
+            **kwargs: Additional optional fields.
+
+        Returns:
+            The newly created user.
+        """
+        user = User(
+            email=email,
+            password_hash=password_hash,
+            first_name=first_name,
+            last_name=last_name,
+            enterprise_id=enterprise_id,
+            **kwargs,
+        )
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
 
     def get_by_email(self, email: str) -> Optional[User]:
         """Get a user by their email address.

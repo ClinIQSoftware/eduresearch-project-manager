@@ -1,6 +1,7 @@
 """Institution repository for institution-specific database operations."""
 
-from typing import List, Optional
+from typing import Any, List, Optional
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -21,6 +22,33 @@ class InstitutionRepository(BaseRepository[Institution]):
             db: SQLAlchemy database session.
         """
         super().__init__(db, Institution)
+
+    def create(
+        self,
+        *,
+        name: str,
+        enterprise_id: UUID,
+        **kwargs: Any,
+    ) -> Institution:
+        """Create a new institution.
+
+        Args:
+            name: Institution name.
+            enterprise_id: The enterprise/tenant ID this institution belongs to.
+            **kwargs: Additional optional fields.
+
+        Returns:
+            The newly created institution.
+        """
+        institution = Institution(
+            name=name,
+            enterprise_id=enterprise_id,
+            **kwargs,
+        )
+        self.db.add(institution)
+        self.db.commit()
+        self.db.refresh(institution)
+        return institution
 
     def get_with_departments(self, id: int) -> Optional[Institution]:
         """Get an institution with its departments eagerly loaded.
