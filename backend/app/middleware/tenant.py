@@ -24,6 +24,13 @@ class TenantMiddleware(BaseHTTPMiddleware):
         host = request.headers.get("host", "localhost")
         subdomain = self._extract_subdomain(host)
 
+        # Handle platform admin header for dev
+        if request.headers.get("X-Platform-Admin") == "true":
+            request.state.is_platform_admin = True
+            request.state.enterprise_id = None
+            request.state.enterprise = None
+            return await call_next(request)
+
         # Handle platform admin
         if subdomain == "admin":
             request.state.is_platform_admin = True

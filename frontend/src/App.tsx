@@ -37,6 +37,7 @@ import {
   EmailTemplatesTab,
   ImportTab,
 } from './pages/admin';
+import { PlatformAdminLayout, EnterprisesTab, SettingsTab } from './pages/platform-admin';
 
 function App() {
   return (
@@ -195,6 +196,13 @@ function App() {
           <Route path="email" element={<EmailTab />} />
           <Route path="email-templates" element={<EmailTemplatesTab />} />
           <Route path="import" element={<ImportTab />} />
+        </Route>
+
+        {/* Platform Admin Routes */}
+        <Route path="/platform-admin" element={<PlatformAdminLayout />}>
+          <Route index element={<Navigate to="/platform-admin/enterprises" replace />} />
+          <Route path="enterprises" element={<EnterprisesTab />} />
+          <Route path="settings" element={<SettingsTab />} />
         </Route>
       </Routes>
       </AuthProvider>
