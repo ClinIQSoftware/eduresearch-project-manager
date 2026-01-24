@@ -25,7 +25,7 @@ class UserRepository(BaseRepository[User]):
         self,
         *,
         email: str,
-        password_hash: str,
+        password_hash: Optional[str],
         first_name: str,
         last_name: str,
         enterprise_id: UUID,
