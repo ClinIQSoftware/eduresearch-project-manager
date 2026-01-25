@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { login as loginApi } from '../services/api';
 
@@ -14,8 +14,17 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const from = (location.state as any)?.from?.pathname || '/';
+
+  // Check for OAuth error in URL params
+  useEffect(() => {
+    const oauthError = searchParams.get('error');
+    if (oauthError) {
+      setError(decodeURIComponent(oauthError));
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
