@@ -12,7 +12,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
-from app.api.deps import get_current_enterprise_id, get_current_user, get_db
+from app.api.deps import get_current_enterprise_id, get_current_user, get_db, get_tenant_db
 from app.config import settings
 from app.models.user import User, AuthProvider
 from app.models.institution import Institution
@@ -224,7 +224,7 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
 def register(
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Register a new user with email and password.
@@ -303,7 +303,7 @@ async def google_login(request: Request):
 @router.get("/google/callback")
 async def google_callback(
     request: Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Handle Google OAuth callback."""
@@ -400,7 +400,7 @@ async def microsoft_login(request: Request):
 @router.get("/microsoft/callback")
 async def microsoft_callback(
     request: Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Handle Microsoft OAuth callback."""
