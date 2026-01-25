@@ -130,3 +130,25 @@ class TestEmailRequest(BaseModel):
     """Schema for test email request."""
 
     to: EmailStr
+
+
+# Platform Admin Credential Management schemas
+class PlatformAdminCredentialsUpdate(BaseModel):
+    """Schema for updating platform admin credentials."""
+
+    current_password: str = Field(..., min_length=1)
+    new_email: Optional[EmailStr] = None
+    new_password: Optional[str] = Field(None, min_length=8)
+    new_name: Optional[str] = Field(None, min_length=1, max_length=255)
+
+
+class PlatformAdminProfileResponse(BaseModel):
+    """Schema for platform admin profile response."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    email: str
+    name: str
+    is_active: bool
+    created_at: datetime

@@ -7,6 +7,21 @@ import type {
   EnterpriseUpdateData,
 } from '../types';
 
+export interface PlatformAdminProfile {
+  id: string;
+  email: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PlatformAdminCredentialsUpdate {
+  current_password: string;
+  new_email?: string;
+  new_password?: string;
+  new_name?: string;
+}
+
 export interface PlatformEmailSettings {
   smtp_host: string;
   smtp_port: number;
@@ -27,6 +42,13 @@ export interface PlatformEmailSettingsUpdate {
 }
 
 export const platformAdminApi = {
+  // Admin Profile
+  getProfile: () =>
+    client.get<PlatformAdminProfile>('/platform/me'),
+
+  updateCredentials: (data: PlatformAdminCredentialsUpdate) =>
+    client.put<PlatformAdminProfile>('/platform/me', data),
+
   getStats: () =>
     client.get<PlatformStats>('/platform/stats'),
 

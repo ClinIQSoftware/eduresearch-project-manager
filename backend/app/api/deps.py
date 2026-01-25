@@ -312,3 +312,44 @@ def get_current_enterprise_id(request: Request) -> UUID:
     if not hasattr(request.state, "enterprise_id") or not request.state.enterprise_id:
         raise HTTPException(status_code=400, detail="Enterprise context required")
     return request.state.enterprise_id
+
+
+def get_platform_admin_id(
+    request: Request,
+    token: str = Depends(OAuth2PasswordBearer(tokenUrl="/api/platform/auth/login", auto_error=False)),
+) -> Optional[UUID]:
+    """Extract platform admin ID from JWT token.
+
+    This is used for platform admin routes that need to identify the current admin.
+    Sets the platform_admin_id on request.state for use in route handlers.
+
+    Args:
+        request: The FastAPI request object.
+        token: JWT access token from Authorization header.
+
+    Returns:
+        The platform admin ID if token is valid and is_platform_admin is True.
+    """
+    if not token:
+        return None
+
+    payload = decode_token(token)
+    if not payload:
+        return None
+
+    # Verify this is a platform admin token
+    if not payload.get("is_platform_admin"):
+        return None
+
+    admin_id_str = payload.get("sub")
+    if not admin_id_str:
+        return None
+
+    try:
+        admin_id = UUID(admin_id_str)
+        # Set on request state for use in require_platform_admin
+        request.state.platform_admin_id = admin_id
+        request.state.is_platform_admin = True
+        return admin_id
+    except (ValueError, TypeError):
+        return None

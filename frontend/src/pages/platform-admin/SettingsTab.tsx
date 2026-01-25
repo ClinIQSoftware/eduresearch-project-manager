@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
+  usePlatformAdminProfile,
+  useUpdatePlatformAdminCredentials,
   usePlatformEmailSettings,
   useUpdatePlatformEmailSettings,
   usePlatformTestEmail,
@@ -12,10 +14,19 @@ import { Checkbox } from '../../components/ui/Checkbox';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 
 export default function SettingsTab() {
+  const { data: profile, isLoading: profileLoading } = usePlatformAdminProfile();
+  const updateCredentials = useUpdatePlatformAdminCredentials();
   const { data: settings, isLoading } = usePlatformEmailSettings();
   const updateSettings = useUpdatePlatformEmailSettings();
   const testEmail = usePlatformTestEmail();
 
+  const [credentialsForm, setCredentialsForm] = useState({
+    current_password: '',
+    new_email: '',
+    new_password: '',
+    new_password_confirm: '',
+    new_name: '',
+  });
   const [form, setForm] = useState({
     smtp_host: '',
     smtp_port: 587,
@@ -32,6 +43,16 @@ export default function SettingsTab() {
   } | null>(null);
 
   useEffect(() => {
+    if (profile) {
+      setCredentialsForm((f) => ({
+        ...f,
+        new_email: profile.email,
+        new_name: profile.name,
+      }));
+    }
+  }, [profile]);
+
+  useEffect(() => {
     if (settings) {
       setForm({
         smtp_host: settings.smtp_host || '',
@@ -44,6 +65,47 @@ export default function SettingsTab() {
       });
     }
   }, [settings]);
+
+  const handleUpdateCredentials = async () => {
+    if (!credentialsForm.current_password) {
+      return setMessage({ type: 'error', text: 'Current password is required' });
+    }
+    if (
+      credentialsForm.new_password &&
+      credentialsForm.new_password !== credentialsForm.new_password_confirm
+    ) {
+      return setMessage({ type: 'error', text: 'New passwords do not match' });
+    }
+    if (credentialsForm.new_password && credentialsForm.new_password.length < 8) {
+      return setMessage({ type: 'error', text: 'New password must be at least 8 characters' });
+    }
+
+    try {
+      const data: { current_password: string; new_email?: string; new_password?: string; new_name?: string } = {
+        current_password: credentialsForm.current_password,
+      };
+      if (credentialsForm.new_email && credentialsForm.new_email !== profile?.email) {
+        data.new_email = credentialsForm.new_email;
+      }
+      if (credentialsForm.new_password) {
+        data.new_password = credentialsForm.new_password;
+      }
+      if (credentialsForm.new_name && credentialsForm.new_name !== profile?.name) {
+        data.new_name = credentialsForm.new_name;
+      }
+
+      await updateCredentials.mutateAsync(data);
+      setCredentialsForm((f) => ({
+        ...f,
+        current_password: '',
+        new_password: '',
+        new_password_confirm: '',
+      }));
+      setMessage({ type: 'success', text: 'Credentials updated successfully' });
+    } catch (error) {
+      setMessage({ type: 'error', text: getErrorMessage(error) });
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -73,7 +135,7 @@ export default function SettingsTab() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || profileLoading) {
     return (
       <div className="py-8">
         <LoadingSpinner size="lg" />
@@ -83,6 +145,61 @@ export default function SettingsTab() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      {/* Admin Credentials Section */}
+      <Card title="Admin Credentials">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Email"
+              type="email"
+              value={credentialsForm.new_email}
+              onChange={(v) => setCredentialsForm({ ...credentialsForm, new_email: v })}
+            />
+            <Input
+              label="Name"
+              value={credentialsForm.new_name}
+              onChange={(v) => setCredentialsForm({ ...credentialsForm, new_name: v })}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="New Password"
+              type="password"
+              value={credentialsForm.new_password}
+              onChange={(v) => setCredentialsForm({ ...credentialsForm, new_password: v })}
+              placeholder="Leave blank to keep current"
+            />
+            <Input
+              label="Confirm New Password"
+              type="password"
+              value={credentialsForm.new_password_confirm}
+              onChange={(v) =>
+                setCredentialsForm({ ...credentialsForm, new_password_confirm: v })
+              }
+              placeholder="Leave blank to keep current"
+            />
+          </div>
+          <div className="border-t pt-4">
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <Input
+                  label="Current Password (required to save changes)"
+                  type="password"
+                  value={credentialsForm.current_password}
+                  onChange={(v) =>
+                    setCredentialsForm({ ...credentialsForm, current_password: v })
+                  }
+                  placeholder="Enter your current password"
+                />
+              </div>
+              <Button onClick={handleUpdateCredentials} loading={updateCredentials.isPending}>
+                Update Credentials
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="text-sm font-medium text-blue-800">Platform Default Settings</h3>
         <p className="text-sm text-blue-600 mt-1">

@@ -1,7 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../utils/queryKeys';
-import { platformAdminApi, PlatformEmailSettingsUpdate } from '../api/platformAdmin';
+import { platformAdminApi, PlatformEmailSettingsUpdate, PlatformAdminCredentialsUpdate } from '../api/platformAdmin';
 import type { EnterpriseCreateData, EnterpriseUpdateData } from '../types';
+
+// Platform Admin Profile
+export function usePlatformAdminProfile() {
+  return useQuery({
+    queryKey: ['platformAdminProfile'],
+    queryFn: async () => {
+      const response = await platformAdminApi.getProfile();
+      return response.data;
+    },
+  });
+}
+
+export function useUpdatePlatformAdminCredentials() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: PlatformAdminCredentialsUpdate) => {
+      const response = await platformAdminApi.updateCredentials(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platformAdminProfile'] });
+    },
+  });
+}
 
 // Platform Stats
 export function usePlatformStats() {

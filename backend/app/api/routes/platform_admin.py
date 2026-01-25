@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_platform_db
+from app.api.deps import get_platform_admin_id, get_platform_db
 from app.config import settings
 from app.core.security import (
     create_access_token,
@@ -29,7 +29,9 @@ from app.schemas.platform_admin import (
     EnterpriseDetailResponse,
     EnterpriseListItem,
     EnterpriseUpdate,
+    PlatformAdminCredentialsUpdate,
     PlatformAdminLogin,
+    PlatformAdminProfileResponse,
     PlatformAdminResponse,
     PlatformEmailSettingsResponse,
     PlatformEmailSettingsUpdate,
@@ -126,6 +128,100 @@ def platform_admin_login(
     )
 
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.get("/me", response_model=PlatformAdminProfileResponse)
+def get_current_admin_profile(
+    request: Request,
+    admin_id: UUID = Depends(get_platform_admin_id),
+    db: Session = Depends(get_platform_db),
+):
+    """Get the current platform admin's profile.
+
+    Returns the admin's profile information based on the JWT token.
+    """
+    require_platform_admin(request)
+
+    if not admin_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not identify admin from token",
+        )
+
+    admin = db.query(PlatformAdmin).filter(PlatformAdmin.id == admin_id).first()
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Admin account not found",
+        )
+
+    return admin
+
+
+@router.put("/me", response_model=PlatformAdminProfileResponse)
+def update_admin_credentials(
+    request: Request,
+    credentials_data: PlatformAdminCredentialsUpdate,
+    admin_id: UUID = Depends(get_platform_admin_id),
+    db: Session = Depends(get_platform_db),
+):
+    """Update the current platform admin's credentials.
+
+    Requires current password for verification. Can update email,
+    password, and/or name.
+    """
+    require_platform_admin(request)
+
+    if not admin_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not identify admin from token",
+        )
+
+    admin = db.query(PlatformAdmin).filter(PlatformAdmin.id == admin_id).first()
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Admin account not found",
+        )
+
+    # Verify current password
+    if not verify_password(credentials_data.current_password, admin.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect",
+        )
+
+    # Update email if provided
+    if credentials_data.new_email is not None:
+        # Check if email is already in use by another admin
+        existing = (
+            db.query(PlatformAdmin)
+            .filter(
+                PlatformAdmin.email == credentials_data.new_email,
+                PlatformAdmin.id != admin.id,
+            )
+            .first()
+        )
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is already in use by another admin",
+            )
+        admin.email = credentials_data.new_email
+
+    # Update password if provided
+    if credentials_data.new_password is not None:
+        admin.password_hash = hash_password(credentials_data.new_password)
+
+    # Update name if provided
+    if credentials_data.new_name is not None:
+        admin.name = credentials_data.new_name
+
+    db.commit()
+    db.refresh(admin)
+
+    return admin
 
 
 @router.get("/stats", response_model=PlatformStatsResponse)
