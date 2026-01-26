@@ -5,8 +5,12 @@ This module sets up the FastAPI application with all routes, middleware, and con
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from app.database import get_db
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.init import run_startup_init
@@ -133,6 +137,23 @@ def root():
 
 
 @app.get("/health")
-def health_check():
+def health_check(detailed: bool = False, db: Session = Depends(get_db)):
     """Health check endpoint."""
-    return {"status": "healthy"}
+    response = {"status": "healthy"}
+
+    if detailed:
+        # Check database
+        try:
+            db.execute(text("SELECT 1"))
+            response["database"] = {"status": "connected"}
+        except Exception as e:
+            response["database"] = {"status": "error", "error": str(e)}
+            response["status"] = "degraded"
+
+        # Check email config
+        from app.config import settings
+        response["email"] = {
+            "configured": bool(settings.smtp_user),
+        }
+
+    return response
