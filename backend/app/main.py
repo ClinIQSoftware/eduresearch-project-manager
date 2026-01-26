@@ -31,6 +31,7 @@ from app.api.routes import (
     timetracking_router,
     enterprise_router,
     platform_admin_router,
+    billing_router,
 )
 from app.config import settings
 
@@ -124,6 +125,9 @@ app.include_router(
 app.include_router(
     platform_admin_router, prefix="/api/platform", tags=["Platform Admin"]
 )
+
+# Billing routes
+app.include_router(billing_router, prefix="/api", tags=["Billing"])
 
 
 @app.get("/")
