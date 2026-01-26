@@ -31,3 +31,6 @@ itsdangerous==2.1.2
 
 # Excel file handling
 openpyxl==3.1.2
+
+# Payments
+stripe==7.0.0
