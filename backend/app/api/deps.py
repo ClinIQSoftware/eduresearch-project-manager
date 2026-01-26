@@ -38,7 +38,7 @@ def get_db():
 def get_current_user(
     request: Request,
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ) -> User:
     """Get the current authenticated user from JWT token.
 
@@ -91,10 +91,11 @@ def get_current_user(
 
 
 def get_current_user_optional(
+    request: Request,
     token: Optional[str] = Depends(
         OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
     ),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ) -> Optional[User]:
     """Get the current user if authenticated, otherwise return None.
 
@@ -102,6 +103,7 @@ def get_current_user_optional(
     vs unauthenticated users.
 
     Args:
+        request: The FastAPI request object.
         token: Optional JWT access token.
         db: Database session.
 
@@ -111,10 +113,13 @@ def get_current_user_optional(
     if not token:
         return None
 
-    try:
-        return get_current_user(token, db)
-    except HTTPException:
+    auth_service = AuthService(db)
+    user = auth_service.get_user_from_token(token)
+
+    if not user or not user.is_active or not user.is_approved:
         return None
+
+    return user
 
 
 def get_current_superuser(current_user: User = Depends(get_current_user)) -> User:
