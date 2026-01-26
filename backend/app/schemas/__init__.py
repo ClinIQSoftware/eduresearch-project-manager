@@ -169,6 +169,14 @@ from app.schemas.platform_admin import (
     PlatformStatsResponse,
 )
 
+# Billing schemas
+from app.schemas.billing import (
+    CreateCheckoutSessionRequest,
+    CheckoutSessionResponse,
+    PortalSessionResponse,
+    SubscriptionStatus,
+)
+
 
 __all__ = [
     # Auth
@@ -295,4 +303,9 @@ __all__ = [
     "PlatformEnterpriseCreate",
     "PlatformEnterpriseUpdate",
     "PlatformStatsResponse",
+    # Billing
+    "CreateCheckoutSessionRequest",
+    "CheckoutSessionResponse",
+    "PortalSessionResponse",
+    "SubscriptionStatus",
 ]
