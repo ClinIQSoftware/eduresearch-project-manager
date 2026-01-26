@@ -649,3 +649,34 @@ def test_platform_email(
         )
 
     return {"message": f"Test email sent to {test_data.to}"}
+
+
+@router.get("/setup-status")
+def get_setup_status(
+    request: Request,
+    admin_id: UUID = Depends(get_platform_admin_id),
+    db: Session = Depends(get_platform_db),
+):
+    """Get platform setup status for admin dashboard."""
+    # Verify platform admin
+    require_platform_admin(request)
+
+    admin = db.query(PlatformAdmin).filter(PlatformAdmin.id == admin_id).first()
+
+    return {
+        "platform_admin": {
+            "configured": True,
+            "must_change_password": admin.must_change_password if admin else True,
+        },
+        "email": {
+            "configured": bool(settings.smtp_user and settings.smtp_password),
+            "provider": settings.smtp_host if settings.smtp_user else None,
+        },
+        "oauth": {
+            "google": bool(settings.google_client_id),
+            "microsoft": bool(settings.microsoft_client_id),
+        },
+        "database": {
+            "connected": True,  # If we got here, DB is connected
+        },
+    }
