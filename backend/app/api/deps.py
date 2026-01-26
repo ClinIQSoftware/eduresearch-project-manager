@@ -35,6 +35,16 @@ def get_db():
         db.close()
 
 
+def get_tenant_db(request: Request) -> Session:
+    """Dependency for tenant-scoped database access."""
+    yield from get_tenant_session(request)
+
+
+def get_platform_db() -> Session:
+    """Dependency for platform admin database access (no RLS)."""
+    yield from get_platform_session()
+
+
 def get_current_user(
     request: Request,
     token: str = Depends(oauth2_scheme),
@@ -300,16 +310,6 @@ def require_admin_access(
                 detail="Superuser access required",
             )
     return current_user
-
-
-def get_tenant_db(request: Request) -> Session:
-    """Dependency for tenant-scoped database access."""
-    yield from get_tenant_session(request)
-
-
-def get_platform_db() -> Session:
-    """Dependency for platform admin database access (no RLS)."""
-    yield from get_platform_session()
 
 
 def get_current_enterprise_id(request: Request) -> UUID:
