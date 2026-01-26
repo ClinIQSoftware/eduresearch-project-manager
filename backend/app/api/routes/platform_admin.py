@@ -662,11 +662,16 @@ def get_setup_status(
     require_platform_admin(request)
 
     admin = db.query(PlatformAdmin).filter(PlatformAdmin.id == admin_id).first()
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Admin account not found",
+        )
 
     return {
         "platform_admin": {
             "configured": True,
-            "must_change_password": admin.must_change_password if admin else True,
+            "must_change_password": admin.must_change_password,
         },
         "email": {
             "configured": bool(settings.smtp_user and settings.smtp_password),
