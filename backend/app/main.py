@@ -3,10 +3,13 @@
 This module sets up the FastAPI application with all routes, middleware, and configuration.
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.core.init import run_startup_init
 from app.middleware import TenantMiddleware
 from app.api.routes import (
     auth_router,
@@ -30,11 +33,22 @@ from app.config import settings
 # Note: Database tables are created via Alembic migrations
 # Run: alembic upgrade head
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan context manager for startup/shutdown events."""
+    # Startup
+    run_startup_init()
+    yield
+    # Shutdown (nothing needed)
+
+
 app = FastAPI(
     title="EduResearch Project Manager API",
     description="API for managing research projects and collaboration",
     version="2.0.0",
     redirect_slashes=False,  # Prevent 307 redirects that drop auth headers on mobile
+    lifespan=lifespan,
 )
 
 # Session middleware for OAuth
