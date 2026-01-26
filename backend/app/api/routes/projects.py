@@ -20,6 +20,7 @@ from app.api.deps import (
     count_project_leads,
 )
 from app.config import settings
+from app.models.enterprise import Enterprise
 from app.models.project import Project
 from app.schemas.project import ProjectClassification, ProjectStatus
 from app.models.project_member import ProjectMember, MemberRole
@@ -155,6 +156,17 @@ def create_project(
 ):
     """Create a new project. Creator becomes the lead."""
     project_service = ProjectService(db)
+
+    # Check project limit
+    if enterprise_id:
+        enterprise = db.query(Enterprise).filter(Enterprise.id == enterprise_id).first()
+        if enterprise and enterprise.max_projects is not None:
+            current_projects = db.query(Project).filter(Project.enterprise_id == enterprise.id).count()
+            if current_projects >= enterprise.max_projects:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={"code": "PROJECT_LIMIT_REACHED", "max": enterprise.max_projects},
+                )
 
     # Use user's institution if not specified
     if not project_data.institution_id and current_user.institution_id:

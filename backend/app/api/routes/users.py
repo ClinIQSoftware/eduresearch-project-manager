@@ -14,6 +14,7 @@ from app.api.deps import (
     get_db,
     is_institution_admin,
 )
+from app.models.enterprise import Enterprise
 from app.models.user import User
 from app.schemas import (
     PendingUserResponse,
@@ -138,6 +139,20 @@ def approve_user(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="User is already approved"
         )
+
+    # Check user limit
+    if user.enterprise_id:
+        enterprise = db.query(Enterprise).filter(Enterprise.id == user.enterprise_id).first()
+        if enterprise:
+            current_users = db.query(User).filter(
+                User.enterprise_id == enterprise.id,
+                User.is_approved.is_(True),
+            ).count()
+            if current_users >= enterprise.max_users:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={"code": "USER_LIMIT_REACHED", "max": enterprise.max_users},
+                )
 
     # Check admin access
     if not current_user.is_superuser:
