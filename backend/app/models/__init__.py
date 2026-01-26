@@ -10,6 +10,7 @@ from app.models.platform_admin import PlatformAdmin
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.task import Task
+from app.models.time_entry import TimeEntry
 from app.models.join_request import JoinRequest
 from app.models.project_file import ProjectFile
 from app.models.email_settings import EmailSettings
@@ -32,6 +33,7 @@ __all__ = [
     "Project",
     "ProjectMember",
     "Task",
+    "TimeEntry",
     "JoinRequest",
     "ProjectFile",
     # Settings
