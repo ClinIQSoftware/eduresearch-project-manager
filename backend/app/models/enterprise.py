@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 import uuid
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -35,6 +35,15 @@ class Enterprise(Base):
     updated_at: Mapped[Optional[datetime]] = mapped_column(
         onupdate=func.now(), nullable=True
     )
+
+    # Subscription fields
+    plan_type: Mapped[str] = mapped_column(String(20), default="free", nullable=False)
+    max_users: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    max_projects: Mapped[Optional[int]] = mapped_column(Integer, default=5, nullable=True)  # None = unlimited
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    subscription_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    current_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     config: Mapped[Optional["EnterpriseConfig"]] = relationship(
