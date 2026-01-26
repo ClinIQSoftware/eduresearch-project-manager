@@ -14,6 +14,7 @@ from app.services.email_service import EmailService
 from app.services.institution_service import InstitutionService
 from app.services.department_service import DepartmentService
 from app.services.settings_service import SettingsService
+from app.services.billing_service import BillingService
 
 __all__ = [
     "AuthService",
@@ -26,4 +27,5 @@ __all__ = [
     "InstitutionService",
     "DepartmentService",
     "SettingsService",
+    "BillingService",
 ]
