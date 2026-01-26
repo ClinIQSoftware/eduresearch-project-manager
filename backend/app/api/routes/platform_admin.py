@@ -29,6 +29,7 @@ from app.schemas.platform_admin import (
     EnterpriseDetailResponse,
     EnterpriseListItem,
     EnterpriseUpdate,
+    PasswordChangeRequest,
     PlatformAdminCredentialsUpdate,
     PlatformAdminLogin,
     PlatformAdminProfileResponse,
@@ -127,7 +128,51 @@ def platform_admin_login(
         }
     )
 
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "must_change_password": admin.must_change_password,
+    }
+
+
+@router.post("/auth/change-password")
+def change_password(
+    request: Request,
+    password_data: PasswordChangeRequest,
+    admin_id: UUID = Depends(get_platform_admin_id),
+    db: Session = Depends(get_platform_db),
+):
+    """Change platform admin password.
+
+    Requires authentication. The current password must be provided
+    for verification. On success, clears the must_change_password flag.
+    """
+    require_platform_admin(request)
+
+    if not admin_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not identify admin from token",
+        )
+
+    admin = db.query(PlatformAdmin).filter(PlatformAdmin.id == admin_id).first()
+    if not admin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Admin not found",
+        )
+
+    if not verify_password(password_data.current_password, admin.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password incorrect",
+        )
+
+    admin.password_hash = hash_password(password_data.new_password)
+    admin.must_change_password = False
+    db.commit()
+
+    return {"message": "Password changed successfully"}
 
 
 @router.get("/me", response_model=PlatformAdminProfileResponse)

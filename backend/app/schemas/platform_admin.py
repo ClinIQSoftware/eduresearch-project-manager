@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 # Platform Admin schemas
@@ -43,6 +43,20 @@ class PlatformAdminLogin(BaseModel):
 
     email: EmailStr
     password: str = Field(..., min_length=1)
+
+
+class PasswordChangeRequest(BaseModel):
+    """Schema for password change request."""
+
+    current_password: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
 
 
 # Enterprise schemas for platform admin views
