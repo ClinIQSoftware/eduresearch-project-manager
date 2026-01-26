@@ -93,12 +93,37 @@ aws cloudformation create-stack \
 
 ## Post-Deployment Checklist
 
-- [ ] Verify `/health` endpoint returns `{"status": "healthy"}`
-- [ ] Run database migrations (most platforms do this automatically)
-- [ ] Set up OAuth credentials (Google/Microsoft) if needed
-- [ ] Configure SMTP for email notifications
-- [ ] Create first superuser account
-- [ ] Test login flow
+After deploying for the first time:
+
+### 1. Change Platform Admin Password
+
+The platform admin is created on first startup with credentials from environment variables.
+
+1. Log in at `https://your-domain.com/login` with the admin credentials
+2. You'll be prompted to change your password immediately
+3. Use a strong, unique password
+
+### 2. Configure Email (Optional)
+
+Email notifications are optional but recommended. To enable:
+
+1. Set SMTP environment variables (see backend/.env.example for Gmail instructions)
+2. Check setup status: GET /api/platform/setup-status
+3. Send a test email from Admin > Email Templates
+
+### 3. Configure OAuth (Optional)
+
+To enable social login:
+
+1. Create OAuth credentials (Google Console / Azure Portal)
+2. Set CLIENT_ID and CLIENT_SECRET environment variables
+3. Redeploy to pick up new settings
+
+### 4. Verify Setup
+
+Check `/health?detailed=true` to verify:
+- Database connection
+- Email configuration status
 
 ## Architecture
 
