@@ -138,7 +138,11 @@ def root():
 
 @app.get("/health")
 def health_check(detailed: bool = False, db: Session = Depends(get_db)):
-    """Health check endpoint."""
+    """Health check endpoint.
+
+    Args:
+        detailed: If True, includes database and email config status.
+    """
     response = {"status": "healthy"}
 
     if detailed:
@@ -146,12 +150,11 @@ def health_check(detailed: bool = False, db: Session = Depends(get_db)):
         try:
             db.execute(text("SELECT 1"))
             response["database"] = {"status": "connected"}
-        except Exception as e:
-            response["database"] = {"status": "error", "error": str(e)}
+        except Exception:
+            response["database"] = {"status": "error", "error": "Connection failed"}
             response["status"] = "degraded"
 
-        # Check email config
-        from app.config import settings
+        # Check email config (settings already imported at module level)
         response["email"] = {
             "configured": bool(settings.smtp_user),
         }
