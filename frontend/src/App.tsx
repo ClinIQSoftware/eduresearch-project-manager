@@ -39,6 +39,8 @@ import {
   ImportTab,
 } from './pages/admin';
 import { PlatformAdminLayout, EnterprisesTab, SettingsTab } from './pages/platform-admin';
+import Landing from './pages/Landing';
+import { BillingSettings, BillingSuccess, BillingCancel } from './pages/billing';
 
 function App() {
   return (
@@ -71,13 +73,14 @@ function App() {
       />
       <Routes>
         {/* Public routes */}
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* Protected routes */}
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Layout>
@@ -167,7 +170,12 @@ function App() {
           <Route path="profile" element={<SettingsProfileTab />} />
           <Route path="security" element={<SettingsSecurityTab />} />
           <Route path="preferences" element={<SettingsPreferencesTab />} />
+          <Route path="billing" element={<BillingSettings />} />
         </Route>
+
+        {/* Billing routes */}
+        <Route path="/billing/success" element={<BillingSuccess />} />
+        <Route path="/billing/cancel" element={<BillingCancel />} />
 
         {/* Admin routes */}
         <Route
