@@ -28,6 +28,7 @@ class PlatformAdmin(Base):
     )  # Nullable for OAuth users
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         default=func.now(), server_default=func.now()
