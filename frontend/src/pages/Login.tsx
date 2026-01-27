@@ -16,7 +16,7 @@ export default function Login() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const from = (location.state as any)?.from?.pathname || '/';
+  const from = (location.state as any)?.from?.pathname || '/dashboard';
 
   // Check for OAuth error in URL params
   useEffect(() => {

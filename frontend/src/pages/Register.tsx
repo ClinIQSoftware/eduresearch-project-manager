@@ -85,7 +85,7 @@ export default function Register() {
       // Auto-login after registration
       const loginResponse = await loginApi(formData.email, formData.password);
       await login(loginResponse.data.access_token);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Registration failed');
     } finally {

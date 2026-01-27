@@ -13,7 +13,7 @@ export default function PendingUsers() {
   useEffect(() => {
     // Redirect non-superusers
     if (user && !user.is_superuser) {
-      navigate('/');
+      navigate('/dashboard');
       return;
     }
     fetchPendingUsers();

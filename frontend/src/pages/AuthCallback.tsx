@@ -18,7 +18,7 @@ export default function AuthCallback() {
 
     if (token) {
       login(token).then(() => {
-        navigate('/');
+        navigate('/dashboard');
       });
     } else {
       navigate('/login');
