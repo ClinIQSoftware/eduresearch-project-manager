@@ -122,7 +122,8 @@ class BillingService:
         from app.models.project import Project
 
         current_users = self.db.query(User).filter(
-            User.enterprise_id == enterprise.id
+            User.enterprise_id == enterprise.id,
+            User.is_approved.is_(True),
         ).count()
 
         current_projects = self.db.query(Project).filter(
