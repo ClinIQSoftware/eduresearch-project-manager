@@ -9,6 +9,7 @@ const adminTabs = [
   { to: '/admin/security', label: 'Security' },
   { to: '/admin/email', label: 'Email Settings' },
   { to: '/admin/email-templates', label: 'Email Templates' },
+  { to: '/admin/invite-codes', label: 'Invite Codes' },
   { to: '/admin/import', label: 'Import' },
 ];
 

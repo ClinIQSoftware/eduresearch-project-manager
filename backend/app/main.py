@@ -32,6 +32,7 @@ from app.api.routes import (
     enterprise_router,
     platform_admin_router,
     billing_router,
+    invite_codes_router,
 )
 from app.config import settings
 
@@ -128,6 +129,9 @@ app.include_router(
 
 # Billing routes
 app.include_router(billing_router, prefix="/api", tags=["Billing"])
+
+# Invite codes routes
+app.include_router(invite_codes_router, prefix="/api", tags=["Invite Codes"])
 
 
 @app.get("/")

@@ -48,6 +48,7 @@ export const register = (data: {
   bio?: string;
   institution_id?: number;
   department_id?: number;
+  invite_code?: string;
 }) => api.post<User>('/auth/register', data);
 
 export const login = (email: string, password: string) =>

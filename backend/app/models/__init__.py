@@ -17,6 +17,7 @@ from app.models.email_settings import EmailSettings
 from app.models.system_settings import SystemSettings
 from app.models.user_keyword import UserKeyword
 from app.models.user_alert_preference import UserAlertPreference
+from app.models.invite_code import InviteCode
 
 # Keep organization_admins import for backward compatibility with authorization.py
 from app.models.organization import organization_admins
@@ -45,4 +46,5 @@ __all__ = [
     # Association tables
     "institution_admins",
     "organization_admins",  # Backward compatibility alias
+    "InviteCode",
 ]

@@ -19,6 +19,7 @@ from app.api.routes.timetracking import router as timetracking_router
 from app.api.routes.enterprise import router as enterprise_router
 from app.api.routes.platform_admin import router as platform_admin_router
 from app.api.routes.billing import router as billing_router
+from app.api.routes.invite_codes import router as invite_codes_router
 
 __all__ = [
     "auth_router",
@@ -37,4 +38,5 @@ __all__ = [
     "enterprise_router",
     "platform_admin_router",
     "billing_router",
+    "invite_codes_router",
 ]

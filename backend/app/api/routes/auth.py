@@ -224,20 +224,74 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
 def register(
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
+    request: Request,
     db: Session = Depends(get_tenant_db),
-    enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Register a new user with email and password.
+
+    If an invite_code is provided, the user is registered under the
+    enterprise associated with that invite code. Otherwise, the user
+    is registered under the enterprise resolved from the subdomain.
 
     If registration approval is required, the user will be created
     in a pending state and admins will be notified.
     """
+    from app.models.invite_code import InviteCode
+    import uuid as uuid_mod
+
+    # Determine enterprise_id: from invite code or from subdomain
+    invite = None
+    if user_data.invite_code:
+        # Look up invite code (use raw db, not tenant-scoped)
+        from app.database import get_platform_session
+        platform_db = next(get_platform_session())
+        try:
+            invite = platform_db.query(InviteCode).filter(
+                InviteCode.code == user_data.invite_code
+            ).first()
+            if not invite:
+                # Try as UUID token
+                try:
+                    token_uuid = uuid_mod.UUID(user_data.invite_code)
+                    invite = platform_db.query(InviteCode).filter(
+                        InviteCode.token == token_uuid
+                    ).first()
+                except (ValueError, TypeError):
+                    pass
+
+            if not invite or not invite.is_valid:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid or expired invite code",
+                )
+
+            enterprise_id = invite.enterprise_id
+        finally:
+            platform_db.close()
+    else:
+        # Fall back to subdomain-based enterprise
+        if not hasattr(request.state, "enterprise_id") or not request.state.enterprise_id:
+            raise HTTPException(status_code=400, detail="Enterprise context required")
+        enterprise_id = request.state.enterprise_id
+
     auth_service = AuthService(db)
 
     try:
         user = auth_service.register(user_data, enterprise_id)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    # Increment invite code use count
+    if invite:
+        from app.database import get_platform_session
+        platform_db = next(get_platform_session())
+        try:
+            db_invite = platform_db.query(InviteCode).filter(InviteCode.id == invite.id).first()
+            if db_invite:
+                db_invite.use_count += 1
+                platform_db.commit()
+        finally:
+            platform_db.close()
 
     # Send approval request emails if needed
     if not user.is_approved:

@@ -37,9 +37,11 @@ import {
   EmailTab,
   EmailTemplatesTab,
   ImportTab,
+  InviteCodesTab,
 } from './pages/admin';
 import { PlatformAdminLayout, EnterprisesTab, SettingsTab } from './pages/platform-admin';
 import Landing from './pages/Landing';
+import Join from './pages/Join';
 import { BillingSettings, BillingSuccess, BillingCancel } from './pages/billing';
 
 function App() {
@@ -76,6 +78,7 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/join/:code" element={<Join />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* Protected routes */}
@@ -204,6 +207,7 @@ function App() {
           <Route path="security" element={<SecurityTab />} />
           <Route path="email" element={<EmailTab />} />
           <Route path="email-templates" element={<EmailTemplatesTab />} />
+          <Route path="invite-codes" element={<InviteCodesTab />} />
           <Route path="import" element={<ImportTab />} />
         </Route>
 

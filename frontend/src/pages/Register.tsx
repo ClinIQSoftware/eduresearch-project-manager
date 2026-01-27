@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { register as registerApi, login as loginApi, getInstitutionsPublic, getDepartmentsPublic } from '../services/api';
+import { validateInviteCode } from '../api/inviteCodes';
 import type { Institution, Department } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export default function Register() {
+  const [searchParams] = useSearchParams();
+  const inviteCode = searchParams.get('invite') || '';
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -16,11 +20,13 @@ export default function Register() {
     phone: '',
     institution_id: '',
     department_id: '',
+    join_code: inviteCode,
   });
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [inviteEnterprise, setInviteEnterprise] = useState('');
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -41,6 +47,17 @@ export default function Register() {
     }
     fetchData();
   }, []);
+
+  // Validate invite code from URL
+  useEffect(() => {
+    if (inviteCode) {
+      validateInviteCode(inviteCode).then(res => {
+        if (res.data.valid && res.data.enterprise_name) {
+          setInviteEnterprise(res.data.enterprise_name);
+        }
+      }).catch(() => {});
+    }
+  }, [inviteCode]);
 
   // Filter departments based on selected institution
   const filteredDepartments = formData.institution_id
@@ -80,6 +97,7 @@ export default function Register() {
         phone: formData.phone || undefined,
         institution_id: formData.institution_id ? Number(formData.institution_id) : undefined,
         department_id: formData.department_id ? Number(formData.department_id) : undefined,
+        invite_code: formData.join_code || undefined,
       });
 
       // Auto-login after registration
@@ -102,6 +120,12 @@ export default function Register() {
         </div>
 
         <h2 className="text-xl font-semibold mb-6">Create Account</h2>
+
+        {inviteEnterprise && (
+          <div className="bg-blue-50 text-blue-700 p-3 rounded-lg mb-4 text-sm">
+            You are joining <strong>{inviteEnterprise}</strong>
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">
@@ -207,6 +231,23 @@ export default function Register() {
               className="w-full border rounded-lg px-3 py-2"
             />
           </div>
+
+          {/* Join Code field - shown when no invite from URL */}
+          {!inviteCode && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Join Code</label>
+              <input
+                type="text"
+                value={formData.join_code}
+                onChange={(e) => setFormData({ ...formData, join_code: e.target.value.toUpperCase() })}
+                className="w-full border rounded-lg px-3 py-2"
+                placeholder="Enter join code if you have one"
+                maxLength={20}
+              />
+              <p className="text-xs text-gray-400 mt-1">Optional. Provided by your organization admin.</p>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium mb-1">Password *</label>
             <input
