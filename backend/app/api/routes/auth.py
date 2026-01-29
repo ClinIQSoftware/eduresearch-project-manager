@@ -398,12 +398,12 @@ async def google_login(request: Request):
 @router.get("/google/callback")
 async def google_callback(
     request: Request,
-    db: Session = Depends(get_tenant_db),
-    enterprise_id: UUID = Depends(get_current_enterprise_id),
+    db: Session = Depends(get_unscoped_db),
 ):
     """Handle Google OAuth callback."""
     auth_service = AuthService(db)
     settings_service = SettingsService(db)
+    enterprise_id = getattr(request.state, "enterprise_id", None)
 
     try:
         token = await oauth.google.authorize_access_token(request)
@@ -437,6 +437,10 @@ async def google_callback(
             user = existing_user
             access_token = auth_service.create_token(user)
         else:
+            if not enterprise_id:
+                return RedirectResponse(
+                    url=f"{settings.frontend_url}/register?error=Please register and create a team first, then link your Google account"
+                )
             # Register via OAuth
             try:
                 user, access_token = auth_service.register_oauth(
@@ -495,12 +499,12 @@ async def microsoft_login(request: Request):
 @router.get("/microsoft/callback")
 async def microsoft_callback(
     request: Request,
-    db: Session = Depends(get_tenant_db),
-    enterprise_id: UUID = Depends(get_current_enterprise_id),
+    db: Session = Depends(get_unscoped_db),
 ):
     """Handle Microsoft OAuth callback."""
     auth_service = AuthService(db)
     settings_service = SettingsService(db)
+    enterprise_id = getattr(request.state, "enterprise_id", None)
 
     try:
         token = await oauth.microsoft.authorize_access_token(request)
@@ -540,6 +544,10 @@ async def microsoft_callback(
             user = existing_user
             access_token = auth_service.create_token(user)
         else:
+            if not enterprise_id:
+                return RedirectResponse(
+                    url=f"{settings.frontend_url}/register?error=Please register and create a team first, then link your Microsoft account"
+                )
             # Register via OAuth
             try:
                 user, access_token = auth_service.register_oauth(
