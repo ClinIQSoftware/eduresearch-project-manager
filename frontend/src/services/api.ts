@@ -49,6 +49,7 @@ export const register = (data: {
   institution_id?: number;
   department_id?: number;
   invite_code?: string;
+  enterprise_name?: string;
 }) => api.post<User>('/auth/register', data);
 
 export const login = (email: string, password: string) =>
