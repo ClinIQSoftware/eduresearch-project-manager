@@ -29,11 +29,33 @@ RESERVED_SLUGS = {"admin", "api", "www", "app", "static", "assets"}
 # Known hosting provider domains where subdomain is NOT an enterprise slug
 HOSTING_DOMAINS = {"onrender.com", "render.com", "herokuapp.com", "railway.app"}
 
+# Paths that bypass tenant resolution (auth, platform admin, health, registration, docs)
+TENANT_EXEMPT_PATHS = (
+    "/health",
+    "/api/auth/",
+    "/api/platform/",
+    "/api/register",
+    "/api/institutions",
+    "/api/enterprise/branding",
+    "/api/invite-codes/validate",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+)
+
 
 class TenantMiddleware(BaseHTTPMiddleware):
     """Middleware to resolve tenant from subdomain."""
 
     async def dispatch(self, request: Request, call_next):
+        # Skip tenant resolution for exempt paths (auth, platform, health, etc.)
+        path = request.url.path
+        if any(path.startswith(p) for p in TENANT_EXEMPT_PATHS):
+            request.state.is_platform_admin = False
+            request.state.enterprise_id = None
+            request.state.enterprise = None
+            return await call_next(request)
+
         # Extract subdomain from host
         host = request.headers.get("host", "localhost")
         subdomain = self._extract_subdomain(host)
@@ -70,7 +92,12 @@ class TenantMiddleware(BaseHTTPMiddleware):
         # Lookup enterprise
         enterprise = await self._get_enterprise(subdomain)
         if not enterprise:
-            raise HTTPException(status_code=404, detail="Enterprise not found")
+            # No enterprise found — allow request through without tenant context
+            # (needed for first-time registration when no enterprises exist yet)
+            request.state.is_platform_admin = False
+            request.state.enterprise_id = None
+            request.state.enterprise = None
+            return await call_next(request)
 
         if not enterprise.is_active:
             raise HTTPException(status_code=403, detail="Enterprise is disabled")
