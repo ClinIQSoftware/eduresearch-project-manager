@@ -16,6 +16,7 @@ export interface User {
   auth_provider: AuthProvider;
   institution_id: number | null;  // Link to Institution entity
   department_id: number | null;  // Link to Department entity
+  enterprise_id: string | null;  // Link to Enterprise (null = needs onboarding)
   created_at: string;
   updated_at: string | null;
 }

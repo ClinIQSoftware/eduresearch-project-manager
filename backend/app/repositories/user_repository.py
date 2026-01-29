@@ -28,7 +28,7 @@ class UserRepository(BaseRepository[User]):
         password_hash: Optional[str],
         first_name: str,
         last_name: str,
-        enterprise_id: UUID,
+        enterprise_id: Optional[UUID] = None,
         **kwargs: Any,
     ) -> User:
         """Create a new user.
@@ -38,7 +38,7 @@ class UserRepository(BaseRepository[User]):
             password_hash: Hashed password.
             first_name: User's first name.
             last_name: User's last name.
-            enterprise_id: The enterprise/tenant ID this user belongs to.
+            enterprise_id: The enterprise/tenant ID (None for pre-onboarding users).
             **kwargs: Additional optional fields.
 
         Returns:

@@ -19,15 +19,13 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    """Schema for creating a new user."""
+    """Schema for creating a new user (account only, no team association)."""
 
     password: str = Field(..., min_length=8)
     phone: Optional[str] = Field(None, max_length=50)
     bio: Optional[str] = Field(None, max_length=2000)
     institution_id: Optional[int] = None
     department_id: Optional[int] = None
-    invite_code: Optional[str] = Field(None, max_length=50)
-    enterprise_name: Optional[str] = Field(None, min_length=2, max_length=255)
 
 
 class UserCreateAdmin(BaseModel):
@@ -89,6 +87,7 @@ class UserResponse(BaseModel):
     auth_provider: AuthProvider = "local"
     institution_id: Optional[int] = None
     department_id: Optional[int] = None
+    enterprise_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -122,3 +121,11 @@ class PendingUserResponse(UserResponse):
     """User response with approval context."""
 
     pass
+
+
+class OnboardingRequest(BaseModel):
+    """Schema for post-registration onboarding (create or join team)."""
+
+    mode: Literal["create", "join"]
+    enterprise_name: Optional[str] = Field(None, min_length=2, max_length=255)
+    invite_code: Optional[str] = Field(None, max_length=50)

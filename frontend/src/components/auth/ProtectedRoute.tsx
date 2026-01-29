@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -8,6 +9,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, requireSuperuser = false }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { isPlatformAdmin } = useTenant();
   const location = useLocation();
 
   if (isLoading) {
@@ -20,6 +22,11 @@ export default function ProtectedRoute({ children, requireSuperuser = false }: P
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Redirect to onboarding if user has no enterprise (skip for platform admins)
+  if (!isPlatformAdmin && user && !user.enterprise_id && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
   }
 
   if (requireSuperuser && !user?.is_superuser) {

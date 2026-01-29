@@ -48,9 +48,13 @@ export const register = (data: {
   bio?: string;
   institution_id?: number;
   department_id?: number;
-  invite_code?: string;
-  enterprise_name?: string;
 }) => api.post<User>('/auth/register', data);
+
+export const completeOnboarding = (data: {
+  mode: 'create' | 'join';
+  enterprise_name?: string;
+  invite_code?: string;
+}) => api.post<User>('/auth/onboarding', data);
 
 export const login = (email: string, password: string) =>
   api.post<{ access_token: string; token_type: string; is_platform_admin?: boolean }>('/auth/login', { email, password });

@@ -42,6 +42,7 @@ import {
 import { PlatformAdminLayout, EnterprisesTab, SettingsTab } from './pages/platform-admin';
 import Landing from './pages/Landing';
 import Join from './pages/Join';
+import Onboarding from './pages/Onboarding';
 import { BillingSettings, BillingSuccess, BillingCancel } from './pages/billing';
 
 function App() {
@@ -80,6 +81,14 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/join/:code" element={<Join />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Protected routes */}
         <Route

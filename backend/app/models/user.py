@@ -73,11 +73,11 @@ class User(Base):
         ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
-    # Multi-tenancy
-    enterprise_id: Mapped[uuid.UUID] = mapped_column(
+    # Multi-tenancy (nullable for two-step registration: account first, then onboarding)
+    enterprise_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("enterprises.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
 

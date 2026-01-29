@@ -12,6 +12,7 @@ from app.schemas.auth import (
 # User schemas
 from app.schemas.user import (
     AuthProvider,
+    OnboardingRequest,
     PendingUserResponse,
     UserBase,
     UserBrief,
@@ -194,6 +195,7 @@ __all__ = [
     "TokenResponse",
     # User
     "AuthProvider",
+    "OnboardingRequest",
     "PendingUserResponse",
     "UserBase",
     "UserBrief",

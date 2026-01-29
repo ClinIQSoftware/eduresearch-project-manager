@@ -20,6 +20,7 @@ from app.models.organization import organization_admins
 from app.models.department import Department
 from app.schemas import (
     LoginRequest,
+    OnboardingRequest,
     PasswordChange,
     Token,
     UserCreate,
@@ -224,115 +225,19 @@ def login(login_data: LoginRequest, db: Session = Depends(get_unscoped_db)):
 def register(
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
-    request: Request,
     db: Session = Depends(get_unscoped_db),
 ):
     """Register a new user with email and password.
 
-    Three registration modes:
-    1. enterprise_name provided: Create a new enterprise and register as admin
-    2. invite_code provided: Join an existing enterprise as standard user
-    3. Neither: Fall back to subdomain-based enterprise resolution
+    Creates an account only — no team association.
+    Users complete onboarding (create/join team) separately via POST /auth/onboarding.
     """
-    from app.models.invite_code import InviteCode
-    from app.models.enterprise import Enterprise
-    import uuid as uuid_mod
-    import re
-
-    invite = None
-    is_enterprise_creator = False
-
-    if user_data.enterprise_name and user_data.invite_code:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Provide either a team name or invite code, not both",
-        )
-
-    if user_data.enterprise_name:
-        # --- Mode 1: Create a new enterprise ---
-        name = user_data.enterprise_name.strip()
-        slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
-        if not slug:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid team name",
-            )
-
-        from app.api.routes.platform_admin import RESERVED_SLUGS
-        if slug in RESERVED_SLUGS:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"The name '{name}' cannot be used",
-            )
-
-        existing = db.query(Enterprise).filter(Enterprise.slug == slug).first()
-        if existing:
-            slug = f"{slug}-{uuid_mod.uuid4().hex[:6]}"
-
-        enterprise = Enterprise(
-            slug=slug,
-            name=name,
-            is_active=True,
-            plan_type="free",
-            max_users=3,
-            max_projects=3,
-        )
-        db.add(enterprise)
-        db.flush()
-        enterprise_id = enterprise.id
-        is_enterprise_creator = True
-
-    elif user_data.invite_code:
-        # --- Mode 2: Join via invite code ---
-        invite = db.query(InviteCode).filter(
-            InviteCode.code == user_data.invite_code
-        ).first()
-        if not invite:
-            try:
-                token_uuid = uuid_mod.UUID(user_data.invite_code)
-                invite = db.query(InviteCode).filter(
-                    InviteCode.token == token_uuid
-                ).first()
-            except (ValueError, TypeError):
-                pass
-
-        if not invite or not invite.is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired invite code",
-            )
-
-        enterprise_id = invite.enterprise_id
-
-    else:
-        # --- Mode 3: Subdomain-based enterprise ---
-        if not hasattr(request.state, "enterprise_id") or not request.state.enterprise_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Please provide a team name or invite code to register.",
-            )
-        enterprise_id = request.state.enterprise_id
-
     auth_service = AuthService(db)
 
     try:
-        user = auth_service.register(user_data, enterprise_id)
+        user = auth_service.register(user_data)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-    # If creating enterprise, make user the admin
-    if is_enterprise_creator:
-        user.is_superuser = True
-        user.is_approved = True
-        db.commit()
-        db.refresh(user)
-
-    # Increment invite code use count
-    if invite:
-        db_invite = db.query(InviteCode).filter(InviteCode.id == invite.id).first()
-        if db_invite:
-            db_invite.use_count += 1
-            db.commit()
 
     # Send approval request emails if needed
     if not user.is_approved:
@@ -437,11 +342,7 @@ async def google_callback(
             user = existing_user
             access_token = auth_service.create_token(user)
         else:
-            if not enterprise_id:
-                return RedirectResponse(
-                    url=f"{settings.frontend_url}/register?error=Please register and create a team first, then link your Google account"
-                )
-            # Register via OAuth
+            # Register via OAuth — no enterprise required (two-step registration)
             try:
                 user, access_token = auth_service.register_oauth(
                     email=email,
@@ -544,11 +445,7 @@ async def microsoft_callback(
             user = existing_user
             access_token = auth_service.create_token(user)
         else:
-            if not enterprise_id:
-                return RedirectResponse(
-                    url=f"{settings.frontend_url}/register?error=Please register and create a team first, then link your Microsoft account"
-                )
-            # Register via OAuth
+            # Register via OAuth — no enterprise required (two-step registration)
             try:
                 user, access_token = auth_service.register_oauth(
                     email=email,
@@ -588,3 +485,117 @@ async def microsoft_callback(
         raise
     except Exception as e:
         return RedirectResponse(url=f"{settings.frontend_url}/login?error={str(e)}")
+
+
+@router.post("/onboarding", response_model=UserResponse)
+def complete_onboarding(
+    data: OnboardingRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_unscoped_db),
+):
+    """Complete onboarding by creating or joining a team.
+
+    Requires authentication. Called after account creation for users
+    who don't yet have an enterprise_id.
+    """
+    from app.models.invite_code import InviteCode
+    from app.models.enterprise import Enterprise
+    import uuid as uuid_mod
+    import re
+
+    if current_user.enterprise_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are already part of a team",
+        )
+
+    if data.mode == "create":
+        if not data.enterprise_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Team name is required when creating a team",
+            )
+
+        name = data.enterprise_name.strip()
+        slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+        if not slug:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid team name",
+            )
+
+        from app.api.routes.platform_admin import RESERVED_SLUGS
+        if slug in RESERVED_SLUGS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"The name '{name}' cannot be used",
+            )
+
+        existing = db.query(Enterprise).filter(Enterprise.slug == slug).first()
+        if existing:
+            slug = f"{slug}-{uuid_mod.uuid4().hex[:6]}"
+
+        enterprise = Enterprise(
+            slug=slug,
+            name=name,
+            is_active=True,
+            plan_type="free",
+            max_users=3,
+            max_projects=3,
+        )
+        db.add(enterprise)
+        db.flush()
+
+        # Set user as enterprise admin
+        current_user.enterprise_id = enterprise.id
+        current_user.is_superuser = True
+        current_user.is_approved = True
+        db.commit()
+        db.refresh(current_user)
+
+        return current_user
+
+    elif data.mode == "join":
+        if not data.invite_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invite code is required when joining a team",
+            )
+
+        invite = db.query(InviteCode).filter(
+            InviteCode.code == data.invite_code
+        ).first()
+        if not invite:
+            try:
+                token_uuid = uuid_mod.UUID(data.invite_code)
+                invite = db.query(InviteCode).filter(
+                    InviteCode.token == token_uuid
+                ).first()
+            except (ValueError, TypeError):
+                pass
+
+        if not invite or not invite.is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired invite code",
+            )
+
+        # Join the enterprise
+        current_user.enterprise_id = invite.enterprise_id
+        current_user.is_approved = True
+        db.flush()
+
+        # Increment invite code use count
+        db_invite = db.query(InviteCode).filter(InviteCode.id == invite.id).first()
+        if db_invite:
+            db_invite.use_count += 1
+
+        db.commit()
+        db.refresh(current_user)
+
+        return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Invalid onboarding mode",
+    )

@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { validateInviteCode } from '../api/inviteCodes';
 
 export default function Join() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated, user, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (authLoading) return;
+
     if (!code) {
       setError('No invite code provided');
       setLoading(false);
@@ -19,8 +23,17 @@ export default function Join() {
       try {
         const res = await validateInviteCode(code!);
         if (res.data.valid) {
-          // Redirect to register with invite code pre-filled
-          navigate(`/register?invite=${encodeURIComponent(code!)}`, { replace: true });
+          if (isAuthenticated && user && !user.enterprise_id) {
+            // Authenticated user without a team — go straight to onboarding
+            navigate(`/onboarding?invite=${encodeURIComponent(code!)}`, { replace: true });
+          } else if (isAuthenticated && user?.enterprise_id) {
+            // Already has a team
+            navigate('/dashboard', { replace: true });
+          } else {
+            // Not authenticated — store code and send to register
+            localStorage.setItem('pending_invite_code', code!);
+            navigate(`/register`, { replace: true });
+          }
         } else {
           setError(res.data.message || 'Invalid invite code');
         }
@@ -32,9 +45,9 @@ export default function Join() {
     }
 
     validate();
-  }, [code, navigate]);
+  }, [code, navigate, isAuthenticated, user, authLoading]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -60,7 +73,7 @@ export default function Join() {
             to="/register"
             className="block w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
           >
-            Register without invite code
+            Register
           </Link>
           <Link
             to="/login"

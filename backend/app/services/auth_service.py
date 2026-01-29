@@ -74,12 +74,12 @@ class AuthService:
         token = self.create_token(user)
         return user, token
 
-    def register(self, data: UserCreate, enterprise_id: UUID) -> User:
+    def register(self, data: UserCreate, enterprise_id: Optional[UUID] = None) -> User:
         """Register a new user.
 
         Args:
             data: User creation data.
-            enterprise_id: The enterprise/tenant ID this user belongs to.
+            enterprise_id: The enterprise/tenant ID this user belongs to (optional for two-step registration).
 
         Returns:
             The newly created User.
@@ -128,7 +128,7 @@ class AuthService:
         last_name: str,
         provider: str,
         oauth_id: str,
-        enterprise_id: UUID,
+        enterprise_id: Optional[UUID] = None,
     ) -> Tuple[User, str]:
         """Register or login a user via OAuth.
 
@@ -142,7 +142,7 @@ class AuthService:
             last_name: User's last name from OAuth provider.
             provider: OAuth provider name ('google' or 'microsoft').
             oauth_id: Unique ID from OAuth provider.
-            enterprise_id: The enterprise/tenant ID this user belongs to.
+            enterprise_id: The enterprise/tenant ID this user belongs to (optional for two-step registration).
 
         Returns:
             Tuple of (User, access_token string).
