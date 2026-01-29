@@ -38,8 +38,8 @@ class Enterprise(Base):
 
     # Subscription fields
     plan_type: Mapped[str] = mapped_column(String(20), default="free", nullable=False)
-    max_users: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
-    max_projects: Mapped[Optional[int]] = mapped_column(Integer, default=5, nullable=True)  # None = unlimited
+    max_users: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    max_projects: Mapped[Optional[int]] = mapped_column(Integer, default=3, nullable=True)  # None = unlimited
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     subscription_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)

@@ -61,8 +61,9 @@ export default function AdminLayout() {
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Enterprise Overview</h2>
                 <span className={`inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                  subscription.plan_type === 'pro' ? 'bg-blue-100 text-blue-700' :
-                  subscription.plan_type === 'enterprise' ? 'bg-purple-100 text-purple-700' :
+                  subscription.plan_type === 'starter' ? 'bg-green-100 text-green-700' :
+                  subscription.plan_type === 'team' ? 'bg-blue-100 text-blue-700' :
+                  subscription.plan_type === 'institution' ? 'bg-purple-100 text-purple-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>
                   {planLabel} Plan

@@ -42,14 +42,18 @@ def create_checkout_session(
     if not enterprise:
         raise HTTPException(status_code=404, detail="Enterprise not found")
 
-    if enterprise.plan_type == "pro":
-        raise HTTPException(status_code=400, detail="Already on Pro plan")
+    if enterprise.plan_type == request_data.plan:
+        raise HTTPException(status_code=400, detail=f"Already on {request_data.plan} plan")
+
+    if enterprise.plan_type == "institution":
+        raise HTTPException(status_code=400, detail="Institution plans are managed separately")
 
     service = BillingService(db)
     base_url = str(request.base_url).rstrip("/")
 
     checkout_url = service.create_checkout_session(
         enterprise=enterprise,
+        plan=request_data.plan,
         price_type=request_data.price_type,
         success_url=f"{base_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{base_url}/billing/cancel",

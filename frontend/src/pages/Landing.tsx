@@ -29,28 +29,38 @@ const plans = [
     name: 'Free',
     price: '$0',
     period: '',
-    description: 'For small research teams',
-    features: ['Up to 5 users', 'Up to 5 projects', 'Basic features'],
+    description: 'For individual researchers',
+    features: ['Up to 3 users', 'Up to 3 projects', 'Core project management'],
     cta: 'Get Started Free',
     href: '/register',
     highlighted: false,
   },
   {
-    name: 'Pro',
-    price: '$29',
+    name: 'Starter',
+    price: '$12',
     period: '/month',
-    description: 'For growing institutions',
-    features: ['Up to 10 users', 'Unlimited projects', 'Priority support'],
-    cta: 'Start Free, Upgrade Later',
+    description: 'For research labs',
+    features: ['Up to 10 users', 'Up to 15 projects', 'File sharing & full reports', 'Email support'],
+    cta: 'Start with Starter',
+    href: '/register',
+    highlighted: false,
+  },
+  {
+    name: 'Team',
+    price: '$39',
+    period: '/month',
+    description: 'For departments',
+    features: ['Up to 50 users', 'Unlimited projects', 'Cross-institutional collaboration', 'Priority support'],
+    cta: 'Go with Team',
     href: '/register',
     highlighted: true,
   },
   {
-    name: 'Enterprise',
+    name: 'Institution',
     price: 'Custom',
     period: '',
-    description: 'For large organizations',
-    features: ['Unlimited users', 'Unlimited projects', 'Dedicated support', 'Custom integrations'],
+    description: 'For universities',
+    features: ['Unlimited users', 'Unlimited projects', 'SSO & custom integrations', 'Dedicated support & SLA'],
     cta: 'Contact Us',
     href: 'mailto:sales@eduresearch.app',
     highlighted: false,
@@ -136,7 +146,7 @@ export default function Landing() {
           <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
             Start free and upgrade as your team grows. No hidden fees.
           </p>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
             {plans.map((plan) => (
               <div
                 key={plan.name}

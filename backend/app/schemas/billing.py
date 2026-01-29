@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class CreateCheckoutSessionRequest(BaseModel):
     """Request to create a Stripe checkout session."""
+    plan: Literal["starter", "team"]
     price_type: Literal["monthly", "annual"]
 
 

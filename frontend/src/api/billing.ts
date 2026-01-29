@@ -11,8 +11,8 @@ export interface SubscriptionStatus {
   cancel_at_period_end: boolean;
 }
 
-export const createCheckoutSession = (priceType: 'monthly' | 'annual') =>
-  client.post<{ checkout_url: string }>('/billing/create-checkout-session', { price_type: priceType });
+export const createCheckoutSession = (plan: 'starter' | 'team', priceType: 'monthly' | 'annual') =>
+  client.post<{ checkout_url: string }>('/billing/create-checkout-session', { plan, price_type: priceType });
 
 export const createPortalSession = () =>
   client.post<{ portal_url: string }>('/billing/create-portal-session');

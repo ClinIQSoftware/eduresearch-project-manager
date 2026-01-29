@@ -37,7 +37,7 @@ export default function UpgradeBanner() {
           to="/settings/billing"
           className={`text-sm font-medium ${isAtLimit ? 'text-red-700 hover:text-red-800' : 'text-yellow-700 hover:text-yellow-800'}`}
         >
-          Upgrade to Pro →
+          Upgrade your plan →
         </Link>
       </div>
     </div>
