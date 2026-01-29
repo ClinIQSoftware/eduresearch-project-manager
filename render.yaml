@@ -32,6 +32,19 @@ services:
         sync: false
       - key: MICROSOFT_CLIENT_SECRET
         sync: false
+      # Stripe Billing
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_STARTER_PRICE_MONTHLY
+        sync: false
+      - key: STRIPE_STARTER_PRICE_ANNUAL
+        sync: false
+      - key: STRIPE_TEAM_PRICE_MONTHLY
+        sync: false
+      - key: STRIPE_TEAM_PRICE_ANNUAL
+        sync: false
       # Optional: Email/SMTP
       - key: SMTP_USER
         sync: false
@@ -62,3 +75,5 @@ services:
     envVars:
       - key: VITE_API_URL
         sync: false  # Set this to your backend API URL after deployment (e.g., https://eduresearch-api.onrender.com/api)
+      - key: VITE_STRIPE_PUBLISHABLE_KEY
+        sync: false
