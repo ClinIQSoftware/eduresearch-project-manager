@@ -176,24 +176,30 @@ export default function Register() {
           </div>
         )}
 
-        {/* OAuth Buttons */}
+        {/* OAuth Buttons - only available for joining existing teams */}
         <div className="mb-6">
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={handleGoogleLogin}
-              className="flex items-center justify-center px-4 py-2 border rounded-lg hover:bg-gray-50"
-            >
-              <span className="text-red-500 mr-2">G</span>
-              Google
-            </button>
-            <button
-              onClick={handleMicrosoftLogin}
-              className="flex items-center justify-center px-4 py-2 border rounded-lg hover:bg-gray-50"
-            >
-              <span className="text-blue-500 mr-2">M</span>
-              Microsoft
-            </button>
-          </div>
+          {mode === 'create' && !inviteCode ? (
+            <p className="text-xs text-gray-400 text-center mb-4">
+              Google/Microsoft sign-up available after creating your team with email.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={handleGoogleLogin}
+                className="flex items-center justify-center px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                <span className="text-red-500 mr-2">G</span>
+                Google
+              </button>
+              <button
+                onClick={handleMicrosoftLogin}
+                className="flex items-center justify-center px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                <span className="text-blue-500 mr-2">M</span>
+                Microsoft
+              </button>
+            </div>
+          )}
           <div className="relative mt-4">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300"></div>
