@@ -223,6 +223,7 @@ function App() {
           <Route index element={<Navigate to="/platform-admin/enterprises" replace />} />
           <Route path="enterprises" element={<EnterprisesTab />} />
           <Route path="settings" element={<SettingsTab />} />
+          <Route path="*" element={<Navigate to="/platform-admin/enterprises" replace />} />
         </Route>
       </Routes>
       </AuthProvider>
