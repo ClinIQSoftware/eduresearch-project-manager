@@ -12,7 +12,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
-from app.api.deps import get_current_enterprise_id, get_current_user, get_db, get_tenant_db
+from app.api.deps import get_current_enterprise_id, get_current_user, get_unscoped_db, get_tenant_db
 from app.config import settings
 from app.models.user import User, AuthProvider
 from app.models.institution import Institution
@@ -148,7 +148,7 @@ async def send_approval_emails_async(db: Session, user: User):
 
 
 @router.post("/login", response_model=Token)
-def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+def login(login_data: LoginRequest, db: Session = Depends(get_unscoped_db)):
     """Login with email and password.
 
     Checks platform_admins table first, then falls back to users table.
@@ -310,7 +310,7 @@ def get_me(current_user: User = Depends(get_current_user)):
 def update_me(
     user_data: UserUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_unscoped_db),
 ):
     """Update current user profile."""
     user_service = UserService(db)
@@ -327,7 +327,7 @@ def update_me(
 def change_password(
     password_data: PasswordChange,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_unscoped_db),
 ):
     """Change current user's password."""
     auth_service = AuthService(db)

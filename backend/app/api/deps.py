@@ -4,6 +4,7 @@ This module provides dependency injection functions for FastAPI routes,
 including authentication, authorization, and database session management.
 """
 
+import logging
 from typing import Optional
 from uuid import UUID
 
@@ -13,17 +14,50 @@ from sqlalchemy.orm import Session
 
 from app.core.security import decode_token
 from app.database import SessionLocal, get_tenant_session, get_platform_session
+from app.middleware.tenant import tenant_context_var
 from app.models.user import User
 from app.models.project import Project
 from app.models.project_member import ProjectMember, MemberRole
 from app.models.organization import organization_admins
 from app.services import AuthService
 
+logger = logging.getLogger(__name__)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def get_db():
-    """Get a database session.
+    """Get a database session WITHOUT tenant scoping.
+
+    WARNING: This does not apply Row Level Security. In tenant-scoped
+    requests, use get_tenant_db instead. A warning will be logged if
+    this is called during a tenant-scoped request.
+
+    For intentional cross-tenant access (cron jobs, auth), use
+    get_unscoped_db to suppress the warning.
+
+    Yields:
+        Session: SQLAlchemy database session.
+    """
+    enterprise_id = tenant_context_var.get()
+    if enterprise_id is not None:
+        logger.warning(
+            "get_db() used in tenant-scoped request (enterprise=%s). "
+            "Use get_tenant_db for tenant isolation or get_unscoped_db "
+            "for intentional cross-tenant access.",
+            enterprise_id,
+        )
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_unscoped_db():
+    """Get a database session WITHOUT tenant scoping — intentionally.
+
+    Use this for endpoints that legitimately need cross-tenant access,
+    such as cron jobs, auth flows, and enterprise branding lookups.
 
     Yields:
         Session: SQLAlchemy database session.
@@ -239,7 +273,7 @@ def count_project_leads(db: Session, project_id: int) -> int:
     )
 
 
-def get_project_or_404(project_id: int, db: Session = Depends(get_db)) -> Project:
+def get_project_or_404(project_id: int, db: Session = Depends(get_tenant_db)) -> Project:
     """Get a project by ID or raise 404.
 
     Args:
@@ -310,6 +344,74 @@ def require_admin_access(
                 detail="Superuser access required",
             )
     return current_user
+
+
+def require_project_member(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_tenant_db),
+) -> Project:
+    """Require the current user to be a member (any role) of the project.
+
+    Superusers bypass this check. Returns the project for use in the route.
+
+    Args:
+        project_id: The project ID from the path.
+        current_user: The authenticated user.
+        db: Tenant-scoped database session.
+
+    Returns:
+        The Project if user has access.
+
+    Raises:
+        HTTPException: If project not found or user is not a member.
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+    if not current_user.is_superuser and not is_project_member(
+        db, current_user.id, project_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Project member access required"
+        )
+    return project
+
+
+def require_project_lead(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_tenant_db),
+) -> Project:
+    """Require the current user to be a lead of the project.
+
+    Superusers bypass this check. Returns the project for use in the route.
+
+    Args:
+        project_id: The project ID from the path.
+        current_user: The authenticated user.
+        db: Tenant-scoped database session.
+
+    Returns:
+        The Project if user has lead access.
+
+    Raises:
+        HTTPException: If project not found or user is not a lead.
+    """
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+    if not current_user.is_superuser and not is_project_lead(
+        db, current_user.id, project_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Project lead access required"
+        )
+    return project
 
 
 def get_current_enterprise_id(request: Request) -> UUID:

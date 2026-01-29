@@ -1,5 +1,7 @@
 """Tenant resolution middleware for multi-tenancy."""
 
+import contextvars
+import logging
 import re
 from typing import Optional
 from uuid import UUID
@@ -12,6 +14,14 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.config import settings
 from app.models.enterprise import Enterprise
+
+logger = logging.getLogger(__name__)
+
+# Context variable to track whether the current request is tenant-scoped.
+# Used by get_db() to warn when unscoped DB access is used in a tenant context.
+tenant_context_var: contextvars.ContextVar[Optional[UUID]] = contextvars.ContextVar(
+    "tenant_context_var", default=None
+)
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
 RESERVED_SLUGS = {"admin", "api", "www", "app", "static", "assets"}
@@ -70,7 +80,12 @@ class TenantMiddleware(BaseHTTPMiddleware):
         request.state.enterprise_id = enterprise.id
         request.state.enterprise = enterprise
 
-        return await call_next(request)
+        # Set context variable so get_db() can detect tenant-scoped requests
+        token = tenant_context_var.set(enterprise.id)
+        try:
+            return await call_next(request)
+        finally:
+            tenant_context_var.reset(token)
 
     def _extract_subdomain(self, host: str) -> str:
         """Extract subdomain from host header."""

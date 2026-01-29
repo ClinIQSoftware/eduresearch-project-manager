@@ -15,10 +15,11 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.deps import (
     get_current_enterprise_id,
     get_current_user,
-    get_db,
     get_tenant_db,
+    get_unscoped_db,
     is_project_lead,
     count_project_leads,
+    require_project_lead,
 )
 from app.config import settings
 from app.models.enterprise import Enterprise
@@ -204,25 +205,12 @@ async def update_project(
     project_id: int,
     project_data: ProjectUpdate,
     background_tasks: BackgroundTasks,
+    project: Project = Depends(require_project_lead),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
 ):
     """Update project (lead only). Notifies all participants."""
     project_service = ProjectService(db)
-    project = project_service.get_project(project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-        )
-
-    # Check lead access
-    if not current_user.is_superuser and not is_project_lead(
-        db, current_user.id, project_id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Only project lead can update"
-        )
 
     try:
         updated_project = project_service.update_project(project_id, project_data)
@@ -263,24 +251,11 @@ async def update_project(
 @router.delete("/{project_id}")
 def delete_project(
     project_id: int,
-    current_user: User = Depends(get_current_user),
+    _project: Project = Depends(require_project_lead),
     db: Session = Depends(get_tenant_db),
 ):
     """Delete project (lead or superuser only)."""
     project_service = ProjectService(db)
-    project = project_service.get_project(project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-        )
-
-    if not current_user.is_superuser and not is_project_lead(
-        db, current_user.id, project_id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Only project lead can delete"
-        )
 
     try:
         project_service.delete_project(project_id)
@@ -319,26 +294,12 @@ def get_project_members(
 def add_project_member(
     project_id: int,
     member_data: AddProjectMemberRequest,
-    current_user: User = Depends(get_current_user),
+    _project: Project = Depends(require_project_lead),
     db: Session = Depends(get_tenant_db),
     enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Add member to project (lead only)."""
     project_service = ProjectService(db)
-    project = project_service.get_project(project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-        )
-
-    if not current_user.is_superuser and not is_project_lead(
-        db, current_user.id, project_id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only project lead can add members",
-        )
 
     # Check if user exists
     user = db.query(User).filter(User.id == member_data.user_id).first()
@@ -361,25 +322,11 @@ def add_project_member(
 def remove_project_member(
     project_id: int,
     user_id: int,
-    current_user: User = Depends(get_current_user),
+    _project: Project = Depends(require_project_lead),
     db: Session = Depends(get_tenant_db),
 ):
     """Remove member from project (lead only)."""
     project_service = ProjectService(db)
-    project = project_service.get_project(project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-        )
-
-    if not current_user.is_superuser and not is_project_lead(
-        db, current_user.id, project_id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only project lead can remove members",
-        )
 
     # Check if removing a lead - ensure at least one lead remains
     member = (
@@ -411,24 +358,10 @@ def update_member_role(
     project_id: int,
     user_id: int,
     role: str,
-    current_user: User = Depends(get_current_user),
+    _project: Project = Depends(require_project_lead),
     db: Session = Depends(get_tenant_db),
 ):
     """Change a member's role (lead only). Ensure at least one lead remains."""
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-        )
-
-    if not current_user.is_superuser and not is_project_lead(
-        db, current_user.id, project_id
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only project lead can change member roles",
-        )
-
     member = (
         db.query(ProjectMember)
         .filter(
@@ -509,7 +442,7 @@ class SendRemindersRequest(BaseModel):
 
 @router.post("/send-reminders")
 async def send_project_reminders(
-    data: SendRemindersRequest, db: Session = Depends(get_db)
+    data: SendRemindersRequest, db: Session = Depends(get_unscoped_db)
 ):
     """Cron-triggered endpoint to send project meeting and deadline reminders."""
     # Validate cron secret

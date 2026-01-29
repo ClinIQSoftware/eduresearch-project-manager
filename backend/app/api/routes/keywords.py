@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List, Optional
 from datetime import datetime, timedelta
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_unscoped_db, get_current_user
 from app.models.project import Project
 from app.models.user import User
 from app.models.user_keyword import UserKeyword
@@ -359,7 +359,7 @@ def get_new_matched_projects(
 
 
 @router.post("/send-alerts")
-async def send_scheduled_alerts(data: SendAlertsRequest, db: Session = Depends(get_db)):
+async def send_scheduled_alerts(data: SendAlertsRequest, db: Session = Depends(get_unscoped_db)):
     """
     Cron-triggered endpoint to send scheduled keyword alert emails.
     Requires cron_secret for authentication.

@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_superuser
+from app.api.deps import get_unscoped_db, get_current_superuser
 from app.models.user import User
 from app.models.enterprise import Enterprise
 from app.models.enterprise_config import EnterpriseConfig
@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 @router.get("/branding", response_model=EnterpriseBrandingResponse)
-def get_enterprise_branding(request: Request, db: Session = Depends(get_db)):
+def get_enterprise_branding(request: Request, db: Session = Depends(get_unscoped_db)):
     """Get public branding for current enterprise (no auth required)."""
     if not hasattr(request.state, "enterprise") or not request.state.enterprise:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enterprise not found")
@@ -35,7 +35,7 @@ def get_enterprise_branding(request: Request, db: Session = Depends(get_db)):
 @router.get("/config", response_model=EnterpriseConfigResponse)
 def get_enterprise_config(
     request: Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_unscoped_db),
     current_user: User = Depends(get_current_superuser),
 ):
     """Get enterprise configuration (superuser only)."""

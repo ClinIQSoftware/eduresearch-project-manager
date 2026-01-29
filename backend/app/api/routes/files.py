@@ -17,7 +17,12 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_current_user, get_tenant_db, is_project_lead, is_project_member
+from app.api.deps import (
+    get_current_user,
+    get_tenant_db,
+    is_project_member,
+    require_project_member,
+)
 from app.models.project_file import ProjectFile
 from app.models.project import Project
 from app.models.user import User
@@ -35,25 +40,11 @@ async def upload_file(
     project_id: int,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    project: Project = Depends(require_project_member),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
 ):
     """Upload a file to a project. Notifies project lead via email with attachment."""
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-        )
-
-    # Check if user has access (member or lead)
-    if not current_user.is_superuser:
-        if not is_project_lead(
-            db, current_user.id, project_id
-        ) and not is_project_member(db, current_user.id, project_id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
-
     file_service = FileService(db)
 
     try:
@@ -87,25 +78,10 @@ async def upload_file(
 @router.get("/project/{project_id}", response_model=List[FileWithUploader])
 def get_project_files(
     project_id: int,
-    current_user: User = Depends(get_current_user),
+    _project: Project = Depends(require_project_member),
     db: Session = Depends(get_tenant_db),
 ):
     """Get all files for a project."""
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-        )
-
-    # Check membership
-    if not current_user.is_superuser:
-        if not is_project_lead(db, current_user.id, project_id) and not is_project_member(
-            db, current_user.id, project_id
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
-            )
-
     files = (
         db.query(ProjectFile)
         .options(joinedload(ProjectFile.uploaded_by))
@@ -136,11 +112,9 @@ def get_file_info(
             status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
         )
 
-    # Check membership
+    # Check membership (file-level routes lack project_id in path, so inline check)
     if not current_user.is_superuser:
-        if not is_project_lead(
-            db, current_user.id, project_file.project_id
-        ) and not is_project_member(db, current_user.id, project_file.project_id):
+        if not is_project_member(db, current_user.id, project_file.project_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
@@ -163,9 +137,7 @@ async def download_file(
 
     # Check access
     if not current_user.is_superuser:
-        if not is_project_lead(
-            db, current_user.id, project_file.project_id
-        ) and not is_project_member(db, current_user.id, project_file.project_id):
+        if not is_project_member(db, current_user.id, project_file.project_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )

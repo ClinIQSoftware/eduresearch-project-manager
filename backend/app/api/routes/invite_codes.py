@@ -9,7 +9,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_tenant_db, get_current_enterprise_id, get_db
+from app.api.deps import get_current_user, get_tenant_db, get_current_enterprise_id, get_unscoped_db
 from app.models.invite_code import InviteCode
 from app.models.enterprise import Enterprise
 from app.models.user import User
@@ -169,7 +169,7 @@ def deactivate_invite_code(
 @router.get("/join/validate", response_model=InviteCodeValidation)
 def validate_invite_code(
     code: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_unscoped_db),
 ):
     """Validate an invite code or link token and return enterprise info.
 
