@@ -225,53 +225,92 @@ def register(
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
     request: Request,
-    db: Session = Depends(get_tenant_db),
+    db: Session = Depends(get_unscoped_db),
 ):
     """Register a new user with email and password.
 
-    If an invite_code is provided, the user is registered under the
-    enterprise associated with that invite code. Otherwise, the user
-    is registered under the enterprise resolved from the subdomain.
-
-    If registration approval is required, the user will be created
-    in a pending state and admins will be notified.
+    Three registration modes:
+    1. enterprise_name provided: Create a new enterprise and register as admin
+    2. invite_code provided: Join an existing enterprise as standard user
+    3. Neither: Fall back to subdomain-based enterprise resolution
     """
     from app.models.invite_code import InviteCode
+    from app.models.enterprise import Enterprise
     import uuid as uuid_mod
+    import re
 
-    # Determine enterprise_id: from invite code or from subdomain
     invite = None
-    if user_data.invite_code:
-        # Look up invite code (use raw db, not tenant-scoped)
-        from app.database import get_platform_session
-        platform_db = next(get_platform_session())
-        try:
-            invite = platform_db.query(InviteCode).filter(
-                InviteCode.code == user_data.invite_code
-            ).first()
-            if not invite:
-                # Try as UUID token
-                try:
-                    token_uuid = uuid_mod.UUID(user_data.invite_code)
-                    invite = platform_db.query(InviteCode).filter(
-                        InviteCode.token == token_uuid
-                    ).first()
-                except (ValueError, TypeError):
-                    pass
+    is_enterprise_creator = False
 
-            if not invite or not invite.is_valid:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid or expired invite code",
-                )
+    if user_data.enterprise_name and user_data.invite_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide either a team name or invite code, not both",
+        )
 
-            enterprise_id = invite.enterprise_id
-        finally:
-            platform_db.close()
+    if user_data.enterprise_name:
+        # --- Mode 1: Create a new enterprise ---
+        name = user_data.enterprise_name.strip()
+        slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+        if not slug:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid team name",
+            )
+
+        from app.api.routes.platform_admin import RESERVED_SLUGS
+        if slug in RESERVED_SLUGS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"The name '{name}' cannot be used",
+            )
+
+        existing = db.query(Enterprise).filter(Enterprise.slug == slug).first()
+        if existing:
+            slug = f"{slug}-{uuid_mod.uuid4().hex[:6]}"
+
+        enterprise = Enterprise(
+            slug=slug,
+            name=name,
+            is_active=True,
+            plan_type="free",
+            max_users=3,
+            max_projects=3,
+        )
+        db.add(enterprise)
+        db.flush()
+        enterprise_id = enterprise.id
+        is_enterprise_creator = True
+
+    elif user_data.invite_code:
+        # --- Mode 2: Join via invite code ---
+        invite = db.query(InviteCode).filter(
+            InviteCode.code == user_data.invite_code
+        ).first()
+        if not invite:
+            try:
+                token_uuid = uuid_mod.UUID(user_data.invite_code)
+                invite = db.query(InviteCode).filter(
+                    InviteCode.token == token_uuid
+                ).first()
+            except (ValueError, TypeError):
+                pass
+
+        if not invite or not invite.is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired invite code",
+            )
+
+        enterprise_id = invite.enterprise_id
+
     else:
-        # Fall back to subdomain-based enterprise
+        # --- Mode 3: Subdomain-based enterprise ---
         if not hasattr(request.state, "enterprise_id") or not request.state.enterprise_id:
-            raise HTTPException(status_code=400, detail="Enterprise context required")
+            raise HTTPException(
+                status_code=400,
+                detail="Please provide a team name or invite code to register.",
+            )
         enterprise_id = request.state.enterprise_id
 
     auth_service = AuthService(db)
@@ -281,17 +320,19 @@ def register(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+    # If creating enterprise, make user the admin
+    if is_enterprise_creator:
+        user.is_superuser = True
+        user.is_approved = True
+        db.commit()
+        db.refresh(user)
+
     # Increment invite code use count
     if invite:
-        from app.database import get_platform_session
-        platform_db = next(get_platform_session())
-        try:
-            db_invite = platform_db.query(InviteCode).filter(InviteCode.id == invite.id).first()
-            if db_invite:
-                db_invite.use_count += 1
-                platform_db.commit()
-        finally:
-            platform_db.close()
+        db_invite = db.query(InviteCode).filter(InviteCode.id == invite.id).first()
+        if db_invite:
+            db_invite.use_count += 1
+            db.commit()
 
     # Send approval request emails if needed
     if not user.is_approved:

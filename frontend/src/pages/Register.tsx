@@ -11,6 +11,9 @@ export default function Register() {
   const [searchParams] = useSearchParams();
   const inviteCode = searchParams.get('invite') || '';
 
+  // Registration mode: 'create' = new team, 'join' = existing team via invite code
+  const [mode, setMode] = useState<'create' | 'join'>(inviteCode ? 'join' : 'create');
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -21,6 +24,7 @@ export default function Register() {
     institution_id: '',
     department_id: '',
     join_code: inviteCode,
+    enterprise_name: '',
   });
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -76,6 +80,16 @@ export default function Register() {
     e.preventDefault();
     setError('');
 
+    if (mode === 'create' && !inviteCode && !formData.enterprise_name.trim()) {
+      setError('Please enter a team name');
+      return;
+    }
+
+    if (mode === 'join' && !inviteCode && !formData.join_code.trim()) {
+      setError('Please enter an invite code');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -97,7 +111,8 @@ export default function Register() {
         phone: formData.phone || undefined,
         institution_id: formData.institution_id ? Number(formData.institution_id) : undefined,
         department_id: formData.department_id ? Number(formData.department_id) : undefined,
-        invite_code: formData.join_code || undefined,
+        invite_code: mode === 'join' ? (formData.join_code || undefined) : undefined,
+        enterprise_name: mode === 'create' ? (formData.enterprise_name || undefined) : undefined,
       });
 
       // Auto-login after registration
@@ -130,6 +145,34 @@ export default function Register() {
         {error && (
           <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">
             {error}
+          </div>
+        )}
+
+        {/* Mode toggle - only show if no invite code from URL */}
+        {!inviteCode && (
+          <div className="flex rounded-lg border border-gray-300 mb-6 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setMode('create')}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                mode === 'create'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Create a new team
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('join')}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                mode === 'join'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Join an existing team
+            </button>
           </div>
         )}
 
@@ -232,19 +275,37 @@ export default function Register() {
             />
           </div>
 
-          {/* Join Code field - shown when no invite from URL */}
-          {!inviteCode && (
+          {/* Enterprise name field - shown in 'create' mode */}
+          {mode === 'create' && !inviteCode && (
             <div>
-              <label className="block text-sm font-medium mb-1">Join Code</label>
+              <label className="block text-sm font-medium mb-1">Team / Organization Name *</label>
+              <input
+                type="text"
+                value={formData.enterprise_name}
+                onChange={(e) => setFormData({ ...formData, enterprise_name: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2"
+                placeholder="e.g. Smith Research Lab"
+                required={mode === 'create'}
+                minLength={2}
+                maxLength={255}
+              />
+              <p className="text-xs text-gray-400 mt-1">You'll be the admin of this team.</p>
+            </div>
+          )}
+
+          {/* Join Code field - shown in 'join' mode or when invite from URL */}
+          {(mode === 'join' && !inviteCode) && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Invite Code *</label>
               <input
                 type="text"
                 value={formData.join_code}
                 onChange={(e) => setFormData({ ...formData, join_code: e.target.value.toUpperCase() })}
                 className="w-full border rounded-lg px-3 py-2"
-                placeholder="Enter join code if you have one"
+                placeholder="Enter invite code from your team admin"
+                required={mode === 'join'}
                 maxLength={20}
               />
-              <p className="text-xs text-gray-400 mt-1">Optional. Provided by your organization admin.</p>
             </div>
           )}
 

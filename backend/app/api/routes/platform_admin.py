@@ -625,6 +625,53 @@ def test_platform_email(
     return {"message": f"Test email sent to {test_data.to}"}
 
 
+@router.post("/wipe-data")
+def wipe_all_data(
+    _admin_id: UUID = Depends(require_platform_admin),
+    db: Session = Depends(get_platform_db),
+):
+    """Wipe all application data (except platform admins and alembic_version).
+
+    WARNING: This permanently deletes all enterprises, users, projects, etc.
+    Requires platform admin authentication.
+    """
+    from sqlalchemy import text
+
+    # Order matters due to foreign keys — delete children first
+    tables_to_truncate = [
+        "time_entries",
+        "tasks",
+        "project_files",
+        "project_members",
+        "join_requests",
+        "user_alert_preferences",
+        "user_keywords",
+        "invite_codes",
+        "projects",
+        "organization_admins",
+        "users",
+        "email_settings",
+        "email_templates",
+        "enterprise_configs",
+        "departments",
+        "institutions",
+        "enterprises",
+        "system_settings",
+    ]
+
+    for table in tables_to_truncate:
+        try:
+            db.execute(text(f"TRUNCATE TABLE {table} CASCADE"))
+        except Exception:
+            # Table may not exist yet
+            db.rollback()
+            continue
+
+    db.commit()
+
+    return {"message": "All application data has been wiped successfully"}
+
+
 @router.get("/setup-status")
 def get_setup_status(
     admin_id: UUID = Depends(require_platform_admin),

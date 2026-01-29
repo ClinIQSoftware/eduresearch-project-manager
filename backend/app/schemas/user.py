@@ -27,6 +27,7 @@ class UserCreate(UserBase):
     institution_id: Optional[int] = None
     department_id: Optional[int] = None
     invite_code: Optional[str] = Field(None, max_length=50)
+    enterprise_name: Optional[str] = Field(None, min_length=2, max_length=255)
 
 
 class UserCreateAdmin(BaseModel):

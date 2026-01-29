@@ -137,6 +137,12 @@ export default function Login() {
             Sign up
           </Link>
         </p>
+
+        <p className="mt-3 text-center">
+          <Link to="/platform-admin/login" className="text-xs text-gray-400 hover:text-gray-600">
+            Platform Admin
+          </Link>
+        </p>
       </div>
     </div>
   );

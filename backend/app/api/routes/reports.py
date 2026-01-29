@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_tenant_db, get_current_user
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.task import Task
@@ -69,7 +69,7 @@ class ReportsOverview(BaseModel):
 
 @router.get("/projects-with-leads", response_model=List[ProjectWithLeadReport])
 def get_projects_with_leads(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_tenant_db)
 ):
     """Get all projects with their lead information."""
     query = db.query(Project).options(joinedload(Project.lead))
@@ -104,7 +104,7 @@ def get_projects_with_leads(
 
 @router.get("/leads-with-projects", response_model=List[LeadWithProjects])
 def get_leads_with_projects(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_tenant_db)
 ):
     """Get all active leads with their projects."""
     # Get users who are leads of at least one project
@@ -151,7 +151,7 @@ def get_leads_with_projects(
 
 @router.get("/users-with-projects", response_model=List[UserWithProjects])
 def get_users_with_projects(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_tenant_db)
 ):
     """Get all users with their project involvement."""
     # Get users who are members of at least one project
@@ -207,7 +207,7 @@ def get_users_with_projects(
 
 @router.get("/overview", response_model=ReportsOverview)
 def get_reports_overview(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_tenant_db)
 ):
     """Get aggregated statistics for reports dashboard."""
     # Base query filters
