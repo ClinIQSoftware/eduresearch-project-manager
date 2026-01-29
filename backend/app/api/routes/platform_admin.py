@@ -47,20 +47,30 @@ router = APIRouter()
 RESERVED_SLUGS = {"admin", "api", "www", "app", "static", "assets"}
 
 
-def require_platform_admin(request: Request) -> None:
-    """Verify that the request is from a platform admin.
+def require_platform_admin(
+    request: Request,
+    admin_id: UUID = Depends(get_platform_admin_id),
+) -> UUID:
+    """Verify that the request is from an authenticated platform admin.
 
-    Args:
-        request: The FastAPI request object.
+    Checks both the middleware flag AND a valid JWT token to prevent
+    header-only bypass attacks.
 
-    Raises:
-        HTTPException: If user is not a platform admin.
+    Returns:
+        The verified platform admin UUID.
     """
     if not getattr(request.state, "is_platform_admin", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Platform admin access required",
         )
+    if not admin_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Valid platform admin token required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return admin_id
 
 
 def generate_subdomain_url(slug: str) -> str:
@@ -137,9 +147,8 @@ def platform_admin_login(
 
 @router.post("/auth/change-password")
 def change_password(
-    request: Request,
     password_data: PasswordChangeRequest,
-    admin_id: UUID = Depends(get_platform_admin_id),
+    admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Change platform admin password.
@@ -147,14 +156,6 @@ def change_password(
     Requires authentication. The current password must be provided
     for verification. On success, clears the must_change_password flag.
     """
-    require_platform_admin(request)
-
-    if not admin_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not identify admin from token",
-        )
-
     admin = db.query(PlatformAdmin).filter(PlatformAdmin.id == admin_id).first()
     if not admin:
         raise HTTPException(
@@ -177,22 +178,13 @@ def change_password(
 
 @router.get("/me", response_model=PlatformAdminProfileResponse)
 def get_current_admin_profile(
-    request: Request,
-    admin_id: UUID = Depends(get_platform_admin_id),
+    admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Get the current platform admin's profile.
 
     Returns the admin's profile information based on the JWT token.
     """
-    require_platform_admin(request)
-
-    if not admin_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not identify admin from token",
-        )
-
     admin = db.query(PlatformAdmin).filter(PlatformAdmin.id == admin_id).first()
     if not admin:
         raise HTTPException(
@@ -205,9 +197,8 @@ def get_current_admin_profile(
 
 @router.put("/me", response_model=PlatformAdminProfileResponse)
 def update_admin_credentials(
-    request: Request,
     credentials_data: PlatformAdminCredentialsUpdate,
-    admin_id: UUID = Depends(get_platform_admin_id),
+    admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Update the current platform admin's credentials.
@@ -215,14 +206,6 @@ def update_admin_credentials(
     Requires current password for verification. Can update email,
     password, and/or name.
     """
-    require_platform_admin(request)
-
-    if not admin_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not identify admin from token",
-        )
-
     admin = db.query(PlatformAdmin).filter(PlatformAdmin.id == admin_id).first()
     if not admin:
         raise HTTPException(
@@ -271,14 +254,13 @@ def update_admin_credentials(
 
 @router.get("/stats", response_model=PlatformStatsResponse)
 def get_platform_stats(
-    request: Request,
+    _admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Get platform-wide statistics.
 
     Returns counts of enterprises, users, projects, and institutions.
     """
-    require_platform_admin(request)
 
     total_enterprises = db.query(func.count(Enterprise.id)).scalar() or 0
     active_enterprises = (
@@ -302,14 +284,13 @@ def get_platform_stats(
 
 @router.get("/enterprises", response_model=List[EnterpriseListItem])
 def list_enterprises(
-    request: Request,
+    _admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """List all enterprises with user and project counts.
 
     Returns enterprises sorted by creation date (newest first).
     """
-    require_platform_admin(request)
 
     # Get enterprises with counts
     enterprises = db.query(Enterprise).order_by(Enterprise.created_at.desc()).all()
@@ -352,15 +333,14 @@ def list_enterprises(
     status_code=status.HTTP_201_CREATED,
 )
 def create_enterprise(
-    request: Request,
     enterprise_data: EnterpriseCreate,
+    _admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Create a new enterprise.
 
     Validates that the slug is not reserved and not already in use.
     """
-    require_platform_admin(request)
 
     # Check for reserved slugs
     if enterprise_data.slug.lower() in RESERVED_SLUGS:
@@ -409,11 +389,10 @@ def create_enterprise(
 @router.get("/enterprises/{enterprise_id}", response_model=EnterpriseDetailResponse)
 def get_enterprise(
     enterprise_id: UUID,
-    request: Request,
+    _admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Get detailed information about a specific enterprise."""
-    require_platform_admin(request)
 
     enterprise = db.query(Enterprise).filter(Enterprise.id == enterprise_id).first()
     if not enterprise:
@@ -463,12 +442,11 @@ def get_enterprise(
 @router.patch("/enterprises/{enterprise_id}", response_model=EnterpriseDetailResponse)
 def update_enterprise(
     enterprise_id: UUID,
-    request: Request,
     enterprise_data: EnterpriseUpdate,
+    _admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Update an enterprise's name or active status."""
-    require_platform_admin(request)
 
     enterprise = db.query(Enterprise).filter(Enterprise.id == enterprise_id).first()
     if not enterprise:
@@ -524,14 +502,13 @@ def update_enterprise(
 @router.delete("/enterprises/{enterprise_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_enterprise(
     enterprise_id: UUID,
-    request: Request,
+    _admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Soft delete (deactivate) an enterprise.
 
     This does not permanently delete the enterprise, only marks it as inactive.
     """
-    require_platform_admin(request)
 
     enterprise = db.query(Enterprise).filter(Enterprise.id == enterprise_id).first()
     if not enterprise:
@@ -550,7 +527,7 @@ def delete_enterprise(
 # Platform Email Settings endpoints
 @router.get("/settings/email", response_model=PlatformEmailSettingsResponse)
 def get_platform_email_settings(
-    request: Request,
+    _admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Get platform-wide default email settings.
@@ -558,7 +535,6 @@ def get_platform_email_settings(
     These settings are inherited by all enterprises that don't have
     their own email configuration.
     """
-    require_platform_admin(request)
 
     email_settings = (
         db.query(EmailSettings)
@@ -585,8 +561,8 @@ def get_platform_email_settings(
 
 @router.put("/settings/email", response_model=PlatformEmailSettingsResponse)
 def update_platform_email_settings(
-    request: Request,
     settings_data: PlatformEmailSettingsUpdate,
+    _admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Update platform-wide default email settings.
@@ -594,7 +570,6 @@ def update_platform_email_settings(
     These settings are inherited by all enterprises that don't have
     their own email configuration.
     """
-    require_platform_admin(request)
 
     email_settings = (
         db.query(EmailSettings)
@@ -626,15 +601,14 @@ def update_platform_email_settings(
 
 @router.post("/settings/email/test")
 def test_platform_email(
-    request: Request,
     test_data: TestEmailRequest,
+    _admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Send a test email using platform default settings.
 
     This verifies that SMTP settings are configured correctly.
     """
-    require_platform_admin(request)
 
     email_service = EmailService(db)
     success = email_service.test_email_settings(
@@ -653,14 +627,10 @@ def test_platform_email(
 
 @router.get("/setup-status")
 def get_setup_status(
-    request: Request,
-    admin_id: UUID = Depends(get_platform_admin_id),
+    admin_id: UUID = Depends(require_platform_admin),
     db: Session = Depends(get_platform_db),
 ):
     """Get platform setup status for admin dashboard."""
-    # Verify platform admin
-    require_platform_admin(request)
-
     admin = db.query(PlatformAdmin).filter(PlatformAdmin.id == admin_id).first()
     if not admin:
         raise HTTPException(

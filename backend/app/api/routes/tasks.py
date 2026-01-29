@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import (
     get_current_enterprise_id,
     get_current_user,
-    get_db,
+    get_tenant_db,
     is_project_member as check_project_member,
 )
 from app.models.task import Task
@@ -83,7 +83,7 @@ def get_tasks(
     project_id: Optional[int] = None,
     assigned_to_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """List tasks with optional filters."""
     task_service = TaskService(db)
@@ -115,7 +115,7 @@ def get_my_tasks(
     status: Optional[TaskStatus] = None,
     priority: Optional[TaskPriority] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get tasks assigned to current user."""
     task_service = TaskService(db)
@@ -131,7 +131,7 @@ def get_my_tasks(
 
 @router.get("/overdue", response_model=List[TaskResponse])
 def get_overdue_tasks(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_tenant_db)
 ):
     """Get overdue tasks."""
     task_service = TaskService(db)
@@ -143,7 +143,7 @@ def create_task(
     task_data: TaskCreate,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Create a new task."""
@@ -186,7 +186,7 @@ def create_task(
 def get_task(
     task_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get a task by ID."""
     task_service = TaskService(db)
@@ -206,7 +206,7 @@ def update_task(
     task_data: TaskUpdate,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Update a task."""
     task_service = TaskService(db)
@@ -266,7 +266,7 @@ def update_task(
 def delete_task(
     task_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Delete a task."""
     task_service = TaskService(db)

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 import stripe
 
 from app.api.deps import get_tenant_db, get_platform_db, get_current_user
+from app.config import settings
 from app.models.user import User
 from app.models.enterprise import Enterprise
 from app.schemas.billing import (
@@ -49,14 +50,14 @@ def create_checkout_session(
         raise HTTPException(status_code=400, detail="Institution plans are managed separately")
 
     service = BillingService(db)
-    base_url = str(request.base_url).rstrip("/")
+    frontend_url = settings.frontend_url.rstrip("/")
 
     checkout_url = service.create_checkout_session(
         enterprise=enterprise,
         plan=request_data.plan,
         price_type=request_data.price_type,
-        success_url=f"{base_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{base_url}/billing/cancel",
+        success_url=f"{frontend_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{frontend_url}/billing/cancel",
     )
 
     return CheckoutSessionResponse(checkout_url=checkout_url)
@@ -83,11 +84,11 @@ def create_portal_session(
         raise HTTPException(status_code=400, detail="No billing account found")
 
     service = BillingService(db)
-    base_url = str(request.base_url).rstrip("/")
+    frontend_url = settings.frontend_url.rstrip("/")
 
     portal_url = service.create_portal_session(
         enterprise=enterprise,
-        return_url=f"{base_url}/settings/billing",
+        return_url=f"{frontend_url}/settings/billing",
     )
 
     return PortalSessionResponse(portal_url=portal_url)

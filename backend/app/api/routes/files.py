@@ -17,7 +17,7 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_current_user, get_db, is_project_lead, is_project_member
+from app.api.deps import get_current_user, get_tenant_db, is_project_lead, is_project_member
 from app.models.project_file import ProjectFile
 from app.models.project import Project
 from app.models.user import User
@@ -36,7 +36,7 @@ async def upload_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Upload a file to a project. Notifies project lead via email with attachment."""
     project = db.query(Project).filter(Project.id == project_id).first()
@@ -88,7 +88,7 @@ async def upload_file(
 def get_project_files(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get all files for a project."""
     project = db.query(Project).filter(Project.id == project_id).first()
@@ -96,6 +96,15 @@ def get_project_files(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
+
+    # Check membership
+    if not current_user.is_superuser:
+        if not is_project_lead(db, current_user.id, project_id) and not is_project_member(
+            db, current_user.id, project_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
 
     files = (
         db.query(ProjectFile)
@@ -112,7 +121,7 @@ def get_project_files(
 def get_file_info(
     file_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get file info by ID."""
     project_file = (
@@ -127,6 +136,15 @@ def get_file_info(
             status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
         )
 
+    # Check membership
+    if not current_user.is_superuser:
+        if not is_project_lead(
+            db, current_user.id, project_file.project_id
+        ) and not is_project_member(db, current_user.id, project_file.project_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+
     return project_file
 
 
@@ -134,7 +152,7 @@ def get_file_info(
 async def download_file(
     file_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Download a file."""
     project_file = db.query(ProjectFile).filter(ProjectFile.id == file_id).first()
@@ -170,7 +188,7 @@ async def download_file(
 def delete_file(
     file_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Delete a file (lead or uploader only)."""
     project_file = db.query(ProjectFile).filter(ProjectFile.id == file_id).first()

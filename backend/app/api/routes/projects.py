@@ -16,6 +16,7 @@ from app.api.deps import (
     get_current_enterprise_id,
     get_current_user,
     get_db,
+    get_tenant_db,
     is_project_lead,
     count_project_leads,
 )
@@ -49,7 +50,7 @@ def get_projects(
     open_to_participants: Optional[bool] = None,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get all projects with optional filters.
 
@@ -86,7 +87,7 @@ def get_projects(
 
 @router.get("/my", response_model=List[ProjectWithLead])
 def get_my_projects(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_tenant_db)
 ):
     """Get projects where current user is lead or participant."""
     project_service = ProjectService(db)
@@ -99,7 +100,7 @@ def get_upcoming_deadlines(
         default=2, ge=1, le=52, description="Number of weeks to look ahead"
     ),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get projects with deadlines within the specified number of weeks."""
     project_service = ProjectService(db)
@@ -113,7 +114,7 @@ def get_upcoming_meetings(
         default=2, ge=1, le=52, description="Number of weeks to look ahead"
     ),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get projects with meetings within the specified number of weeks."""
     project_service = ProjectService(db)
@@ -128,7 +129,7 @@ def search_projects(
     status: Optional[ProjectStatus] = None,
     open_to_participants: Optional[bool] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Search projects by keyword in title or description."""
     project_service = ProjectService(db)
@@ -151,7 +152,7 @@ def search_projects(
 def create_project(
     project_data: ProjectCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Create a new project. Creator becomes the lead."""
@@ -184,7 +185,7 @@ def create_project(
 def get_project(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get project details with members."""
     project_service = ProjectService(db)
@@ -204,7 +205,7 @@ async def update_project(
     project_data: ProjectUpdate,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Update project (lead only). Notifies all participants."""
     project_service = ProjectService(db)
@@ -263,7 +264,7 @@ async def update_project(
 def delete_project(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Delete project (lead or superuser only)."""
     project_service = ProjectService(db)
@@ -293,7 +294,7 @@ def delete_project(
 def get_project_members(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get project members."""
     project_service = ProjectService(db)
@@ -319,7 +320,7 @@ def add_project_member(
     project_id: int,
     member_data: AddProjectMemberRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Add member to project (lead only)."""
@@ -361,7 +362,7 @@ def remove_project_member(
     project_id: int,
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Remove member from project (lead only)."""
     project_service = ProjectService(db)
@@ -411,7 +412,7 @@ def update_member_role(
     user_id: int,
     role: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Change a member's role (lead only). Ensure at least one lead remains."""
     project = db.query(Project).filter(Project.id == project_id).first()
@@ -462,7 +463,7 @@ def update_member_role(
 def leave_project(
     project_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Leave a project. Leads can only leave if other leads exist."""
     project = db.query(Project).filter(Project.id == project_id).first()

@@ -10,13 +10,11 @@ from typing import List, Optional
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.project_file import ProjectFile
 from app.models.user import User
 from app.repositories import FileRepository, ProjectRepository
-
-# File upload constraints
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 ALLOWED_EXTENSIONS = {
     ".pdf",
     ".doc",
@@ -38,20 +36,20 @@ ALLOWED_EXTENSIONS = {
 class FileService:
     """Service for file management operations."""
 
-    def __init__(self, db: Session, upload_dir: str = "uploads") -> None:
+    def __init__(self, db: Session, upload_dir: str | None = None) -> None:
         """Initialize the FileService.
 
         Args:
             db: SQLAlchemy database session.
-            upload_dir: Base directory for file uploads (default: 'uploads').
+            upload_dir: Base directory for file uploads (uses settings.upload_dir by default).
         """
         self.db = db
         self.file_repo = FileRepository(db)
         self.project_repo = ProjectRepository(db)
-        self.upload_dir = upload_dir
+        self.upload_dir = upload_dir or settings.upload_dir
 
         # Ensure upload directory exists
-        Path(upload_dir).mkdir(parents=True, exist_ok=True)
+        Path(self.upload_dir).mkdir(parents=True, exist_ok=True)
 
     async def upload_file(
         self, project_id: int, file: UploadFile, uploaded_by: User
@@ -75,9 +73,10 @@ class FileService:
             raise NotFoundException(f"Project with id {project_id} not found")
 
         # Validate file size
-        if file.size and file.size > MAX_FILE_SIZE:
+        max_size = settings.max_file_size
+        if file.size and file.size > max_size:
             raise BadRequestException(
-                f"File size exceeds maximum allowed ({MAX_FILE_SIZE // (1024 * 1024)}MB)"
+                f"File size exceeds maximum allowed ({max_size // (1024 * 1024)}MB)"
             )
 
         # Validate file extension

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
+from app.config import settings
 from app.models.enterprise import Enterprise
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
@@ -27,12 +28,14 @@ class TenantMiddleware(BaseHTTPMiddleware):
         host = request.headers.get("host", "localhost")
         subdomain = self._extract_subdomain(host)
 
-        # Handle platform admin header for dev
+        # Handle platform admin header — only allowed in development
         if request.headers.get("X-Platform-Admin") == "true":
-            request.state.is_platform_admin = True
-            request.state.enterprise_id = None
-            request.state.enterprise = None
-            return await call_next(request)
+            if not settings.is_production:
+                request.state.is_platform_admin = True
+                request.state.enterprise_id = None
+                request.state.enterprise = None
+                return await call_next(request)
+            # In production, ignore the header (fall through to normal flow)
 
         # Handle platform admin
         if subdomain == "admin":
