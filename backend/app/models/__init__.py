@@ -19,6 +19,22 @@ from app.models.user_keyword import UserKeyword
 from app.models.user_alert_preference import UserAlertPreference
 from app.models.invite_code import InviteCode
 
+# IRB models
+from app.models.irb import (
+    IrbAiConfig,
+    IrbBoard,
+    IrbBoardMember,
+    IrbDecision,
+    IrbQuestion,
+    IrbQuestionCondition,
+    IrbQuestionSection,
+    IrbReview,
+    IrbSubmission,
+    IrbSubmissionFile,
+    IrbSubmissionHistory,
+    IrbSubmissionResponse,
+)
+
 # Keep organization_admins import for backward compatibility with authorization.py
 from app.models.organization import organization_admins
 
@@ -47,4 +63,17 @@ __all__ = [
     "institution_admins",
     "organization_admins",  # Backward compatibility alias
     "InviteCode",
+    # IRB
+    "IrbBoard",
+    "IrbBoardMember",
+    "IrbSubmission",
+    "IrbSubmissionFile",
+    "IrbQuestionSection",
+    "IrbQuestion",
+    "IrbQuestionCondition",
+    "IrbSubmissionResponse",
+    "IrbReview",
+    "IrbDecision",
+    "IrbSubmissionHistory",
+    "IrbAiConfig",
 ]
