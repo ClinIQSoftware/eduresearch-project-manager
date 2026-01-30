@@ -33,6 +33,10 @@ from app.api.routes import (
     platform_admin_router,
     billing_router,
     invite_codes_router,
+    irb_boards_router,
+    irb_questions_router,
+    irb_submissions_router,
+    irb_dashboard_router,
 )
 from app.config import settings
 
@@ -132,6 +136,14 @@ app.include_router(billing_router, prefix="/api", tags=["Billing"])
 
 # Invite codes routes
 app.include_router(invite_codes_router, prefix="/api", tags=["Invite Codes"])
+
+# IRB routes
+app.include_router(irb_boards_router, prefix="/api/irb/boards", tags=["IRB Boards"])
+app.include_router(irb_questions_router, prefix="/api/irb", tags=["IRB Questions"])
+app.include_router(
+    irb_submissions_router, prefix="/api/irb/submissions", tags=["IRB Submissions"]
+)
+app.include_router(irb_dashboard_router, prefix="/api/irb", tags=["IRB Dashboard"])
 
 
 @app.get("/")

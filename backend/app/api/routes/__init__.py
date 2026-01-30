@@ -21,6 +21,12 @@ from app.api.routes.platform_admin import router as platform_admin_router
 from app.api.routes.billing import router as billing_router
 from app.api.routes.invite_codes import router as invite_codes_router
 
+# IRB routers
+from app.api.routes.irb_boards import router as irb_boards_router
+from app.api.routes.irb_questions import router as irb_questions_router
+from app.api.routes.irb_submissions import router as irb_submissions_router
+from app.api.routes.irb_dashboard import router as irb_dashboard_router
+
 __all__ = [
     "auth_router",
     "users_router",
@@ -39,4 +45,9 @@ __all__ = [
     "platform_admin_router",
     "billing_router",
     "invite_codes_router",
+    # IRB
+    "irb_boards_router",
+    "irb_questions_router",
+    "irb_submissions_router",
+    "irb_dashboard_router",
 ]
