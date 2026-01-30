@@ -43,6 +43,9 @@ TENANT_EXEMPT_PATHS = (
     "/redoc",
 )
 
+# Sentinel to distinguish hosting domains from localhost in _extract_subdomain
+_HOSTING_DOMAIN = "__hosting__"
+
 
 class TenantMiddleware(BaseHTTPMiddleware):
     """Middleware to resolve tenant from subdomain."""
@@ -76,6 +79,10 @@ class TenantMiddleware(BaseHTTPMiddleware):
             request.state.enterprise = None
             return await call_next(request)
 
+        # Handle hosting domains (onrender.com, etc.) — resolve tenant from JWT
+        if subdomain == _HOSTING_DOMAIN:
+            return await self._dispatch_hosting_domain(request, call_next)
+
         # Handle localhost/development
         if subdomain in ("localhost", "127", ""):
             # Use default enterprise or header override for dev
@@ -90,7 +97,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
             raise HTTPException(status_code=400, detail="Reserved subdomain")
 
         # Lookup enterprise
-        enterprise = await self._get_enterprise(subdomain)
+        enterprise = await self._get_enterprise_by_slug(subdomain)
         if not enterprise:
             # No enterprise found — allow request through without tenant context
             # (needed for first-time registration when no enterprises exist yet)
@@ -102,7 +109,29 @@ class TenantMiddleware(BaseHTTPMiddleware):
         if not enterprise.is_active:
             raise HTTPException(status_code=403, detail="Enterprise is disabled")
 
-        # Set request state
+        return await self._dispatch_with_tenant(request, call_next, enterprise)
+
+    async def _dispatch_hosting_domain(self, request: Request, call_next):
+        """Resolve tenant from JWT token for hosting domain requests.
+
+        On shared hosting domains (e.g. onrender.com), there's no subdomain
+        to identify the enterprise. Instead, extract enterprise_id from the
+        JWT token in the Authorization header.
+        """
+        enterprise_id = self._extract_enterprise_from_jwt(request)
+        if enterprise_id:
+            enterprise = await self._get_enterprise_by_id(enterprise_id)
+            if enterprise and enterprise.is_active:
+                return await self._dispatch_with_tenant(request, call_next, enterprise)
+
+        # No JWT enterprise or enterprise not found — proceed without tenant context
+        request.state.is_platform_admin = False
+        request.state.enterprise_id = None
+        request.state.enterprise = None
+        return await call_next(request)
+
+    async def _dispatch_with_tenant(self, request: Request, call_next, enterprise):
+        """Dispatch request with tenant context set."""
         request.state.is_platform_admin = False
         request.state.enterprise_id = enterprise.id
         request.state.enterprise = enterprise
@@ -124,10 +153,9 @@ class TenantMiddleware(BaseHTTPMiddleware):
             return "localhost"
 
         # Check if this is a known hosting provider domain
-        # e.g., eduresearch-backend.onrender.com -> treat as localhost (use default)
         for hosting_domain in HOSTING_DOMAINS:
             if host.endswith(f".{hosting_domain}"):
-                return "localhost"
+                return _HOSTING_DOMAIN
 
         # Extract first part of domain
         parts = host.split(".")
@@ -136,13 +164,39 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         return ""
 
-    async def _get_enterprise(self, slug: str) -> Optional[Enterprise]:
+    def _extract_enterprise_from_jwt(self, request: Request) -> Optional[UUID]:
+        """Extract enterprise_id from JWT Authorization header."""
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return None
+        token = auth_header[7:]
+        try:
+            from app.core.security import decode_token
+            payload = decode_token(token)
+            if payload and payload.get("enterprise_id"):
+                return UUID(payload["enterprise_id"])
+        except (ValueError, TypeError):
+            pass
+        return None
+
+    async def _get_enterprise_by_slug(self, slug: str) -> Optional[Enterprise]:
         """Lookup enterprise by slug."""
         # TODO: Add Redis caching here
         db = SessionLocal()
         try:
             result = db.execute(
                 select(Enterprise).where(Enterprise.slug == slug)
+            )
+            return result.scalar_one_or_none()
+        finally:
+            db.close()
+
+    async def _get_enterprise_by_id(self, enterprise_id: UUID) -> Optional[Enterprise]:
+        """Lookup enterprise by ID."""
+        db = SessionLocal()
+        try:
+            result = db.execute(
+                select(Enterprise).where(Enterprise.id == enterprise_id)
             )
             return result.scalar_one_or_none()
         finally:

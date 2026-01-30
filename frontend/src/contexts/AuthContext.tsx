@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import type { User } from '../types';
 import { getCurrentUser } from '../services/api';
 
@@ -40,9 +40,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  // Guard to prevent useEffect from re-fetching when login() already did
+  const loginFetchedRef = useRef(false);
+
+  // Initial token check — fetch user on mount or when token changes
   useEffect(() => {
     if (token) {
-      // Check if token is for platform admin
+      // Skip if login() already fetched the user for this token
+      if (loginFetchedRef.current) {
+        loginFetchedRef.current = false;
+        return;
+      }
       const payload = parseJwt(token);
       if (payload?.is_platform_admin) {
         setIsPlatformAdmin(true);
@@ -54,6 +62,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
   }, [token]);
+
+  // Listen for 401 events from the API interceptor
+  useEffect(() => {
+    function handleUnauthorized() {
+      setToken(null);
+      setUser(null);
+      setIsPlatformAdmin(false);
+    }
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
 
   async function fetchUser() {
     try {
@@ -70,6 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(newToken: string, platformAdmin = false) {
     localStorage.setItem('token', newToken);
     localStorage.setItem('isPlatformAdmin', platformAdmin ? 'true' : 'false');
+
+    // Mark that login is handling the fetch — prevents useEffect from double-fetching
+    loginFetchedRef.current = true;
     setToken(newToken);
     setIsPlatformAdmin(platformAdmin);
 

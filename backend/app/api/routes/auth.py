@@ -27,6 +27,7 @@ from app.schemas import (
     UserResponse,
     UserUpdate,
 )
+from app.schemas.user import OnboardingResponse
 from app.services import AuthService, UserService, SettingsService, EmailService
 
 router = APIRouter()
@@ -487,7 +488,7 @@ async def microsoft_callback(
         return RedirectResponse(url=f"{settings.frontend_url}/login?error={str(e)}")
 
 
-@router.post("/onboarding", response_model=UserResponse)
+@router.post("/onboarding", response_model=OnboardingResponse)
 def complete_onboarding(
     data: OnboardingRequest,
     current_user: User = Depends(get_current_user),
@@ -495,8 +496,8 @@ def complete_onboarding(
 ):
     """Complete onboarding by creating or joining a team.
 
-    Requires authentication. Called after account creation for users
-    who don't yet have an enterprise_id.
+    Returns the updated user plus a fresh JWT that includes enterprise_id,
+    so the frontend can use it for subsequent tenant-scoped API calls.
     """
     from app.models.invite_code import InviteCode
     from app.models.enterprise import Enterprise
@@ -556,7 +557,13 @@ def complete_onboarding(
         db.commit()
         db.refresh(current_user)
 
-        return current_user
+        # Issue fresh JWT with enterprise_id for tenant-scoped API calls
+        auth_service = AuthService(db)
+        new_token = auth_service.create_token(current_user)
+        return OnboardingResponse(
+            user=UserResponse.model_validate(current_user),
+            access_token=new_token,
+        )
 
     elif data.mode == "join":
         if not data.invite_code:
@@ -596,7 +603,13 @@ def complete_onboarding(
         db.commit()
         db.refresh(current_user)
 
-        return current_user
+        # Issue fresh JWT with enterprise_id for tenant-scoped API calls
+        auth_service = AuthService(db)
+        new_token = auth_service.create_token(current_user)
+        return OnboardingResponse(
+            user=UserResponse.model_validate(current_user),
+            access_token=new_token,
+        )
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,

@@ -26,13 +26,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 responses
+// Handle 401 responses — clear token and notify React via custom event
+// (avoids hard window.location redirect which causes a flash of content)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem('isPlatformAdmin');
+      window.dispatchEvent(new Event('auth:unauthorized'));
     }
     return Promise.reject(error);
   }
@@ -54,7 +56,7 @@ export const completeOnboarding = (data: {
   mode: 'create' | 'join';
   enterprise_name?: string;
   invite_code?: string;
-}) => api.post<User>('/auth/onboarding', data);
+}) => api.post<{ user: User; access_token: string }>('/auth/onboarding', data);
 
 export const login = (email: string, password: string) =>
   api.post<{ access_token: string; token_type: string; is_platform_admin?: boolean }>('/auth/login', { email, password });

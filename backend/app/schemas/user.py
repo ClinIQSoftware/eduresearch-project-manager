@@ -130,3 +130,10 @@ class OnboardingRequest(BaseModel):
     mode: Literal["create", "join"]
     enterprise_name: Optional[str] = Field(None, min_length=2, max_length=255)
     invite_code: Optional[str] = Field(None, max_length=50)
+
+
+class OnboardingResponse(BaseModel):
+    """Response from onboarding — includes a fresh JWT with enterprise_id."""
+
+    user: UserResponse
+    access_token: str
