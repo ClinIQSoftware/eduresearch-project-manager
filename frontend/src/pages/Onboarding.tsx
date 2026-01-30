@@ -15,7 +15,7 @@ export default function Onboarding() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { user, login } = useAuth();
+  const { user, login, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   // If user already has an enterprise, redirect to dashboard
@@ -49,7 +49,12 @@ export default function Onboarding() {
       localStorage.removeItem('pending_invite_code');
 
       // Save the fresh JWT (includes enterprise_id for tenant-scoped API calls)
-      await login(response.data.access_token);
+      if (response.data.access_token) {
+        await login(response.data.access_token);
+      } else {
+        // Fallback for older API that returns User directly
+        await refreshUser();
+      }
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Something went wrong');
