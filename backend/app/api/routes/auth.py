@@ -503,6 +503,9 @@ def complete_onboarding(
     import uuid as uuid_mod
     import re
 
+    # Re-fetch the user within this session (current_user comes from a different session)
+    current_user = db.merge(current_user)
+
     if current_user.enterprise_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
