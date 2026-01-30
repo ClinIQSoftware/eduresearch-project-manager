@@ -35,7 +35,7 @@ def upgrade() -> None:
             current_setting('app.current_enterprise_id', true) IS NULL
             OR current_setting('app.current_enterprise_id', true) = ''
             OR enterprise_id IS NULL
-            OR enterprise_id = current_setting('app.current_enterprise_id', true)::uuid
+            OR enterprise_id = NULLIF(current_setting('app.current_enterprise_id', true), '')::uuid
         )
     """)
 

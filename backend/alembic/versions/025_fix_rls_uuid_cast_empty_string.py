@@ -1,20 +1,20 @@
-"""Fix users RLS policy for NULL current_setting.
+"""Fix RLS policy UUID cast on empty string.
 
-When get_unscoped_db() is used (auth endpoints), the app.current_enterprise_id
-setting is never set, so current_setting() returns NULL (not empty string).
-The previous policy only checked for '' but not NULL, causing UPDATE
-operations in unscoped sessions to fail with InsufficientPrivilege.
+PostgreSQL does not short-circuit OR clauses, so
+  enterprise_id = current_setting(...)::uuid
+crashes with InvalidTextRepresentation when the setting is '' (empty string).
+Use NULLIF to convert '' to NULL before casting, which avoids the error.
 
-Revision ID: 024
-Revises: 023
+Revision ID: 025
+Revises: 024
 Create Date: 2026-01-30
 """
 
 from typing import Sequence, Union
 from alembic import op
 
-revision: str = "024"
-down_revision: Union[str, None] = "023"
+revision: str = "025"
+down_revision: Union[str, None] = "024"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -37,8 +37,9 @@ def downgrade() -> None:
     op.execute("""
         CREATE POLICY tenant_isolation_users ON users
         USING (
-            enterprise_id IS NULL
-            OR enterprise_id = NULLIF(current_setting('app.current_enterprise_id', true), '')::uuid
+            current_setting('app.current_enterprise_id', true) IS NULL
             OR current_setting('app.current_enterprise_id', true) = ''
+            OR enterprise_id IS NULL
+            OR enterprise_id = current_setting('app.current_enterprise_id', true)::uuid
         )
     """)
