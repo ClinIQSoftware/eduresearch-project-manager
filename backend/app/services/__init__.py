@@ -16,6 +16,12 @@ from app.services.department_service import DepartmentService
 from app.services.settings_service import SettingsService
 from app.services.billing_service import BillingService
 
+# IRB services
+from app.services.irb_board_service import IrbBoardService
+from app.services.irb_question_service import IrbQuestionService
+from app.services.irb_submission_service import IrbSubmissionService
+from app.services.irb_ai_service import IrbAiService
+
 __all__ = [
     "AuthService",
     "UserService",
@@ -28,4 +34,9 @@ __all__ = [
     "DepartmentService",
     "SettingsService",
     "BillingService",
+    # IRB
+    "IrbBoardService",
+    "IrbQuestionService",
+    "IrbSubmissionService",
+    "IrbAiService",
 ]
