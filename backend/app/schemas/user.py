@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import Literal, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field
 
@@ -87,7 +88,7 @@ class UserResponse(BaseModel):
     auth_provider: AuthProvider = "local"
     institution_id: Optional[int] = None
     department_id: Optional[int] = None
-    enterprise_id: Optional[str] = None
+    enterprise_id: Optional[UUID] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
