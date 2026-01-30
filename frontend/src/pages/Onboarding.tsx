@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { completeOnboarding } from '../services/api';
 
@@ -20,8 +20,7 @@ export default function Onboarding() {
 
   // If user already has an enterprise, redirect to dashboard
   if (user?.enterprise_id) {
-    navigate('/dashboard', { replace: true });
-    return null;
+    return <Navigate to="/dashboard" replace />;
   }
 
   async function handleSubmit(e: React.FormEvent) {

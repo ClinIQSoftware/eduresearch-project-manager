@@ -10,7 +10,12 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "type-check": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:headed": "playwright test --headed",
+    "e2e:local": "E2E_BASE_URL=http://localhost:5173 E2E_API_URL=http://localhost:8000/api playwright test",
+    "e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@azure/msal-browser": "^3.5.0",
@@ -30,6 +35,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.0",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^5.1.2",
