@@ -8,6 +8,7 @@ import {
   FileBarChart,
   CheckSquare,
   Clock,
+  ClipboardCheck,
   UserPlus,
   Settings as SettingsIcon,
   Shield,
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { to: '/reports', label: 'Reports', icon: FileBarChart },
   { to: '/tasks', label: 'Tasks', icon: CheckSquare },
   { to: '/time', label: 'Time Tracking', icon: Clock },
+  { to: '/irb', label: 'IRB', icon: ClipboardCheck },
 ];
 
 export default function MobileNav() {

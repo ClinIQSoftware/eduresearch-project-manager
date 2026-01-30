@@ -45,6 +45,15 @@ import Landing from './pages/Landing';
 import Join from './pages/Join';
 import Onboarding from './pages/Onboarding';
 import { BillingSettings, BillingSuccess, BillingCancel } from './pages/billing';
+import {
+  IrbLayout,
+  IrbDashboardTab,
+  IrbBoardsTab,
+  IrbBoardDetailPage,
+  IrbSubmissionsTab,
+  IrbSubmissionDetailPage,
+  IrbNewSubmissionPage,
+} from './pages/irb';
 
 function App() {
   return (
@@ -185,6 +194,53 @@ function App() {
           <Route path="preferences" element={<SettingsPreferencesTab />} />
           <Route path="billing" element={<BillingSettings />} />
         </Route>
+
+        {/* IRB routes */}
+        <Route
+          path="/irb"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <IrbLayout />
+              </Layout>
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/irb/dashboard" replace />} />
+          <Route path="dashboard" element={<IrbDashboardTab />} />
+          <Route path="boards" element={<IrbBoardsTab />} />
+          <Route path="submissions" element={<IrbSubmissionsTab />} />
+        </Route>
+        <Route
+          path="/irb/boards/:boardId"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <IrbBoardDetailPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/irb/submissions/new"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <IrbNewSubmissionPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/irb/submissions/:submissionId"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <IrbSubmissionDetailPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Billing routes */}
         <Route path="/billing/success" element={<BillingSuccess />} />

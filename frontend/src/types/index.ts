@@ -349,3 +349,196 @@ export interface EnterpriseUpdateData {
   name?: string;
   is_active?: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// IRB types
+// ---------------------------------------------------------------------------
+
+export type BoardType = 'irb' | 'research_council';
+export type BoardMemberRole = 'coordinator' | 'main_reviewer' | 'associate_reviewer' | 'statistician';
+export type SubmissionType = 'standard' | 'exempt';
+export type SubmissionStatus =
+  | 'draft'
+  | 'submitted'
+  | 'in_triage'
+  | 'assigned_to_main'
+  | 'under_review'
+  | 'decision_made'
+  | 'accepted'
+  | 'revision_requested'
+  | 'declined';
+export type RevisionType = 'minor' | 'major';
+export type QuestionType = 'text' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'date' | 'number' | 'file_upload';
+export type SubmissionTypeFilter = 'standard' | 'exempt' | 'both';
+export type ConditionOperator = 'equals' | 'not_equals' | 'contains' | 'is_empty' | 'is_not_empty';
+export type Recommendation = 'accept' | 'minor_revise' | 'major_revise' | 'decline';
+export type DecisionTypeValue = 'accept' | 'minor_revise' | 'major_revise' | 'decline';
+export type FileType = 'protocol' | 'consent_form' | 'supporting_doc';
+export type AiProvider = 'anthropic' | 'openai' | 'custom';
+
+// Board
+export interface IrbBoard {
+  id: string;
+  name: string;
+  description: string | null;
+  board_type: BoardType;
+  institution_id: number | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface IrbBoardDetail extends IrbBoard {
+  members_count: number;
+  submissions_count: number;
+}
+
+export interface IrbBoardMember {
+  id: number;
+  board_id: string;
+  user_id: number;
+  role: BoardMemberRole;
+  is_active: boolean;
+  assigned_at: string;
+  user_name: string | null;
+  user_email: string | null;
+}
+
+// Question sections
+export interface IrbQuestionSection {
+  id: number;
+  board_id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  order: number;
+}
+
+// Question conditions
+export interface IrbQuestionCondition {
+  id: number;
+  question_id: number;
+  depends_on_question_id: number;
+  operator: ConditionOperator;
+  value: string;
+}
+
+// Questions
+export interface IrbQuestion {
+  id: number;
+  board_id: string;
+  section_id: number;
+  text: string;
+  description: string | null;
+  question_type: QuestionType;
+  options: unknown[] | null;
+  required: boolean;
+  order: number;
+  is_active: boolean;
+  submission_type: SubmissionTypeFilter;
+  created_at: string;
+  conditions: IrbQuestionCondition[];
+}
+
+// Submission files
+export interface IrbSubmissionFile {
+  id: number;
+  submission_id: string;
+  file_name: string;
+  file_url: string;
+  file_type: FileType;
+  uploaded_at: string;
+}
+
+// Submission responses (answers)
+export interface IrbSubmissionResponseData {
+  id: number;
+  submission_id: string;
+  question_id: number;
+  answer: string | null;
+  ai_prefilled: boolean | null;
+  user_confirmed: boolean | null;
+  updated_at: string | null;
+}
+
+// Reviews
+export interface IrbReview {
+  id: string;
+  submission_id: string;
+  reviewer_id: number;
+  role: BoardMemberRole;
+  recommendation: Recommendation;
+  comments: string | null;
+  feedback_to_submitter: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+// Decisions
+export interface IrbDecision {
+  id: string;
+  submission_id: string;
+  decided_by_id: number;
+  decision: DecisionTypeValue;
+  rationale: string | null;
+  letter: string | null;
+  conditions: string | null;
+  decided_at: string;
+}
+
+// History
+export interface IrbSubmissionHistory {
+  id: number;
+  submission_id: string;
+  from_status: SubmissionStatus | null;
+  to_status: SubmissionStatus;
+  changed_by_id: number;
+  note: string | null;
+  created_at: string;
+}
+
+// Submissions
+export interface IrbSubmission {
+  id: string;
+  board_id: string;
+  project_id: number;
+  submitted_by_id: number;
+  submission_type: SubmissionType;
+  status: SubmissionStatus;
+  revision_type: RevisionType | null;
+  protocol_file_url: string | null;
+  ai_summary: string | null;
+  ai_summary_approved: boolean | null;
+  escalated_from_id: string | null;
+  version: number;
+  main_reviewer_id: number | null;
+  submitted_at: string | null;
+  decided_at: string | null;
+  created_at: string;
+}
+
+export interface IrbSubmissionDetail extends IrbSubmission {
+  files: IrbSubmissionFile[];
+  responses: IrbSubmissionResponseData[];
+  reviews: IrbReview[];
+  decision: IrbDecision | null;
+  history: IrbSubmissionHistory[];
+}
+
+// AI config
+export interface IrbAiConfig {
+  id: number;
+  provider: AiProvider;
+  model_name: string;
+  custom_endpoint: string | null;
+  max_tokens: number;
+  is_active: boolean;
+  updated_at: string | null;
+  api_key_set: boolean;
+}
+
+// Dashboard
+export interface IrbDashboard {
+  my_submissions: IrbSubmission[];
+  my_pending_reviews: IrbSubmission[];
+  board_queue: IrbSubmission[];
+}

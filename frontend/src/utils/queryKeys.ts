@@ -92,6 +92,26 @@ export const queryKeys = {
       detail: (id: string) => [...queryKeys.platformAdmin.enterprises.all(), 'detail', id] as const,
     },
   },
+
+  // IRB
+  irb: {
+    all: ['irb'] as const,
+    boards: {
+      all: () => [...queryKeys.irb.all, 'boards'] as const,
+      list: () => [...queryKeys.irb.boards.all(), 'list'] as const,
+      detail: (id: string) => [...queryKeys.irb.boards.all(), 'detail', id] as const,
+      members: (boardId: string) => [...queryKeys.irb.boards.all(), 'members', boardId] as const,
+      sections: (boardId: string) => [...queryKeys.irb.boards.all(), 'sections', boardId] as const,
+      questions: (boardId: string) => [...queryKeys.irb.boards.all(), 'questions', boardId] as const,
+      aiConfig: (boardId: string) => [...queryKeys.irb.boards.all(), 'aiConfig', boardId] as const,
+    },
+    submissions: {
+      all: () => [...queryKeys.irb.all, 'submissions'] as const,
+      list: (filters?: { board_id?: string; status?: string }) => [...queryKeys.irb.submissions.all(), 'list', filters] as const,
+      detail: (id: string) => [...queryKeys.irb.submissions.all(), 'detail', id] as const,
+    },
+    dashboard: (boardId: string) => [...queryKeys.irb.all, 'dashboard', boardId] as const,
+  },
 };
 
 export default queryKeys;
