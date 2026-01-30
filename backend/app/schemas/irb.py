@@ -283,7 +283,7 @@ class IrbReviewResponse(BaseModel):
     submission_id: UUID
     reviewer_id: int
     role: BoardMemberRole
-    recommendation: Recommendation
+    recommendation: Optional[Recommendation] = None
     comments: Optional[str] = None
     feedback_to_submitter: Optional[str] = None
     completed_at: Optional[datetime] = None

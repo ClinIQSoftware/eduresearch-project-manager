@@ -37,7 +37,10 @@ def validate_config() -> None:
 def seed_default_enterprise(db: Session) -> Enterprise:
     """Ensure default enterprise exists for single-tenant deployments."""
     enterprise = db.query(Enterprise).filter(Enterprise.slug == "default").first()
-    if not enterprise:
+    if enterprise:
+        return enterprise
+
+    try:
         enterprise = Enterprise(
             id=uuid4(),
             name="Default Enterprise",
@@ -47,7 +50,11 @@ def seed_default_enterprise(db: Session) -> Enterprise:
         db.add(enterprise)
         db.commit()
         logger.info("Created default enterprise")
-    return enterprise
+        return enterprise
+    except Exception:
+        db.rollback()
+        logger.info("Default enterprise already seeded by another worker")
+        return db.query(Enterprise).filter(Enterprise.slug == "default").first()
 
 
 def seed_platform_admin(db: Session) -> None:
@@ -57,20 +64,24 @@ def seed_platform_admin(db: Session) -> None:
         logger.info(f"Platform admin already exists: {existing.email}")
         return
 
-    # Create from environment variables
-    password_hash = hash_password(settings.platform_admin_password)
-    admin = PlatformAdmin(
-        id=uuid4(),
-        email=settings.platform_admin_email,
-        password_hash=password_hash,
-        name=settings.platform_admin_name,
-        is_active=True,
-        must_change_password=True,
-    )
-    db.add(admin)
-    db.commit()
-    logger.info(f"Created platform admin: {admin.email}")
-    logger.warning("Platform admin created with default password - change immediately!")
+    # Create from environment variables — guard against race with concurrent workers
+    try:
+        password_hash = hash_password(settings.platform_admin_password)
+        admin = PlatformAdmin(
+            id=uuid4(),
+            email=settings.platform_admin_email,
+            password_hash=password_hash,
+            name=settings.platform_admin_name,
+            is_active=True,
+            must_change_password=True,
+        )
+        db.add(admin)
+        db.commit()
+        logger.info(f"Created platform admin: {admin.email}")
+        logger.warning("Platform admin created with default password - change immediately!")
+    except Exception:
+        db.rollback()
+        logger.info("Platform admin already seeded by another worker")
 
 
 def run_startup_init() -> None:
