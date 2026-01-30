@@ -6,3 +6,4 @@ export { default as EmailTab } from './EmailTab';
 export { default as EmailTemplatesTab } from './EmailTemplatesTab';
 export { default as ImportTab } from './ImportTab';
 export { default as InviteCodesTab } from './InviteCodesTab';
+export { default as EnterpriseSettingsTab } from './EnterpriseSettingsTab';

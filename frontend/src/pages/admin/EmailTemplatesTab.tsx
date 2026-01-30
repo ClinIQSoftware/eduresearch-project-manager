@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useEmailTemplates, useUpdateEmailTemplate, useTestTemplateEmail } from '../../hooks/useAdmin';
 import { getErrorMessage } from '../../utils/errorHandling';
+import PlanGate from '../../components/PlanGate';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Checkbox } from '../../components/ui/Checkbox';
@@ -117,6 +118,7 @@ export default function EmailTemplatesTab() {
   if (isLoading) return <div className="py-8"><LoadingSpinner size="lg" /></div>;
 
   return (
+    <PlanGate requiredPlan="starter" featureName="Email Templates">
     <div className="space-y-6">
       {message && (
         <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
@@ -203,5 +205,6 @@ export default function EmailTemplatesTab() {
         </div>
       </Modal>
     </div>
+    </PlanGate>
   );
 }

@@ -2,6 +2,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Request,
     UploadFile,
     File,
     BackgroundTasks,
@@ -17,9 +18,12 @@ import string
 
 from app.api.deps import (
     get_db,
+    get_tenant_db,
     get_current_user,
     get_current_superuser,
     is_institution_admin,
+    require_plan,
+    get_current_enterprise_id,
 )
 from app.models.user import User
 from app.models.project import Project
@@ -73,12 +77,18 @@ router = APIRouter()
 
 @router.get("/users", response_model=List[UserResponse])
 def get_all_users(
+    request: Request,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get all users (admin only)."""
     query = db.query(User)
+
+    # Explicit enterprise filtering (defense-in-depth alongside RLS)
+    enterprise_id = getattr(request.state, "enterprise_id", None)
+    if enterprise_id:
+        query = query.filter(User.enterprise_id == enterprise_id)
 
     if current_user.is_superuser:
         if institution_id:
@@ -102,7 +112,7 @@ async def create_user_admin(
     user_data: UserCreateAdmin,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Create a new user (admin only). Auto-generates password and sends welcome email."""
     # Check admin access
@@ -160,7 +170,7 @@ def update_user_admin(
     user_id: int,
     user_data: UserUpdateAdmin,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Update a user (admin only)."""
     user = db.query(User).filter(User.id == user_id).first()
@@ -194,7 +204,7 @@ def update_user_admin(
 def deactivate_user(
     user_id: int,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Deactivate a user (superuser only)."""
     user = db.query(User).filter(User.id == user_id).first()
@@ -214,7 +224,7 @@ def deactivate_user(
 def delete_user_permanently(
     user_id: int,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Permanently delete a user (superuser only). This action cannot be undone."""
     user = db.query(User).filter(User.id == user_id).first()
@@ -247,10 +257,19 @@ def delete_user_permanently(
 
 @router.get("/projects", response_model=List[ProjectResponse])
 def get_all_projects_admin(
-    current_user: User = Depends(get_current_superuser), db: Session = Depends(get_db)
+    request: Request,
+    current_user: User = Depends(get_current_superuser),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get all projects (superuser only)."""
-    return db.query(Project).order_by(Project.created_at.desc()).all()
+    query = db.query(Project)
+
+    # Explicit enterprise filtering (defense-in-depth)
+    enterprise_id = getattr(request.state, "enterprise_id", None)
+    if enterprise_id:
+        query = query.filter(Project.enterprise_id == enterprise_id)
+
+    return query.order_by(Project.created_at.desc()).all()
 
 
 @router.put("/projects/{project_id}", response_model=ProjectResponse)
@@ -258,7 +277,7 @@ def update_project_admin(
     project_id: int,
     project_data: ProjectUpdate,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Update any project (superuser only)."""
     project = db.query(Project).filter(Project.id == project_id).first()
@@ -277,11 +296,11 @@ def update_project_admin(
 # Email Settings
 
 
-@router.get("/email-settings", response_model=EmailSettingsResponse)
+@router.get("/email-settings", response_model=EmailSettingsResponse, dependencies=[Depends(require_plan("starter"))])
 def get_email_settings(
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get email settings."""
     require_admin_access(institution_id, current_user, db)
@@ -306,12 +325,12 @@ def get_email_settings(
     return settings
 
 
-@router.put("/email-settings", response_model=EmailSettingsResponse)
+@router.put("/email-settings", response_model=EmailSettingsResponse, dependencies=[Depends(require_plan("starter"))])
 def update_email_settings(
     settings_data: EmailSettingsUpdate,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Update email settings."""
     require_admin_access(institution_id, current_user, db)
@@ -343,7 +362,7 @@ def update_email_settings(
 def get_system_settings(
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get system settings (superuser only for global, org admin for org-specific)."""
     if not current_user.is_superuser:
@@ -384,7 +403,7 @@ def update_system_settings(
     settings_data: SystemSettingsUpdate,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Update system settings (superuser only for global, org admin for org-specific)."""
     if not current_user.is_superuser:
@@ -419,9 +438,10 @@ def update_system_settings(
 
 @router.get("/pending-users", response_model=List[PendingUserResponse])
 def get_pending_users(
+    request: Request,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get users pending approval."""
     if not current_user.is_superuser:
@@ -432,6 +452,11 @@ def get_pending_users(
             raise HTTPException(status_code=403, detail="Superuser access required")
 
     query = db.query(User).filter(User.is_approved.is_(False))
+
+    # Explicit enterprise filtering (defense-in-depth)
+    enterprise_id = getattr(request.state, "enterprise_id", None)
+    if enterprise_id:
+        query = query.filter(User.enterprise_id == enterprise_id)
 
     if institution_id:
         query = query.filter(User.institution_id == institution_id)
@@ -445,7 +470,7 @@ def get_pending_users(
 def approve_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Approve a pending user registration."""
     user = db.query(User).filter(User.id == user_id).first()
@@ -476,7 +501,7 @@ def approve_user(
 def reject_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Reject and delete a pending user registration."""
     user = db.query(User).filter(User.id == user_id).first()
@@ -509,11 +534,11 @@ def generate_temp_password(length: int = 12) -> str:
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
-@router.post("/users/bulk-upload", response_model=BulkUploadResult)
+@router.post("/users/bulk-upload", response_model=BulkUploadResult, dependencies=[Depends(require_plan("team"))])
 async def bulk_upload_users(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """
     Bulk upload users from Excel file.
@@ -699,7 +724,7 @@ async def bulk_upload_users(
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 
-@router.get("/users/upload-template")
+@router.get("/users/upload-template", dependencies=[Depends(require_plan("team"))])
 async def get_upload_template(current_user: User = Depends(get_current_superuser)):
     """Download Excel template for bulk user upload."""
     import openpyxl
@@ -768,11 +793,11 @@ async def get_upload_template(current_user: User = Depends(get_current_superuser
 # Email Templates
 
 
-@router.get("/email-templates", response_model=List[EmailTemplateResponse])
+@router.get("/email-templates", response_model=List[EmailTemplateResponse], dependencies=[Depends(require_plan("starter"))])
 def get_email_templates(
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get all email templates."""
     require_admin_access(institution_id, current_user, db)
@@ -793,12 +818,12 @@ def get_email_templates(
     return templates
 
 
-@router.get("/email-templates/{template_type}", response_model=EmailTemplateResponse)
+@router.get("/email-templates/{template_type}", response_model=EmailTemplateResponse, dependencies=[Depends(require_plan("starter"))])
 def get_email_template(
     template_type: str,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get a specific email template by type."""
     require_admin_access(institution_id, current_user, db)
@@ -830,13 +855,13 @@ def get_email_template(
     return template
 
 
-@router.put("/email-templates/{template_type}", response_model=EmailTemplateResponse)
+@router.put("/email-templates/{template_type}", response_model=EmailTemplateResponse, dependencies=[Depends(require_plan("starter"))])
 def update_email_template(
     template_type: str,
     template_data: EmailTemplateUpdate,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Update an email template."""
     require_admin_access(institution_id, current_user, db)
@@ -885,12 +910,12 @@ def update_email_template(
     return template
 
 
-@router.post("/email-templates/test")
+@router.post("/email-templates/test", dependencies=[Depends(require_plan("starter"))])
 async def send_test_email(
     request: TestEmailRequest,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Send a test email using a specific template."""
     require_admin_access(institution_id, current_user, db)

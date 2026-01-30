@@ -38,6 +38,7 @@ import {
   EmailTemplatesTab,
   ImportTab,
   InviteCodesTab,
+  EnterpriseSettingsTab,
 } from './pages/admin';
 import { PlatformAdminLayout, EnterprisesTab, SettingsTab } from './pages/platform-admin';
 import Landing from './pages/Landing';
@@ -210,7 +211,8 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/admin/users" replace />} />
+          <Route index element={<Navigate to="/admin/enterprise" replace />} />
+          <Route path="enterprise" element={<EnterpriseSettingsTab />} />
           <Route path="users" element={<UsersTab />} />
           <Route path="organizations" element={<OrganizationsTab />} />
           <Route path="security" element={<SecurityTab />} />

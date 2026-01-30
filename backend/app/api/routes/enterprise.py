@@ -10,6 +10,8 @@ from app.models.enterprise_config import EnterpriseConfig
 from app.schemas.enterprise import (
     EnterpriseBrandingResponse,
     EnterpriseConfigResponse,
+    EnterpriseResponse,
+    EnterpriseUpdate,
 )
 
 router = APIRouter()
@@ -30,6 +32,51 @@ def get_enterprise_branding(request: Request, db: Session = Depends(get_unscoped
         primary_color=config.primary_color if config else "#3B82F6",
         favicon_url=config.favicon_url if config else None,
     )
+
+
+@router.get("/settings", response_model=EnterpriseResponse)
+def get_enterprise_settings(
+    request: Request,
+    current_user: User = Depends(get_current_superuser),
+    db: Session = Depends(get_unscoped_db),
+):
+    """Get current enterprise details (admin only)."""
+    if not hasattr(request.state, "enterprise_id") or not request.state.enterprise_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enterprise not found")
+
+    enterprise = db.query(Enterprise).filter(Enterprise.id == request.state.enterprise_id).first()
+    if not enterprise:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enterprise not found")
+
+    return enterprise
+
+
+@router.put("/settings", response_model=EnterpriseResponse)
+def update_enterprise_settings(
+    data: EnterpriseUpdate,
+    request: Request,
+    current_user: User = Depends(get_current_superuser),
+    db: Session = Depends(get_unscoped_db),
+):
+    """Update enterprise name (admin only)."""
+    if not hasattr(request.state, "enterprise_id") or not request.state.enterprise_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enterprise not found")
+
+    enterprise = db.query(Enterprise).filter(Enterprise.id == request.state.enterprise_id).first()
+    if not enterprise:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Enterprise not found")
+
+    update_data = data.model_dump(exclude_unset=True)
+    # Only allow name updates (not is_active — that's platform admin only)
+    if "is_active" in update_data:
+        del update_data["is_active"]
+
+    for key, value in update_data.items():
+        setattr(enterprise, key, value)
+
+    db.commit()
+    db.refresh(enterprise)
+    return enterprise
 
 
 @router.get("/config", response_model=EnterpriseConfigResponse)

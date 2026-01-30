@@ -414,6 +414,32 @@ def require_project_lead(
     return project
 
 
+PLAN_RANK = {"free": 0, "starter": 1, "team": 2, "institution": 3}
+
+
+def require_plan(minimum_plan: str):
+    """Create a dependency that requires a minimum plan tier.
+
+    Usage: Depends(require_plan("starter"))
+    """
+    def checker(request: Request):
+        enterprise = getattr(request.state, "enterprise", None)
+        if not enterprise:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Enterprise context required",
+            )
+        current_rank = PLAN_RANK.get(enterprise.plan_type, 0)
+        required_rank = PLAN_RANK.get(minimum_plan, 1)
+        if current_rank < required_rank:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"This feature requires the {minimum_plan.title()} plan or higher. "
+                       f"Current plan: {enterprise.plan_type.title()}.",
+            )
+    return checker
+
+
 def get_current_enterprise_id(request: Request) -> UUID:
     """Get current enterprise ID from request state."""
     if not hasattr(request.state, "enterprise_id") or not request.state.enterprise_id:

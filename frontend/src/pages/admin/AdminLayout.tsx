@@ -1,16 +1,19 @@
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getSubscription } from '../../api/billing';
-import { Building2, Users, FolderKanban } from 'lucide-react';
+import { Building2, Users, FolderKanban, Lock } from 'lucide-react';
+
+const PLAN_RANK: Record<string, number> = { free: 0, starter: 1, team: 2, institution: 3 };
 
 const adminTabs = [
+  { to: '/admin/enterprise', label: 'Enterprise' },
   { to: '/admin/users', label: 'Users' },
   { to: '/admin/organizations', label: 'Organizations' },
   { to: '/admin/security', label: 'Security' },
-  { to: '/admin/email', label: 'Email Settings' },
-  { to: '/admin/email-templates', label: 'Email Templates' },
+  { to: '/admin/email', label: 'Email Settings', requiredPlan: 'starter' },
+  { to: '/admin/email-templates', label: 'Email Templates', requiredPlan: 'starter' },
   { to: '/admin/invite-codes', label: 'Invite Codes' },
-  { to: '/admin/import', label: 'Import' },
+  { to: '/admin/import', label: 'Import', requiredPlan: 'team' },
 ];
 
 function UsageBar({ current, max, label }: { current: number; max: number | null; label: string }) {
@@ -47,6 +50,8 @@ export default function AdminLayout() {
   const planLabel = subscription?.plan_type
     ? subscription.plan_type.charAt(0).toUpperCase() + subscription.plan_type.slice(1)
     : '';
+
+  const currentRank = PLAN_RANK[subscription?.plan_type || 'free'] ?? 0;
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -105,21 +110,30 @@ export default function AdminLayout() {
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex flex-wrap gap-x-6 gap-y-1">
-          {adminTabs.map((tab) => (
-            <NavLink
-              key={tab.to}
-              to={tab.to}
-              className={({ isActive }) =>
-                `py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  isActive
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`
-              }
-            >
-              {tab.label}
-            </NavLink>
-          ))}
+          {adminTabs.map((tab) => {
+            const isLocked = tab.requiredPlan
+              ? currentRank < (PLAN_RANK[tab.requiredPlan] ?? 1)
+              : false;
+
+            return (
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                className={({ isActive }) =>
+                  `py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex items-center gap-1 ${
+                    isActive
+                      ? 'border-blue-500 text-blue-600'
+                      : isLocked
+                        ? 'border-transparent text-gray-400 hover:text-gray-500 hover:border-gray-200'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`
+                }
+              >
+                {tab.label}
+                {isLocked && <Lock className="w-3 h-3" />}
+              </NavLink>
+            );
+          })}
         </nav>
       </div>
 

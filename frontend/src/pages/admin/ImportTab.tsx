@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useBulkUploadUsers } from '../../hooks/useAdmin';
 import { downloadUserTemplate } from '../../api/admin';
 import { getErrorMessage } from '../../utils/errorHandling';
+import PlanGate from '../../components/PlanGate';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import type { BulkUploadResult } from '../../types';
@@ -60,6 +61,7 @@ export default function ImportTab() {
   };
 
   return (
+    <PlanGate requiredPlan="team" featureName="Bulk User Import">
     <div className="max-w-2xl space-y-6">
       <Card className="bg-blue-50 border-blue-200">
         <h2 className="text-lg font-semibold text-blue-800 mb-2">Bulk User Import</h2>
@@ -108,5 +110,6 @@ export default function ImportTab() {
         </Card>
       )}
     </div>
+    </PlanGate>
   );
 }

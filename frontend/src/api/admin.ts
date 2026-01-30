@@ -82,3 +82,19 @@ export const updateEmailSettings = (data: UpdateEmailSettingsData, institutionId
 
 export const testEmail = (to: string, institutionId?: number) =>
   client.post('/admin/email-settings/test', { to }, { params: { institution_id: institutionId } });
+
+// Enterprise Settings
+export interface EnterpriseSettings {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export const getEnterpriseSettings = () =>
+  client.get<EnterpriseSettings>('/enterprise/settings');
+
+export const updateEnterpriseSettings = (data: { name: string }) =>
+  client.put<EnterpriseSettings>('/enterprise/settings', data);
