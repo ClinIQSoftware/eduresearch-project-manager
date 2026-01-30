@@ -32,9 +32,10 @@ def upgrade() -> None:
     op.execute("""
         CREATE POLICY tenant_isolation_users ON users
         USING (
-            enterprise_id IS NULL
-            OR enterprise_id = current_setting('app.current_enterprise_id', true)::uuid
+            current_setting('app.current_enterprise_id', true) IS NULL
             OR current_setting('app.current_enterprise_id', true) = ''
+            OR enterprise_id IS NULL
+            OR enterprise_id = current_setting('app.current_enterprise_id', true)::uuid
         )
     """)
 
