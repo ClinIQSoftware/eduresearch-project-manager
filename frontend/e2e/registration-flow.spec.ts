@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { generateTestUser, apiRegisterAndLogin } from './helpers/auth';
+import { generateTestUser, apiRegisterAndLogin, apiLogin } from './helpers/auth';
 
 // Shared test user across the sequential test suite
 let testUser: ReturnType<typeof generateTestUser>;
@@ -101,16 +101,20 @@ test.describe('Two-step registration flow', () => {
   test('6 - onboarded user navigating to /onboarding is redirected to dashboard', async ({
     page,
   }) => {
-    await loginViaUI(page, testUser.email, testUser.password);
+    // Use API login + token injection to avoid potential rate-limiting from repeated UI logins
+    const token = await apiLogin(testUser.email, testUser.password);
 
-    // Wait for initial redirect to dashboard
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await page.goto('/');
+    await page.evaluate(
+      (t) => {
+        localStorage.setItem('token', t);
+        localStorage.setItem('isPlatformAdmin', 'false');
+      },
+      token,
+    );
 
-    // Try to navigate to /onboarding manually
-    await page.goto('/onboarding', { waitUntil: 'networkidle' });
-
-    // Onboarding page checks enterprise_id and redirects back to dashboard
-    // Allow either immediate redirect or a brief delay for React hydration
+    // Navigate directly to /onboarding — should redirect to /dashboard since user has enterprise_id
+    await page.goto('/onboarding');
     await page.waitForURL('**/dashboard', { timeout: 30_000 });
     await expect(page).toHaveURL(/\/dashboard/);
   });
