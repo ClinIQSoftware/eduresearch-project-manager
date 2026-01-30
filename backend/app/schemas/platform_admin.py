@@ -1,7 +1,7 @@
 """Pydantic schemas for Platform Admin operations."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -92,6 +92,7 @@ class EnterpriseUpdate(BaseModel):
 
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     is_active: Optional[bool] = None
+    plan_type: Optional[Literal["free", "starter", "team", "institution"]] = None
 
 
 class EnterpriseDetailResponse(EnterpriseListItem):

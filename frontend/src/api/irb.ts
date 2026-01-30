@@ -277,7 +277,7 @@ export const triageSubmission = (submissionId: string, data: TriageActionData) =
   client.post<IrbSubmission>(`/irb/submissions/${submissionId}/triage`, data);
 
 export const assignMainReviewer = (submissionId: string, data: AssignMainReviewerData) =>
-  client.post<IrbSubmission>(`/irb/submissions/${submissionId}/assign-main-reviewer`, data);
+  client.post<IrbSubmission>(`/irb/submissions/${submissionId}/assign-main`, data);
 
 export const assignReviewers = (submissionId: string, data: AssignReviewersData) =>
   client.post<IrbSubmission>(`/irb/submissions/${submissionId}/assign-reviewers`, data);
@@ -311,5 +311,5 @@ export const updateAiConfig = (boardId: string, data: UpdateAiConfigData) =>
 // Dashboard API
 // ===========================================================================
 
-export const getDashboard = (boardId: string) =>
-  client.get<IrbDashboard>(`/irb/dashboard/${boardId}`);
+export const getDashboard = () =>
+  client.get<IrbDashboard>('/irb/dashboard');

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useIrbBoards, useIrbDashboard } from '../../hooks/useIrb';
+import { useIrbDashboard } from '../../hooks/useIrb';
 import { FileText, Clock, Inbox } from 'lucide-react';
 import type { IrbSubmission, SubmissionStatus } from '../../types';
 
@@ -65,23 +65,10 @@ function SectionEmpty({ message }: { message: string }) {
 }
 
 export default function IrbDashboardTab() {
-  const { data: boards, isLoading: boardsLoading } = useIrbBoards();
-  const firstBoardId = boards?.[0]?.id || '';
-  const { data: dashboard, isLoading: dashLoading } = useIrbDashboard(firstBoardId);
+  const { data: dashboard, isLoading } = useIrbDashboard();
 
-  if (boardsLoading || dashLoading) {
+  if (isLoading) {
     return <div className="text-center py-12 text-gray-500">Loading dashboard...</div>;
-  }
-
-  if (!boards || boards.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">No IRB boards found. Create a board first to get started.</p>
-        <Link to="/irb/boards" className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          Go to Boards
-        </Link>
-      </div>
-    );
   }
 
   return (

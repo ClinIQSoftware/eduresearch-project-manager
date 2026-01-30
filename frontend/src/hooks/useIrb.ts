@@ -498,13 +498,12 @@ export function useUpdateIrbAiConfig() {
 // Dashboard hooks
 // ===========================================================================
 
-export function useIrbDashboard(boardId: string) {
+export function useIrbDashboard() {
   return useQuery({
-    queryKey: queryKeys.irb.dashboard(boardId),
+    queryKey: queryKeys.irb.dashboard(),
     queryFn: async () => {
-      const response = await irbApi.getDashboard(boardId);
+      const response = await irbApi.getDashboard();
       return response.data;
     },
-    enabled: !!boardId,
   });
 }

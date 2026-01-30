@@ -16,6 +16,7 @@ from app.api.deps import (
 from app.models.user import User
 from app.schemas.irb import (
     IrbBoardCreate,
+    IrbBoardDetail,
     IrbBoardMemberCreate,
     IrbBoardMemberResponse,
     IrbBoardResponse,
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("", response_model=List[IrbBoardResponse])
+@router.get("", response_model=List[IrbBoardDetail])
 def list_boards(
     institution_id: Optional[int] = Query(None),
     current_user: User = Depends(get_current_user),
@@ -37,7 +38,21 @@ def list_boards(
 ):
     """List IRB boards for the current enterprise."""
     service = IrbBoardService(db)
-    return service.list_boards(enterprise_id, institution_id=institution_id)
+    boards = service.list_boards(enterprise_id, institution_id=institution_id)
+    return [
+        IrbBoardDetail(
+            id=b.id,
+            name=b.name,
+            description=b.description,
+            board_type=b.board_type,
+            institution_id=b.institution_id,
+            is_active=b.is_active,
+            created_at=b.created_at,
+            members_count=len(b.members),
+            submissions_count=len(b.submissions),
+        )
+        for b in boards
+    ]
 
 
 @router.post("", response_model=IrbBoardResponse)

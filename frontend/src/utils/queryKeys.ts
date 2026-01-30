@@ -110,7 +110,7 @@ export const queryKeys = {
       list: (filters?: { board_id?: string; status?: string }) => [...queryKeys.irb.submissions.all(), 'list', filters] as const,
       detail: (id: string) => [...queryKeys.irb.submissions.all(), 'detail', id] as const,
     },
-    dashboard: (boardId: string) => [...queryKeys.irb.all, 'dashboard', boardId] as const,
+    dashboard: () => [...queryKeys.irb.all, 'dashboard'] as const,
   },
 };
 

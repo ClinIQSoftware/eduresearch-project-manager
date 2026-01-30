@@ -460,6 +460,12 @@ def update_enterprise(
         enterprise.name = enterprise_data.name
     if enterprise_data.is_active is not None:
         enterprise.is_active = enterprise_data.is_active
+    if enterprise_data.plan_type is not None:
+        from app.services.billing_service import PLAN_LIMITS
+        limits = PLAN_LIMITS.get(enterprise_data.plan_type, PLAN_LIMITS["free"])
+        enterprise.plan_type = enterprise_data.plan_type
+        enterprise.max_users = limits["max_users"] or 9999
+        enterprise.max_projects = limits["max_projects"]
 
     db.commit()
     db.refresh(enterprise)
