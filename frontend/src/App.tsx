@@ -39,6 +39,9 @@ import {
   ImportTab,
   InviteCodesTab,
   EnterpriseSettingsTab,
+  IrbAdminBoardsTab,
+  IrbAdminQuestionsTab,
+  IrbAdminAiSettingsTab,
 } from './pages/admin';
 import { PlatformAdminLayout, EnterprisesTab, SettingsTab } from './pages/platform-admin';
 import Landing from './pages/Landing';
@@ -53,6 +56,9 @@ import {
   IrbSubmissionsTab,
   IrbSubmissionDetailPage,
   IrbNewSubmissionPage,
+  IrbReviewQueue,
+  IrbReviewForm,
+  IrbDecisionPanel,
 } from './pages/irb';
 
 function App() {
@@ -241,6 +247,36 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/irb/reviews"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <IrbReviewQueue />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/irb/reviews/:submissionId"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <IrbReviewForm />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/irb/boards/:boardId/decide/:submissionId"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <IrbDecisionPanel />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Billing routes */}
         <Route path="/billing/success" element={<BillingSuccess />} />
@@ -276,6 +312,9 @@ function App() {
           <Route path="email-templates" element={<EmailTemplatesTab />} />
           <Route path="invite-codes" element={<InviteCodesTab />} />
           <Route path="import" element={<ImportTab />} />
+          <Route path="irb-boards" element={<IrbAdminBoardsTab />} />
+          <Route path="irb-questions" element={<IrbAdminQuestionsTab />} />
+          <Route path="irb-ai" element={<IrbAdminAiSettingsTab />} />
         </Route>
 
         {/* Platform Admin Routes */}

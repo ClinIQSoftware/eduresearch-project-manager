@@ -5,3 +5,6 @@ export { default as IrbBoardDetailPage } from './IrbBoardDetailPage';
 export { default as IrbSubmissionsTab } from './IrbSubmissionsTab';
 export { default as IrbSubmissionDetailPage } from './IrbSubmissionDetailPage';
 export { default as IrbNewSubmissionPage } from './IrbNewSubmissionPage';
+export { default as IrbReviewQueue } from './IrbReviewQueue';
+export { default as IrbReviewForm } from './IrbReviewForm';
+export { default as IrbDecisionPanel } from './IrbDecisionPanel';
