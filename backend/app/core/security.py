@@ -2,14 +2,15 @@
 Security utilities for the EduResearch Project Manager.
 
 Provides password hashing and JWT token operations for authentication.
-Uses bcrypt directly for password hashing and python-jose for JWT tokens.
+Uses bcrypt directly for password hashing and PyJWT for JWT tokens.
 """
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import bcrypt
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import PyJWTError
 
 from app.config import settings
 
@@ -114,5 +115,5 @@ def decode_token(token: str) -> Optional[dict]:
             token, settings.secret_key, algorithms=[settings.algorithm]
         )
         return payload
-    except JWTError:
+    except PyJWTError:
         return None
