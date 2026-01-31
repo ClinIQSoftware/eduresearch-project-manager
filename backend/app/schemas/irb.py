@@ -232,6 +232,9 @@ class IrbSubmissionFileResponse(BaseModel):
     file_name: str
     file_url: str
     file_type: FileType
+    original_filename: Optional[str] = None
+    file_size: Optional[int] = None
+    content_type: Optional[str] = None
     uploaded_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

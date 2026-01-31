@@ -8,8 +8,9 @@ import {
   useCreateIrbReview,
   useCreateIrbDecision,
 } from '../../hooks/useIrb';
+import { downloadSubmissionFile } from '../../api/irb';
 import toast from 'react-hot-toast';
-import { ArrowLeft, FileText, MessageSquare, Scale, Clock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, FileText, MessageSquare, Scale, Clock, CheckCircle2, Download } from 'lucide-react';
 import type { SubmissionStatus, Recommendation, DecisionTypeValue } from '../../types';
 
 const STATUS_COLORS: Record<SubmissionStatus, string> = {
@@ -271,20 +272,36 @@ export default function IrbSubmissionDetailPage() {
             {submission.files.map((file) => (
               <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{file.file_name}</p>
+                  <p className="text-sm font-medium text-gray-900">{file.original_filename || file.file_name}</p>
                   <p className="text-xs text-gray-500">
-                    {file.file_type.replace(/_/g, ' ')} &middot; Uploaded{' '}
+                    {file.file_type.replace(/_/g, ' ')}
+                    {file.file_size ? ` \u00b7 ${(file.file_size / 1024).toFixed(0)} KB` : ''}
+                    {' '}&middot; Uploaded{' '}
                     {new Date(file.uploaded_at).toLocaleDateString()}
                   </p>
                 </div>
-                <a
-                  href={file.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 text-sm"
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await downloadSubmissionFile(submission.id, file.id);
+                      const blob = new Blob([response.data]);
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = file.original_filename || file.file_name;
+                      document.body.appendChild(a);
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                      a.remove();
+                    } catch {
+                      toast.error('Failed to download file');
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm"
                 >
+                  <Download className="w-4 h-4" />
                   Download
-                </a>
+                </button>
               </div>
             ))}
           </div>

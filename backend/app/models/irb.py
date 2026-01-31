@@ -206,6 +206,9 @@ class IrbSubmissionFile(Base):
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_url: Mapped[str] = mapped_column(String(500), nullable=False)
     file_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    original_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    file_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    content_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(
         default=func.now(), server_default=func.now()
     )

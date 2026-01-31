@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
@@ -22,6 +23,7 @@ from app.models.irb import (
     IrbSubmissionHistory,
     IrbSubmissionResponse,
 )
+from app.models.user import User
 from app.schemas.irb import (
     IrbDecisionCreate,
     IrbReviewCreate,
@@ -74,6 +76,97 @@ class IrbSubmissionService:
             note=note,
         )
         self.db.add(history)
+
+    # ------------------------------------------------------------------
+    # Access control
+    # ------------------------------------------------------------------
+
+    def can_access_submission(self, user: User, submission: IrbSubmission) -> bool:
+        """Check if a user can access a submission.
+
+        Access is granted if the user is:
+        - A superuser
+        - An IRB admin
+        - The submitter
+        - An assigned reviewer for this submission
+        - A board coordinator for the submission's board
+        """
+        if user.is_superuser:
+            return True
+        if getattr(user, "irb_role", None) == "admin":
+            return True
+        if submission.submitted_by_id == user.id:
+            return True
+
+        # Check if user is an assigned reviewer
+        review = (
+            self.db.query(IrbReview)
+            .filter(
+                IrbReview.submission_id == submission.id,
+                IrbReview.reviewer_id == user.id,
+            )
+            .first()
+        )
+        if review:
+            return True
+
+        # Check if user is a board coordinator
+        member = (
+            self.db.query(IrbBoardMember)
+            .filter(
+                IrbBoardMember.board_id == submission.board_id,
+                IrbBoardMember.user_id == user.id,
+                IrbBoardMember.role == "coordinator",
+                IrbBoardMember.is_active.is_(True),
+            )
+            .first()
+        )
+        if member:
+            return True
+
+        return False
+
+    def list_submissions_for_member(
+        self,
+        enterprise_id: UUID,
+        user_id: int,
+        board_id: Optional[UUID] = None,
+        status: Optional[str] = None,
+    ) -> list[IrbSubmission]:
+        """List submissions visible to an IRB board member.
+
+        Members see their own submissions plus those they are assigned
+        to review.
+        """
+        # Get submission IDs where user is an assigned reviewer
+        review_submission_ids = [
+            r.submission_id
+            for r in self.db.query(IrbReview.submission_id)
+            .filter(IrbReview.reviewer_id == user_id)
+            .all()
+        ]
+
+        query = self.db.query(IrbSubmission).filter(
+            IrbSubmission.enterprise_id == enterprise_id
+        )
+
+        # Own submissions OR assigned as reviewer
+        if review_submission_ids:
+            query = query.filter(
+                or_(
+                    IrbSubmission.submitted_by_id == user_id,
+                    IrbSubmission.id.in_(review_submission_ids),
+                )
+            )
+        else:
+            query = query.filter(IrbSubmission.submitted_by_id == user_id)
+
+        if board_id is not None:
+            query = query.filter(IrbSubmission.board_id == board_id)
+        if status is not None:
+            query = query.filter(IrbSubmission.status == status)
+
+        return query.order_by(IrbSubmission.created_at.desc()).all()
 
     # ------------------------------------------------------------------
     # 1. Create submission

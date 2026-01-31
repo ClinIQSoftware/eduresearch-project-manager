@@ -377,7 +377,7 @@ export default function IrbNewSubmissionPage() {
                 {uploadedFiles.map((file) => (
                   <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{file.file_name}</p>
+                      <p className="text-sm font-medium text-gray-900">{file.original_filename || file.file_name}</p>
                       <p className="text-xs text-gray-500">{file.file_type.replace(/_/g, ' ')}</p>
                     </div>
                     <button

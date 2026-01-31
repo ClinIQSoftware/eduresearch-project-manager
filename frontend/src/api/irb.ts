@@ -273,6 +273,12 @@ export const uploadSubmissionFile = (submissionId: string, formData: FormData) =
 export const deleteSubmissionFile = (submissionId: string, fileId: number) =>
   client.delete(`/irb/submissions/${submissionId}/files/${fileId}`);
 
+export const downloadSubmissionFile = (submissionId: string, fileId: number) =>
+  client.get(`/irb/submissions/${submissionId}/files/${fileId}/download`, {
+    responseType: 'blob',
+    maxRedirects: 5,
+  });
+
 // Workflow actions
 export const triageSubmission = (submissionId: string, data: TriageActionData) =>
   client.post<IrbSubmission>(`/irb/submissions/${submissionId}/triage`, data);

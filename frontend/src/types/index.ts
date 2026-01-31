@@ -448,6 +448,9 @@ export interface IrbSubmissionFile {
   file_name: string;
   file_url: string;
   file_type: FileType;
+  original_filename: string | null;
+  file_size: number | null;
+  content_type: string | null;
   uploaded_at: string;
 }
 
