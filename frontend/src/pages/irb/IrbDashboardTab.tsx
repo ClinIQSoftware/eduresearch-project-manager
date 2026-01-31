@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useIrbDashboard } from '../../hooks/useIrb';
+import { useAuth } from '../../contexts/AuthContext';
 import { FileText, Clock, Inbox, Plus } from 'lucide-react';
 import type { IrbSubmission, SubmissionStatus } from '../../types';
 
@@ -65,6 +66,8 @@ function SectionEmpty({ message }: { message: string }) {
 }
 
 export default function IrbDashboardTab() {
+  const { user } = useAuth();
+  const isMemberOrAdmin = user?.irb_role === 'member' || user?.irb_role === 'admin' || user?.is_superuser;
   const { data: dashboard, isLoading } = useIrbDashboard();
 
   if (isLoading) {
@@ -104,22 +107,24 @@ export default function IrbDashboardTab() {
         )}
       </div>
 
-      {/* My Pending Reviews */}
-      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Clock className="w-5 h-5 text-orange-500" />
-          <h2 className="text-lg font-semibold text-gray-800">My Pending Reviews</h2>
-        </div>
-        {dashboard?.my_pending_reviews && dashboard.my_pending_reviews.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {dashboard.my_pending_reviews.map((s) => (
-              <SubmissionCard key={s.id} submission={s} />
-            ))}
+      {/* My Pending Reviews — only visible to IRB members/admins */}
+      {isMemberOrAdmin && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="w-5 h-5 text-orange-500" />
+            <h2 className="text-lg font-semibold text-gray-800">My Pending Reviews</h2>
           </div>
-        ) : (
-          <SectionEmpty message="No reviews are pending for you at this time." />
-        )}
-      </div>
+          {dashboard?.my_pending_reviews && dashboard.my_pending_reviews.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {dashboard.my_pending_reviews.map((s) => (
+                <SubmissionCard key={s.id} submission={s} />
+              ))}
+            </div>
+          ) : (
+            <SectionEmpty message="No reviews are pending for you at this time." />
+          )}
+        </div>
+      )}
 
       {/* Board Queue */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
