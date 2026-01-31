@@ -98,11 +98,20 @@ def send_approval_emails(background_tasks: BackgroundTasks, db: Session, user: U
 
 
 async def send_approval_emails_async(db: Session, user: User):
-    """Send approval request emails asynchronously (for OAuth callbacks)."""
+    """Send approval request emails asynchronously (for OAuth callbacks).
+
+    Runs the synchronous SMTP send in a threadpool to avoid
+    blocking the event loop during OAuth callback handling.
+    """
+    import asyncio
+
     admins = get_institution_admins(db, user.institution_id)
     if admins:
         email_service = EmailService(db)
-        email_service.send_approval_request(user, admins)
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(
+            None, email_service.send_approval_request, user, admins
+        )
 
 
 @router.post("/login", response_model=Token)

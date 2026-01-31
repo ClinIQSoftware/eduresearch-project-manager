@@ -458,7 +458,7 @@ def send_project_reminders(
 
     email_service = EmailService(db)
 
-    # Check if email is configured
+    # Check if email is configured (platform-level fallback check)
     if not email_service.is_configured():
         return {
             "success": False,
@@ -502,6 +502,8 @@ def send_project_reminders(
                 meeting_date=project.next_meeting_date.strftime("%A, %B %d, %Y"),
                 days_until=days_until,
                 project_id=project.id,
+                institution_id=project.institution_id,
+                enterprise_id=project.enterprise_id,
             )
 
             project.meeting_reminder_sent_date = project.next_meeting_date
@@ -548,6 +550,8 @@ def send_project_reminders(
                 deadline_date=project.end_date.strftime("%A, %B %d, %Y"),
                 days_until=days_until,
                 project_id=project.id,
+                institution_id=project.institution_id,
+                enterprise_id=project.enterprise_id,
             )
 
             project.deadline_reminder_sent_date = project.end_date

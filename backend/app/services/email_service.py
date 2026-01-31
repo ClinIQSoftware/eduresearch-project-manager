@@ -90,7 +90,7 @@ class EmailService:
         return None
 
     def _render_template(self, template_name: str, context: dict) -> str:
-        """Render a Jinja2 email template.
+        """Render a Jinja2 email template file.
 
         Args:
             template_name: Name of the template file.
@@ -106,6 +106,19 @@ class EmailService:
             logger.warning(f"Template {template_name} not found, using fallback: {e}")
             # Return a basic fallback if template doesn't exist
             return self._create_fallback_content(context)
+
+    def render_template_string(self, template_string: str, context: dict) -> str:
+        """Render a Jinja2 template from a string (e.g. stored in DB).
+
+        Args:
+            template_string: Jinja2 template content as a string.
+            context: Dictionary of variables to pass to the template.
+
+        Returns:
+            Rendered string.
+        """
+        template = self.jinja_env.from_string(template_string)
+        return template.render(**context)
 
     def _create_fallback_content(self, context: dict) -> str:
         """Create fallback HTML content when template is not available.
@@ -522,6 +535,8 @@ class EmailService:
         meeting_date: str,
         days_until: int,
         project_id: int,
+        institution_id: Optional[int] = None,
+        enterprise_id: Optional[UUID] = None,
     ) -> bool:
         """Send meeting reminder emails to project members.
 
@@ -531,6 +546,8 @@ class EmailService:
             meeting_date: Formatted meeting date string.
             days_until: Days until the meeting.
             project_id: The project ID.
+            institution_id: Optional institution ID for SMTP settings lookup.
+            enterprise_id: Optional enterprise UUID for SMTP settings lookup.
 
         Returns:
             True if at least one email was sent.
@@ -565,6 +582,8 @@ class EmailService:
                 to=email,
                 subject=f"Meeting Reminder: {project_title}",
                 html_content=html_content,
+                institution_id=institution_id,
+                enterprise_id=enterprise_id,
             ):
                 sent_any = True
 
@@ -577,6 +596,8 @@ class EmailService:
         deadline_date: str,
         days_until: int,
         project_id: int,
+        institution_id: Optional[int] = None,
+        enterprise_id: Optional[UUID] = None,
     ) -> bool:
         """Send deadline reminder emails to project members.
 
@@ -586,6 +607,8 @@ class EmailService:
             deadline_date: Formatted deadline date string.
             days_until: Days until the deadline.
             project_id: The project ID.
+            institution_id: Optional institution ID for SMTP settings lookup.
+            enterprise_id: Optional enterprise UUID for SMTP settings lookup.
 
         Returns:
             True if at least one email was sent.
@@ -620,6 +643,8 @@ class EmailService:
                 to=email,
                 subject=f"Deadline Reminder: {project_title}",
                 html_content=html_content,
+                institution_id=institution_id,
+                enterprise_id=enterprise_id,
             ):
                 sent_any = True
 

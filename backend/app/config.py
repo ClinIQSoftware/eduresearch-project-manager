@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"
     max_file_size: int = 10485760  # 10MB
 
+    # Object Storage (S3-compatible, e.g. Render Object Storage)
+    s3_bucket_name: Optional[str] = None
+    s3_endpoint_url: Optional[str] = None
+    s3_access_key_id: Optional[str] = None
+    s3_secret_access_key: Optional[str] = None
+    s3_region: str = "auto"
+    s3_presigned_url_expiry: int = 3600  # 1 hour
+
     # App URLs
     frontend_url: str = "http://localhost:5173"
     backend_url: str = "http://localhost:8000"
@@ -81,6 +89,11 @@ class Settings(BaseSettings):
         return v
 
     @property
+    def use_s3(self) -> bool:
+        """Whether S3 object storage is configured."""
+        return bool(self.s3_bucket_name and self.s3_access_key_id)
+
+    @property
     def is_production(self) -> bool:
         return self.environment == "production"
 
@@ -98,5 +111,6 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Ensure upload directory exists
-os.makedirs(settings.upload_dir, exist_ok=True)
+# Ensure upload directory exists (only needed when using local storage)
+if not settings.use_s3:
+    os.makedirs(settings.upload_dir, exist_ok=True)

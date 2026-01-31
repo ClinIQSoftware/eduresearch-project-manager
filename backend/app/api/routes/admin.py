@@ -970,17 +970,18 @@ def send_test_email(
         "task_link": "https://example.com/tasks/1",
     }
 
-    # Render template body with test context
+    # Render template body and subject with Jinja2
     try:
-        rendered_body = email_svc._render_template(template.body, test_context)
+        rendered_body = email_svc.render_template_string(template.body, test_context)
     except Exception:
-        # If template rendering fails, use the raw body
         rendered_body = template.body
 
-    # Render subject with test context
-    rendered_subject = template.subject
-    for key, value in test_context.items():
-        rendered_subject = rendered_subject.replace("{{" + key + "}}", str(value))
+    try:
+        rendered_subject = email_svc.render_template_string(
+            template.subject, test_context
+        )
+    except Exception:
+        rendered_subject = template.subject
 
     try:
         success = email_svc.send_email(

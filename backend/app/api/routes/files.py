@@ -14,7 +14,7 @@ from fastapi import (
     File,
     status,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import (
@@ -23,6 +23,7 @@ from app.api.deps import (
     is_project_member,
     require_project_member,
 )
+from app.config import settings
 from app.models.project_file import ProjectFile
 from app.models.project import Project
 from app.models.user import User
@@ -128,7 +129,11 @@ async def download_file(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_tenant_db),
 ):
-    """Download a file."""
+    """Download a file.
+
+    With S3 storage: redirects to a time-limited presigned URL.
+    With local storage: serves the file directly via FileResponse.
+    """
     project_file = db.query(ProjectFile).filter(ProjectFile.id == file_id).first()
     if not project_file:
         raise HTTPException(
@@ -142,18 +147,23 @@ async def download_file(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
 
-    import os
+    file_service = FileService(db)
 
-    if not os.path.exists(project_file.file_path):
+    try:
+        download_url = file_service.get_download_url(project_file)
+    except Exception:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk"
+            status_code=status.HTTP_404_NOT_FOUND, detail="File not found in storage"
         )
 
-    return FileResponse(
-        path=project_file.file_path,
-        filename=project_file.original_filename,
-        media_type=project_file.content_type or "application/octet-stream",
-    )
+    if settings.use_s3:
+        return RedirectResponse(url=download_url, status_code=302)
+    else:
+        return FileResponse(
+            path=download_url,
+            filename=project_file.original_filename,
+            media_type=project_file.content_type or "application/octet-stream",
+        )
 
 
 @router.delete("/{file_id}")
