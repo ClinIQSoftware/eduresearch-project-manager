@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-from app.api.deps import get_db
+from app.api.deps import get_tenant_db
 from app.models.time_entry import TimeEntry
 from app.schemas.time_entry import TimeEntryCreate, TimeEntryUpdate, TimeEntryResponse
 
@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[TimeEntryResponse])
-def get_time_entries(task_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_time_entries(task_id: Optional[int] = None, db: Session = Depends(get_tenant_db)):
     query = db.query(TimeEntry)
 
     if task_id:
@@ -20,12 +20,12 @@ def get_time_entries(task_id: Optional[int] = None, db: Session = Depends(get_db
 
 
 @router.get("/active", response_model=Optional[TimeEntryResponse])
-def get_active_timer(db: Session = Depends(get_db)):
+def get_active_timer(db: Session = Depends(get_tenant_db)):
     return db.query(TimeEntry).filter(TimeEntry.end_time.is_(None)).first()
 
 
 @router.post("/", response_model=TimeEntryResponse)
-def create_time_entry(entry: TimeEntryCreate, db: Session = Depends(get_db)):
+def create_time_entry(entry: TimeEntryCreate, db: Session = Depends(get_tenant_db)):
     # Check if there's already an active timer
     active = db.query(TimeEntry).filter(TimeEntry.end_time.is_(None)).first()
     if active:
@@ -45,7 +45,7 @@ def create_time_entry(entry: TimeEntryCreate, db: Session = Depends(get_db)):
 
 @router.put("/{entry_id}", response_model=TimeEntryResponse)
 def update_time_entry(
-    entry_id: int, entry: TimeEntryUpdate, db: Session = Depends(get_db)
+    entry_id: int, entry: TimeEntryUpdate, db: Session = Depends(get_tenant_db)
 ):
     db_entry = db.query(TimeEntry).filter(TimeEntry.id == entry_id).first()
     if not db_entry:
@@ -68,7 +68,7 @@ def update_time_entry(
 
 
 @router.post("/{entry_id}/stop", response_model=TimeEntryResponse)
-def stop_timer(entry_id: int, db: Session = Depends(get_db)):
+def stop_timer(entry_id: int, db: Session = Depends(get_tenant_db)):
     db_entry = db.query(TimeEntry).filter(TimeEntry.id == entry_id).first()
     if not db_entry:
         raise HTTPException(status_code=404, detail="Time entry not found")
@@ -88,7 +88,7 @@ def stop_timer(entry_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/{entry_id}")
-def delete_time_entry(entry_id: int, db: Session = Depends(get_db)):
+def delete_time_entry(entry_id: int, db: Session = Depends(get_tenant_db)):
     entry = db.query(TimeEntry).filter(TimeEntry.id == entry_id).first()
     if not entry:
         raise HTTPException(status_code=404, detail="Time entry not found")

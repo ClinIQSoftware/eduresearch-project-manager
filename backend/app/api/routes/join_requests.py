@@ -8,7 +8,7 @@ from typing import List, Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_current_user, get_db, is_project_lead
+from app.api.deps import get_current_user, get_tenant_db, is_project_lead
 from app.models.join_request import JoinRequest, RequestStatus
 from app.schemas.join_request import RequestStatus as RequestStatusType
 from app.models.project import Project
@@ -29,7 +29,7 @@ def get_join_requests(
     project_id: Optional[int] = None,
     request_status: Optional[RequestStatusType] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get join requests.
 
@@ -78,7 +78,7 @@ def get_join_requests(
 
 @router.get("/my", response_model=List[JoinRequestWithUser])
 def get_my_join_requests(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_tenant_db)
 ):
     """Get current user's join requests."""
     join_request_service = JoinRequestService(db)
@@ -90,7 +90,7 @@ async def create_join_request(
     request_data: JoinRequestCreate,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Request to join a project. Notifies project lead."""
     join_request_service = JoinRequestService(db)
@@ -127,7 +127,7 @@ async def approve_join_request(
     request_id: int,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Approve a join request (project lead)."""
     join_request_service = JoinRequestService(db)
@@ -173,7 +173,7 @@ async def reject_join_request(
     request_id: int,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Reject a join request (project lead)."""
     join_request_service = JoinRequestService(db)
@@ -221,7 +221,7 @@ async def respond_to_join_request(
     response_data: RespondToJoinRequest,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Approve or reject a join request (lead only)."""
     if response_data.status == RequestStatus.approved:
@@ -240,7 +240,7 @@ async def respond_to_join_request(
 def cancel_join_request(
     request_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Cancel a pending join request (requester only)."""
     join_request = db.query(JoinRequest).filter(JoinRequest.id == request_id).first()

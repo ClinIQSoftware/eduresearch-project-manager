@@ -95,12 +95,19 @@ class FileService:
         file_path = project_dir / stored_filename
 
         try:
-            # Read and save file content
-            content = await file.read()
-            file_size = len(content)
-
+            # Stream file to disk in chunks to limit memory usage
+            file_size = 0
+            max_size = settings.max_file_size
             with open(file_path, "wb") as f:
-                f.write(content)
+                while chunk := await file.read(8192):
+                    file_size += len(chunk)
+                    if file_size > max_size:
+                        f.close()
+                        file_path.unlink(missing_ok=True)
+                        raise BadRequestException(
+                            f"File size exceeds maximum allowed ({max_size // (1024 * 1024)}MB)"
+                        )
+                    f.write(chunk)
 
             # Create database record
             file_data = {

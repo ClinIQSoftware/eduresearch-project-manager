@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List, Optional
 from datetime import datetime, timedelta
-from app.api.deps import get_db, get_unscoped_db, get_current_user
+from app.api.deps import get_tenant_db, get_unscoped_db, get_current_user
 from app.models.project import Project
 from app.models.user import User
 from app.models.user_keyword import UserKeyword
@@ -68,7 +68,7 @@ def search_projects_by_keywords(db: Session, keywords: List[str]) -> List[Projec
 
 @router.get("", response_model=KeywordListResponse)
 def get_keywords(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_tenant_db)
 ):
     """Get current user's keywords."""
     keywords = (
@@ -85,7 +85,7 @@ def get_keywords(
 def add_keyword(
     keyword_data: KeywordCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Add a new keyword. Max 20 keywords per user."""
     # Check limit
@@ -122,7 +122,7 @@ def add_keyword(
 def delete_keyword(
     keyword_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Delete a keyword."""
     keyword = (
@@ -144,7 +144,7 @@ def delete_keyword(
 def bulk_update_keywords(
     data: KeywordBulkUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Replace all keywords with new list. Max 20 keywords."""
     if len(data.keywords) > MAX_KEYWORDS_PER_USER:
@@ -178,7 +178,7 @@ def bulk_update_keywords(
 
 @router.get("/preferences", response_model=AlertPreferenceResponse)
 def get_alert_preferences(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_tenant_db)
 ):
     """Get user's alert preferences. Creates default if not exists."""
     pref = (
@@ -203,7 +203,7 @@ def get_alert_preferences(
 def update_alert_preferences(
     data: AlertPreferenceUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Update alert preferences."""
     pref = (
@@ -232,7 +232,7 @@ def get_matched_projects(
     limit: int = 50,
     offset: int = 0,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get all projects matching user's saved keywords."""
     # Get user's keywords
@@ -285,7 +285,7 @@ def get_new_matched_projects(
         description="Number of weeks to look back (overrides user preference)",
     ),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get new matched projects for dashboard (within specified or user's configured week range)."""
     # Use provided weeks or fall back to user's preferences

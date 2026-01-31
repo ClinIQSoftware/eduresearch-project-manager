@@ -9,7 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_enterprise_id, get_current_user, get_db, is_institution_admin
+from app.api.deps import get_current_enterprise_id, get_current_user, get_tenant_db, get_unscoped_db, is_institution_admin
 from app.models.user import User
 from app.schemas import (
     DepartmentCreate,
@@ -27,7 +27,7 @@ router = APIRouter()
 def get_departments(
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get departments, optionally filtered by institution."""
     department_service = DepartmentService(db)
@@ -54,7 +54,7 @@ def get_departments(
 
 @router.get("/public", response_model=List[DepartmentResponse])
 def get_departments_public(
-    institution_id: Optional[int] = None, db: Session = Depends(get_db)
+    institution_id: Optional[int] = None, db: Session = Depends(get_unscoped_db)
 ):
     """Get all departments (public endpoint for registration)."""
     from app.models.department import Department
@@ -69,7 +69,7 @@ def get_departments_public(
 def create_department(
     dept_data: DepartmentCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Create a new department (superuser or institution admin only)."""
@@ -95,7 +95,7 @@ def create_department(
 def get_department(
     department_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get department details."""
     department_service = DepartmentService(db)
@@ -121,7 +121,7 @@ def update_department(
     department_id: int,
     dept_data: DepartmentUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Update department (admin only)."""
     department_service = DepartmentService(db)
@@ -154,7 +154,7 @@ def update_department(
 def delete_department(
     department_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Delete a department (superuser or institution admin only).
 
@@ -196,7 +196,7 @@ def delete_department(
 def get_department_members(
     department_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get department members."""
     department_service = DepartmentService(db)
@@ -222,7 +222,7 @@ def add_department_member(
     department_id: int,
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Add member to department (admin only)."""
     department_service = DepartmentService(db)
@@ -264,7 +264,7 @@ def remove_department_member(
     department_id: int,
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Remove member from department."""
     department_service = DepartmentService(db)

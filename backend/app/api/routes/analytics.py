@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
-from app.api.deps import get_db
+from app.api.deps import get_tenant_db
 from app.models.task import Task
 from app.models.time_entry import TimeEntry
 from app.models.project import Project
@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.get("/summary")
-def get_summary(db: Session = Depends(get_db)):
+def get_summary(db: Session = Depends(get_tenant_db)):
     total_tasks = db.query(Task).count()
     completed_tasks = db.query(Task).filter(Task.status == "completed").count()
     in_progress_tasks = db.query(Task).filter(Task.status == "in_progress").count()
@@ -41,7 +41,7 @@ def get_summary(db: Session = Depends(get_db)):
 
 
 @router.get("/time-by-project")
-def get_time_by_project(db: Session = Depends(get_db)):
+def get_time_by_project(db: Session = Depends(get_tenant_db)):
     results = (
         db.query(
             Project.id,
@@ -67,7 +67,7 @@ def get_time_by_project(db: Session = Depends(get_db)):
 
 
 @router.get("/tasks-completed")
-def get_tasks_completed(days: int = 7, db: Session = Depends(get_db)):
+def get_tasks_completed(days: int = 7, db: Session = Depends(get_tenant_db)):
     start_date = datetime.utcnow() - timedelta(days=days)
 
     # Get task completion by day
@@ -85,7 +85,7 @@ def get_tasks_completed(days: int = 7, db: Session = Depends(get_db)):
 
 
 @router.get("/daily-time")
-def get_daily_time(days: int = 7, db: Session = Depends(get_db)):
+def get_daily_time(days: int = 7, db: Session = Depends(get_tenant_db)):
     start_date = datetime.utcnow() - timedelta(days=days)
 
     results = (

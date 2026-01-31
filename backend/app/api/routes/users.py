@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import (
     get_current_user,
     get_current_superuser,
-    get_db,
+    get_tenant_db,
     is_institution_admin,
 )
 from app.models.enterprise import Enterprise
@@ -29,7 +29,7 @@ router = APIRouter()
 def list_users(
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """List all users (superuser only).
 
@@ -46,7 +46,7 @@ def list_users(
 def get_pending_users(
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get users pending approval.
 
@@ -85,7 +85,7 @@ def get_pending_users(
 def get_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get a user by ID.
 
@@ -120,7 +120,7 @@ def get_user(
 def approve_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Approve a pending user registration.
 
@@ -197,7 +197,7 @@ def approve_user(
 def reject_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Reject and delete a pending user registration.
 
