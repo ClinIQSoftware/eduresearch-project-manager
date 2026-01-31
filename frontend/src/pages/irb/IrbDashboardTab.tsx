@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useIrbDashboard } from '../../hooks/useIrb';
-import { FileText, Clock, Inbox } from 'lucide-react';
+import { FileText, Clock, Inbox, Plus } from 'lucide-react';
 import type { IrbSubmission, SubmissionStatus } from '../../types';
 
 const STATUS_COLORS: Record<SubmissionStatus, string> = {
@@ -75,9 +75,18 @@ export default function IrbDashboardTab() {
     <div className="space-y-6">
       {/* My Submissions */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <FileText className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-800">My Submissions</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-blue-600" />
+            <h2 className="text-lg font-semibold text-gray-800">My Submissions</h2>
+          </div>
+          <Link
+            to="/irb/submissions/new"
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            New Submission
+          </Link>
         </div>
         {dashboard?.my_submissions && dashboard.my_submissions.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -86,7 +95,12 @@ export default function IrbDashboardTab() {
             ))}
           </div>
         ) : (
-          <SectionEmpty message="You have no submissions yet. Start by creating a new submission." />
+          <div className="text-center py-8 text-gray-400">
+            <p className="text-sm">You have no submissions yet.</p>
+            <Link to="/irb/submissions/new" className="text-sm text-blue-600 hover:text-blue-700 font-medium mt-1 inline-block">
+              Create your first submission →
+            </Link>
+          </div>
         )}
       </div>
 

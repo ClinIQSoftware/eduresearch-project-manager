@@ -1,5 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { ClipboardCheck } from 'lucide-react';
+import { NavLink, Outlet, Link } from 'react-router-dom';
+import { ClipboardCheck, Plus } from 'lucide-react';
 
 const irbTabs = [
   { to: '/irb/dashboard', label: 'Dashboard' },
@@ -10,9 +10,18 @@ const irbTabs = [
 export default function IrbLayout() {
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex items-center gap-3">
-        <ClipboardCheck className="w-7 h-7 text-blue-600" />
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">IRB Management</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <ClipboardCheck className="w-7 h-7 text-blue-600" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">IRB Management</h1>
+        </div>
+        <Link
+          to="/irb/submissions/new"
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+        >
+          <Plus className="w-4 h-4" />
+          New Submission
+        </Link>
       </div>
 
       {/* Tab Navigation */}
