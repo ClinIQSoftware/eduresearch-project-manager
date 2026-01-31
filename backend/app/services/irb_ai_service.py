@@ -264,7 +264,6 @@ Return ONLY valid JSON, no additional text."""
         submission.ai_summary = summary
         submission.ai_summary_approved = False
         self.db.commit()
-        self.db.refresh(submission)
 
         return summary
 
@@ -367,8 +366,6 @@ Return ONLY valid JSON, no additional text."""
                 created_responses.append(response)
 
         self.db.commit()
-        for r in created_responses:
-            self.db.refresh(r)
 
         return created_responses
 
@@ -394,7 +391,6 @@ Return ONLY valid JSON, no additional text."""
             existing.max_tokens = data.max_tokens
             existing.is_active = True
             self.db.commit()
-            self.db.refresh(existing)
             return existing
         else:
             config = IrbAiConfig(
@@ -408,7 +404,6 @@ Return ONLY valid JSON, no additional text."""
             )
             self.db.add(config)
             self.db.commit()
-            self.db.refresh(config)
             return config
 
     def update_config(self, enterprise_id: UUID, data: IrbAiConfigUpdate) -> IrbAiConfig:
@@ -423,7 +418,6 @@ Return ONLY valid JSON, no additional text."""
             setattr(config, key, value)
 
         self.db.commit()
-        self.db.refresh(config)
         return config
 
     async def test_connection(self, enterprise_id: UUID) -> dict:

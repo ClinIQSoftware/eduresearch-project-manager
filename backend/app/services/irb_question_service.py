@@ -61,7 +61,6 @@ class IrbQuestionService:
         )
         self.db.add(section)
         self.db.commit()
-        self.db.refresh(section)
         return section
 
     def update_section(
@@ -92,7 +91,6 @@ class IrbQuestionService:
             setattr(section, field, value)
 
         self.db.commit()
-        self.db.refresh(section)
         return section
 
     def list_sections(self, board_id: UUID) -> list[IrbQuestionSection]:
@@ -175,16 +173,16 @@ class IrbQuestionService:
                 )
                 self.db.add(condition)
 
-        self.db.commit()
-        self.db.refresh(question)
-
-        # Eager-load conditions before returning
-        return (
+        # Eager-load conditions before committing (RLS blocks post-commit queries)
+        self.db.flush()
+        result = (
             self.db.query(IrbQuestion)
             .options(joinedload(IrbQuestion.conditions))
             .filter(IrbQuestion.id == question.id)
             .first()
         )
+        self.db.commit()
+        return result
 
     def update_question(self, question_id: int, enterprise_id=None, data: IrbQuestionUpdate = None) -> IrbQuestion:
         """Update an existing question.
@@ -231,16 +229,16 @@ class IrbQuestionService:
                     )
                     self.db.add(condition)
 
-        self.db.commit()
-        self.db.refresh(question)
-
-        # Eager-load conditions before returning
-        return (
+        # Eager-load conditions before committing (RLS blocks post-commit queries)
+        self.db.flush()
+        result = (
             self.db.query(IrbQuestion)
             .options(joinedload(IrbQuestion.conditions))
             .filter(IrbQuestion.id == question_id)
             .first()
         )
+        self.db.commit()
+        return result
 
     def delete_question(self, question_id: int, enterprise_id=None) -> bool:
         """Soft-delete a question by setting is_active to False.

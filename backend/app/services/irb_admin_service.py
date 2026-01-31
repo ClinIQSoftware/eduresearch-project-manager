@@ -189,7 +189,6 @@ class IrbAdminService:
             return None
         user.irb_role = irb_role
         self.db.commit()
-        self.db.refresh(user)
         return user
 
     def remove_member_role(self, enterprise_id: UUID, user_id: int) -> User:
@@ -203,7 +202,6 @@ class IrbAdminService:
             return None
         user.irb_role = None
         self.db.commit()
-        self.db.refresh(user)
         return user
 
     def get_all_submissions(
@@ -275,8 +273,6 @@ class IrbAdminService:
 
         if created_reviews:
             self.db.commit()
-            for r in created_reviews:
-                self.db.refresh(r)
 
         return created_reviews
 

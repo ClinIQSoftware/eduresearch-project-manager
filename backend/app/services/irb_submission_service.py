@@ -101,7 +101,6 @@ class IrbSubmissionService:
         )
         self.db.add(submission)
         self.db.commit()
-        self.db.refresh(submission)
         return submission
 
     # ------------------------------------------------------------------
@@ -141,7 +140,6 @@ class IrbSubmissionService:
             setattr(submission, field, value)
 
         self.db.commit()
-        self.db.refresh(submission)
         return submission
 
     # ------------------------------------------------------------------
@@ -250,7 +248,6 @@ class IrbSubmissionService:
             enterprise_id=submission.enterprise_id,
         )
         self.db.commit()
-        self.db.refresh(submission)
         return submission
 
     # ------------------------------------------------------------------
@@ -351,7 +348,6 @@ class IrbSubmissionService:
         )
         self.db.add(file_record)
         self.db.commit()
-        self.db.refresh(file_record)
         return file_record
 
     # ------------------------------------------------------------------
@@ -418,7 +414,6 @@ class IrbSubmissionService:
             )
 
         self.db.commit()
-        self.db.refresh(submission)
         return submission
 
     # ------------------------------------------------------------------
@@ -464,7 +459,6 @@ class IrbSubmissionService:
             enterprise_id=submission.enterprise_id,
         )
         self.db.commit()
-        self.db.refresh(submission)
         return submission
 
     # ------------------------------------------------------------------
@@ -536,8 +530,6 @@ class IrbSubmissionService:
             enterprise_id=submission.enterprise_id,
         )
         self.db.commit()
-        for review in reviews:
-            self.db.refresh(review)
         return reviews
 
     # ------------------------------------------------------------------
@@ -590,7 +582,6 @@ class IrbSubmissionService:
                 self.db.add(review_response)
 
         self.db.commit()
-        self.db.refresh(review)
         return review
 
     # ------------------------------------------------------------------
@@ -671,7 +662,6 @@ class IrbSubmissionService:
         )
 
         self.db.commit()
-        self.db.refresh(decision)
         return decision
 
     # ------------------------------------------------------------------
@@ -722,7 +712,6 @@ class IrbSubmissionService:
         )
         self.db.add(new_submission)
         self.db.commit()
-        self.db.refresh(new_submission)
         return new_submission
 
     # ------------------------------------------------------------------
@@ -769,7 +758,6 @@ class IrbSubmissionService:
         )
         self.db.add(new_submission)
         self.db.commit()
-        self.db.refresh(new_submission)
         return new_submission
 
     # ------------------------------------------------------------------

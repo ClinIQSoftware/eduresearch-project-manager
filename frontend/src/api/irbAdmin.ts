@@ -16,7 +16,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 export const getAdminDashboard = async (): Promise<IrbAdminDashboard> => {
-  const { data } = await client.get('/api/irb/admin/dashboard');
+  const { data } = await client.get('/irb/admin/dashboard');
   return data;
 };
 
@@ -25,22 +25,22 @@ export const getAdminDashboard = async (): Promise<IrbAdminDashboard> => {
 // ---------------------------------------------------------------------------
 
 export const getMembers = async (): Promise<IrbMember[]> => {
-  const { data } = await client.get('/api/irb/admin/members');
+  const { data } = await client.get('/irb/admin/members');
   return data;
 };
 
 export const addMember = async (payload: { user_id: number; irb_role: IrbRole }): Promise<IrbMember> => {
-  const { data } = await client.post('/api/irb/admin/members', payload);
+  const { data } = await client.post('/irb/admin/members', payload);
   return data;
 };
 
 export const updateMember = async (userId: number, payload: { irb_role: IrbRole }): Promise<IrbMember> => {
-  const { data } = await client.put(`/api/irb/admin/members/${userId}`, payload);
+  const { data } = await client.put(`/irb/admin/members/${userId}`, payload);
   return data;
 };
 
 export const removeMember = async (userId: number): Promise<void> => {
-  await client.delete(`/api/irb/admin/members/${userId}`);
+  await client.delete(`/irb/admin/members/${userId}`);
 };
 
 // ---------------------------------------------------------------------------
@@ -51,7 +51,7 @@ export const getAdminSubmissions = async (filters?: {
   board_id?: string;
   status?: string;
 }): Promise<IrbSubmission[]> => {
-  const { data } = await client.get('/api/irb/admin/submissions', { params: filters });
+  const { data } = await client.get('/irb/admin/submissions', { params: filters });
   return data;
 };
 
@@ -59,7 +59,7 @@ export const assignReviewers = async (
   submissionId: string,
   reviewerIds: number[]
 ): Promise<IrbReview[]> => {
-  const { data } = await client.post(`/api/irb/admin/submissions/${submissionId}/assign`, {
+  const { data } = await client.post(`/irb/admin/submissions/${submissionId}/assign`, {
     reviewer_ids: reviewerIds,
   });
   return data;
@@ -70,7 +70,7 @@ export const assignReviewers = async (
 // ---------------------------------------------------------------------------
 
 export const getReviewQuestions = async (boardId: string): Promise<IrbQuestion[]> => {
-  const { data } = await client.get(`/api/irb/admin/boards/${boardId}/review-questions`);
+  const { data } = await client.get(`/irb/admin/boards/${boardId}/review-questions`);
   return data;
 };
 
@@ -90,7 +90,7 @@ export const createReviewQuestion = async (
   boardId: string,
   payload: CreateReviewQuestionData
 ): Promise<IrbQuestion> => {
-  const { data } = await client.post(`/api/irb/admin/boards/${boardId}/review-questions`, payload);
+  const { data } = await client.post(`/irb/admin/boards/${boardId}/review-questions`, payload);
   return data;
 };
 
@@ -98,12 +98,12 @@ export const updateReviewQuestion = async (
   questionId: number,
   payload: Partial<CreateReviewQuestionData>
 ): Promise<IrbQuestion> => {
-  const { data } = await client.put(`/api/irb/admin/review-questions/${questionId}`, payload);
+  const { data } = await client.put(`/irb/admin/review-questions/${questionId}`, payload);
   return data;
 };
 
 export const deleteReviewQuestion = async (questionId: number): Promise<void> => {
-  await client.delete(`/api/irb/admin/review-questions/${questionId}`);
+  await client.delete(`/irb/admin/review-questions/${questionId}`);
 };
 
 // ---------------------------------------------------------------------------
@@ -111,7 +111,7 @@ export const deleteReviewQuestion = async (questionId: number): Promise<void> =>
 // ---------------------------------------------------------------------------
 
 export const getReports = async (): Promise<IrbReportsData> => {
-  const { data } = await client.get('/api/irb/admin/reports');
+  const { data } = await client.get('/irb/admin/reports');
   return data;
 };
 
@@ -120,6 +120,6 @@ export const getReports = async (): Promise<IrbReportsData> => {
 // ---------------------------------------------------------------------------
 
 export const getMyReviews = async (): Promise<IrbMyReviews> => {
-  const { data } = await client.get('/api/irb/my-reviews');
+  const { data } = await client.get('/irb/my-reviews');
   return data;
 };

@@ -86,7 +86,6 @@ class IrbBoardService:
         )
         self.db.add(board)
         self.db.commit()
-        self.db.refresh(board)
         return board
 
     def update_board(self, board_id: UUID, data: IrbBoardUpdate) -> IrbBoard:
@@ -111,7 +110,6 @@ class IrbBoardService:
             setattr(board, field, value)
 
         self.db.commit()
-        self.db.refresh(board)
         return board
 
     def get_board(self, board_id: UUID) -> IrbBoard:
@@ -198,7 +196,6 @@ class IrbBoardService:
         )
         self.db.add(member)
         self.db.commit()
-        self.db.refresh(member)
         return member
 
     def remove_member(self, board_id: UUID, user_id: int) -> bool:
