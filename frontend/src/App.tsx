@@ -39,9 +39,6 @@ import {
   ImportTab,
   InviteCodesTab,
   EnterpriseSettingsTab,
-  IrbAdminBoardsTab,
-  IrbAdminQuestionsTab,
-  IrbAdminAiSettingsTab,
 } from './pages/admin';
 import { PlatformAdminLayout, EnterprisesTab, SettingsTab } from './pages/platform-admin';
 import Landing from './pages/Landing';
@@ -51,6 +48,7 @@ import { BillingSettings, BillingSuccess, BillingCancel } from './pages/billing'
 import {
   IrbLayout,
   IrbDashboardTab,
+  IrbMyReviewsTab,
   IrbBoardsTab,
   IrbBoardDetailPage,
   IrbSubmissionsTab,
@@ -60,6 +58,17 @@ import {
   IrbReviewForm,
   IrbDecisionPanel,
 } from './pages/irb';
+import {
+  IrbAdminLayout as IrbAdminPanelLayout,
+  IrbAdminDashboardTab as IrbAdminPanelDashboardTab,
+  IrbAdminMembersTab as IrbAdminPanelMembersTab,
+  IrbAdminBoardsTab as IrbAdminPanelBoardsTab,
+  IrbAdminQuestionsTab as IrbAdminPanelQuestionsTab,
+  IrbAdminReviewQuestionsTab as IrbAdminPanelReviewQuestionsTab,
+  IrbAdminAssignmentsTab as IrbAdminPanelAssignmentsTab,
+  IrbAdminReportsTab as IrbAdminPanelReportsTab,
+  IrbAdminAiSettingsTab as IrbAdminPanelAiSettingsTab,
+} from './pages/irb-admin';
 
 function App() {
   return (
@@ -216,6 +225,7 @@ function App() {
           <Route path="dashboard" element={<IrbDashboardTab />} />
           <Route path="boards" element={<IrbBoardsTab />} />
           <Route path="submissions" element={<IrbSubmissionsTab />} />
+          <Route path="my-reviews" element={<IrbMyReviewsTab />} />
         </Route>
         <Route
           path="/irb/boards/:boardId"
@@ -278,6 +288,27 @@ function App() {
           }
         />
 
+        {/* IRB Admin routes */}
+        <Route
+          path="/irb-admin"
+          element={
+            <ProtectedRoute requireIrbAdmin>
+              <Layout>
+                <IrbAdminPanelLayout />
+              </Layout>
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<IrbAdminPanelDashboardTab />} />
+          <Route path="members" element={<IrbAdminPanelMembersTab />} />
+          <Route path="boards" element={<IrbAdminPanelBoardsTab />} />
+          <Route path="questions" element={<IrbAdminPanelQuestionsTab />} />
+          <Route path="review-questions" element={<IrbAdminPanelReviewQuestionsTab />} />
+          <Route path="assignments" element={<IrbAdminPanelAssignmentsTab />} />
+          <Route path="reports" element={<IrbAdminPanelReportsTab />} />
+          <Route path="ai-settings" element={<IrbAdminPanelAiSettingsTab />} />
+        </Route>
+
         {/* Billing routes */}
         <Route path="/billing/success" element={<BillingSuccess />} />
         <Route path="/billing/cancel" element={<BillingCancel />} />
@@ -312,9 +343,6 @@ function App() {
           <Route path="email-templates" element={<EmailTemplatesTab />} />
           <Route path="invite-codes" element={<InviteCodesTab />} />
           <Route path="import" element={<ImportTab />} />
-          <Route path="irb-boards" element={<IrbAdminBoardsTab />} />
-          <Route path="irb-questions" element={<IrbAdminQuestionsTab />} />
-          <Route path="irb-ai" element={<IrbAdminAiSettingsTab />} />
         </Route>
 
         {/* Platform Admin Routes */}

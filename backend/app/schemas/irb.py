@@ -33,6 +33,8 @@ Recommendation = Literal["accept", "minor_revise", "major_revise", "decline"]
 DecisionType = Literal["accept", "minor_revise", "major_revise", "decline"]
 FileType = Literal["protocol", "consent_form", "supporting_doc"]
 AiProvider = Literal["anthropic", "openai", "custom"]
+QuestionContext = Literal["submission", "review"]
+IrbRole = Literal["member", "admin"]
 
 
 # ---------------------------------------------------------------------------
@@ -177,6 +179,7 @@ class IrbQuestionCreate(BaseModel):
     required: bool = False
     order: int = 0
     submission_type: SubmissionTypeFilter = "both"
+    question_context: QuestionContext = "submission"
     conditions: Optional[List[IrbQuestionConditionCreate]] = None
 
 
@@ -191,6 +194,7 @@ class IrbQuestionUpdate(BaseModel):
     order: Optional[int] = None
     is_active: Optional[bool] = None
     submission_type: Optional[SubmissionTypeFilter] = None
+    question_context: Optional[QuestionContext] = None
     section_id: Optional[int] = None
     conditions: Optional[List[IrbQuestionConditionCreate]] = None
 
@@ -209,6 +213,7 @@ class IrbQuestionResponse(BaseModel):
     order: int
     is_active: bool
     submission_type: SubmissionTypeFilter
+    question_context: QuestionContext = "submission"
     created_at: datetime
     conditions: List[IrbQuestionConditionResponse] = []
 
@@ -268,12 +273,32 @@ class IrbSubmissionResponseResponse(BaseModel):
 # Review schemas (must precede SubmissionDetail)
 # ---------------------------------------------------------------------------
 
+class IrbReviewResponseCreate(BaseModel):
+    """Schema for creating a review response (answer to a review question)."""
+
+    question_id: int
+    answer: Optional[str] = None
+
+
+class IrbReviewResponseResponse(BaseModel):
+    """Schema for review response response."""
+
+    id: int
+    review_id: UUID
+    question_id: int
+    answer: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class IrbReviewCreate(BaseModel):
     """Schema for creating a review."""
 
     recommendation: Recommendation
     comments: Optional[str] = None
     feedback_to_submitter: Optional[str] = None
+    review_responses: Optional[List[IrbReviewResponseCreate]] = None
 
 
 class IrbReviewResponse(BaseModel):
@@ -288,6 +313,7 @@ class IrbReviewResponse(BaseModel):
     feedback_to_submitter: Optional[str] = None
     completed_at: Optional[datetime] = None
     created_at: datetime
+    review_responses: List[IrbReviewResponseResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -465,3 +491,68 @@ class IrbDashboardResponse(BaseModel):
     my_submissions: List[IrbSubmissionResponse] = []
     my_pending_reviews: List[IrbSubmissionResponse] = []
     board_queue: List[IrbSubmissionResponse] = []
+
+
+# ---------------------------------------------------------------------------
+# IRB Admin schemas
+# ---------------------------------------------------------------------------
+
+class IrbAdminDashboardStats(BaseModel):
+    """Schema for IRB admin dashboard statistics."""
+
+    total_submissions: int = 0
+    pending_submissions: int = 0
+    in_review_submissions: int = 0
+    completed_submissions: int = 0
+    total_boards: int = 0
+    total_members: int = 0
+    avg_review_days: Optional[float] = None
+    submissions_by_status: dict = {}
+    recent_activity: List[dict] = []
+
+
+class IrbMemberResponse(BaseModel):
+    """Schema for IRB member response."""
+
+    id: int
+    email: str
+    first_name: str
+    last_name: str
+    irb_role: Optional[IrbRole] = None
+    boards: List[dict] = []
+    pending_reviews: int = 0
+    completed_reviews: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class IrbMemberCreate(BaseModel):
+    """Schema for setting IRB role on a user."""
+
+    user_id: int
+    irb_role: IrbRole
+
+
+class IrbMemberUpdate(BaseModel):
+    """Schema for updating IRB role."""
+
+    irb_role: IrbRole
+
+
+class IrbReportsResponse(BaseModel):
+    """Schema for IRB reports data."""
+
+    submissions_over_time: List[dict] = []
+    reviewer_workload: List[dict] = []
+    avg_turnaround_days: Optional[float] = None
+    decisions_breakdown: dict = {}
+    submissions_by_board: List[dict] = []
+
+
+class IrbMyReviewsResponse(BaseModel):
+    """Schema for my reviews dashboard."""
+
+    pending_reviews: List[IrbSubmissionResponse] = []
+    completed_reviews: List[IrbSubmissionResponse] = []
+    total_pending: int = 0
+    total_completed: int = 0

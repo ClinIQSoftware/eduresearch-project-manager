@@ -5,9 +5,10 @@ import { useTenant } from '../../contexts/TenantContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireSuperuser?: boolean;
+  requireIrbAdmin?: boolean;
 }
 
-export default function ProtectedRoute({ children, requireSuperuser = false }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, requireSuperuser = false, requireIrbAdmin = false }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { isPlatformAdmin } = useTenant();
   const location = useLocation();
@@ -30,6 +31,10 @@ export default function ProtectedRoute({ children, requireSuperuser = false }: P
   }
 
   if (requireSuperuser && !user?.is_superuser) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requireIrbAdmin && !(user?.is_superuser || user?.irb_role === 'admin')) {
     return <Navigate to="/dashboard" replace />;
   }
 

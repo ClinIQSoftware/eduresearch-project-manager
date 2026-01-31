@@ -11,6 +11,7 @@ export interface User {
   bio: string | null;
   is_active: boolean;
   is_superuser: boolean;
+  irb_role: 'member' | 'admin' | null;
   is_approved: boolean;
   approved_at: string | null;
   auth_provider: AuthProvider;
@@ -435,6 +436,7 @@ export interface IrbQuestion {
   order: number;
   is_active: boolean;
   submission_type: SubmissionTypeFilter;
+  question_context: 'submission' | 'review';
   created_at: string;
   conditions: IrbQuestionCondition[];
 }
@@ -461,6 +463,14 @@ export interface IrbSubmissionResponseData {
 }
 
 // Reviews
+export interface IrbReviewResponseData {
+  id: number;
+  review_id: string;
+  question_id: number;
+  answer: string | null;
+  updated_at: string | null;
+}
+
 export interface IrbReview {
   id: string;
   submission_id: string;
@@ -471,6 +481,7 @@ export interface IrbReview {
   feedback_to_submitter: string | null;
   completed_at: string | null;
   created_at: string;
+  review_responses: IrbReviewResponseData[];
 }
 
 // Decisions
@@ -541,4 +552,64 @@ export interface IrbDashboard {
   my_submissions: IrbSubmission[];
   my_pending_reviews: IrbSubmission[];
   board_queue: IrbSubmission[];
+}
+
+// IRB Admin types
+export type IrbRole = 'member' | 'admin';
+export type QuestionContext = 'submission' | 'review';
+
+export interface IrbAdminDashboard {
+  total_submissions: number;
+  pending_submissions: number;
+  in_review_submissions: number;
+  completed_submissions: number;
+  total_boards: number;
+  total_members: number;
+  avg_review_days: number | null;
+  submissions_by_status: Record<string, number>;
+  recent_activity: Array<{
+    id: number;
+    submission_id: string;
+    from_status: string;
+    to_status: string;
+    changed_by_id: number;
+    note: string | null;
+    created_at: string | null;
+  }>;
+}
+
+export interface IrbMember {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  irb_role: IrbRole | null;
+  boards: Array<{
+    board_id: string;
+    board_name: string | null;
+    role: string;
+  }>;
+  pending_reviews: number;
+  completed_reviews: number;
+}
+
+export interface IrbReportsData {
+  submissions_over_time: Array<{ year: number; month: number; count: number }>;
+  reviewer_workload: Array<{
+    reviewer_id: number;
+    reviewer_name: string;
+    total: number;
+    completed: number;
+    pending: number;
+  }>;
+  avg_turnaround_days: number | null;
+  decisions_breakdown: Record<string, number>;
+  submissions_by_board: Array<{ board_name: string; count: number }>;
+}
+
+export interface IrbMyReviews {
+  pending_reviews: IrbSubmission[];
+  completed_reviews: IrbSubmission[];
+  total_pending: number;
+  total_completed: number;
 }

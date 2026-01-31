@@ -10,6 +10,7 @@ from app.api.deps import (
     get_current_enterprise_id,
     get_current_user,
     get_tenant_db,
+    require_irb_member,
     require_plan,
 )
 from app.models.user import User
@@ -18,6 +19,7 @@ from app.schemas.irb import (
     IrbAiConfigResponse,
     IrbAiConfigUpdate,
     IrbDashboardResponse,
+    IrbMyReviewsResponse,
 )
 from app.services.irb_ai_service import IrbAiService
 from app.services.irb_submission_service import IrbSubmissionService
@@ -37,6 +39,18 @@ def get_dashboard(
     service = IrbSubmissionService(db)
     data = service.get_dashboard(current_user.id, enterprise_id)
     return data
+
+
+@router.get("/my-reviews", response_model=IrbMyReviewsResponse)
+def get_my_reviews(
+    current_user: User = Depends(require_irb_member),
+    db: Session = Depends(get_tenant_db),
+    enterprise_id: UUID = Depends(get_current_enterprise_id),
+    _plan: None = Depends(require_plan("team")),
+):
+    """Get pending and completed reviews for the current IRB member."""
+    service = IrbSubmissionService(db)
+    return service.get_my_reviews(current_user.id, enterprise_id)
 
 
 # --- AI Config (institution plan) ---

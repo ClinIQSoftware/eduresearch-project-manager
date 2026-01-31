@@ -414,6 +414,30 @@ def require_project_lead(
     return project
 
 
+def require_irb_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Require the current user to be an IRB admin or superuser."""
+    if current_user.is_superuser:
+        return current_user
+    if getattr(current_user, "irb_role", None) == "admin":
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="IRB administrator access required",
+    )
+
+
+def require_irb_member(current_user: User = Depends(get_current_user)) -> User:
+    """Require the current user to be an IRB member, admin, or superuser."""
+    if current_user.is_superuser:
+        return current_user
+    if getattr(current_user, "irb_role", None) in ("member", "admin"):
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="IRB member access required",
+    )
+
+
 PLAN_RANK = {"free": 0, "starter": 1, "team": 2, "institution": 3}
 
 

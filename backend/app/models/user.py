@@ -52,6 +52,9 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # IRB role: null = regular user, 'member' = IRB member, 'admin' = IRB administrator
+    irb_role: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+
     # Approval fields for registration approval workflow
     is_approved: Mapped[bool] = mapped_column(Boolean, default=True)
     approved_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)

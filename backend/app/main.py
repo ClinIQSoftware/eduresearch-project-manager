@@ -37,6 +37,7 @@ from app.api.routes import (
     irb_questions_router,
     irb_submissions_router,
     irb_dashboard_router,
+    irb_admin_router,
 )
 from app.config import settings
 
@@ -144,6 +145,7 @@ app.include_router(
     irb_submissions_router, prefix="/api/irb/submissions", tags=["IRB Submissions"]
 )
 app.include_router(irb_dashboard_router, prefix="/api/irb", tags=["IRB Dashboard"])
+app.include_router(irb_admin_router, prefix="/api/irb/admin", tags=["IRB Admin"])
 
 
 @app.get("/")

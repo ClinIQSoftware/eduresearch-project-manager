@@ -96,7 +96,7 @@ def create_question(
 ):
     """Create a question for a board, optionally with conditional display rules."""
     service = IrbQuestionService(db)
-    return service.create_question(board_id, data, enterprise_id)
+    return service.create_question(board_id, enterprise_id, data)
 
 
 @router.put("/questions/{question_id}", response_model=IrbQuestionResponse)
@@ -109,7 +109,7 @@ def update_question(
 ):
     """Update a question and optionally its conditions."""
     service = IrbQuestionService(db)
-    return service.update_question(question_id, data)
+    return service.update_question(question_id, data=data)
 
 
 @router.delete("/questions/{question_id}")

@@ -7,6 +7,3 @@ export { default as EmailTemplatesTab } from './EmailTemplatesTab';
 export { default as ImportTab } from './ImportTab';
 export { default as InviteCodesTab } from './InviteCodesTab';
 export { default as EnterpriseSettingsTab } from './EnterpriseSettingsTab';
-export { default as IrbAdminBoardsTab } from './IrbAdminBoards';
-export { default as IrbAdminQuestionsTab } from './IrbAdminQuestions';
-export { default as IrbAdminAiSettingsTab } from './IrbAdminAiSettings';

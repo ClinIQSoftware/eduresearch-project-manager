@@ -111,6 +111,17 @@ export const queryKeys = {
       detail: (id: string) => [...queryKeys.irb.submissions.all(), 'detail', id] as const,
     },
     dashboard: () => [...queryKeys.irb.all, 'dashboard'] as const,
+    myReviews: () => [...queryKeys.irb.all, 'myReviews'] as const,
+  },
+
+  // IRB Admin
+  irbAdmin: {
+    all: ['irbAdmin'] as const,
+    dashboard: () => ['irbAdmin', 'dashboard'] as const,
+    members: () => ['irbAdmin', 'members'] as const,
+    submissions: (filters?: { board_id?: string; status?: string }) => ['irbAdmin', 'submissions', filters] as const,
+    reviewQuestions: (boardId: string) => ['irbAdmin', 'reviewQuestions', boardId] as const,
+    reports: () => ['irbAdmin', 'reports'] as const,
   },
 };
 

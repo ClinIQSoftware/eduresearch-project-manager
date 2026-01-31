@@ -26,6 +26,7 @@ from app.api.routes.irb_boards import router as irb_boards_router
 from app.api.routes.irb_questions import router as irb_questions_router
 from app.api.routes.irb_submissions import router as irb_submissions_router
 from app.api.routes.irb_dashboard import router as irb_dashboard_router
+from app.api.routes.irb_admin import router as irb_admin_router
 
 __all__ = [
     "auth_router",
@@ -50,4 +51,5 @@ __all__ = [
     "irb_questions_router",
     "irb_submissions_router",
     "irb_dashboard_router",
+    "irb_admin_router",
 ]

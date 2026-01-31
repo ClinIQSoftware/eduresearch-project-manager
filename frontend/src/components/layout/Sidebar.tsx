@@ -80,6 +80,34 @@ export default function Sidebar() {
             );
           })}
 
+          {/* IRB Admin section - for IRB admins and superusers */}
+          {(user?.irb_role === 'admin' || user?.is_superuser) && (
+            <>
+              <li className="pt-4 mt-4">
+                <div className="px-3 mb-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    IRB Administration
+                  </span>
+                </div>
+              </li>
+              <li>
+                <NavLink
+                  to="/irb-admin"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 ${
+                      isActive
+                        ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25'
+                        : 'text-gray-300 hover:bg-gray-800/50 hover:text-white'
+                    }`
+                  }
+                >
+                  <ClipboardCheck className="w-5 h-5 flex-shrink-0" />
+                  <span className="font-medium">IRB Admin</span>
+                </NavLink>
+              </li>
+            </>
+          )}
+
           {/* Admin section - only for superusers */}
           {user?.is_superuser && (
             <>

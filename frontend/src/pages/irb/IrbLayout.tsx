@@ -1,13 +1,17 @@
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import { ClipboardCheck, Plus } from 'lucide-react';
-
-const irbTabs = [
-  { to: '/irb/dashboard', label: 'Dashboard' },
-  { to: '/irb/boards', label: 'Boards' },
-  { to: '/irb/submissions', label: 'Submissions' },
-];
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function IrbLayout() {
+  const { user } = useAuth();
+  const isMemberOrAdmin = user?.irb_role === 'member' || user?.irb_role === 'admin' || user?.is_superuser;
+
+  const irbTabs = [
+    { to: '/irb/dashboard', label: 'Dashboard' },
+    { to: '/irb/submissions', label: 'Submissions' },
+    ...(isMemberOrAdmin ? [{ to: '/irb/my-reviews', label: 'My Reviews' }] : []),
+  ];
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">

@@ -1,0 +1,9 @@
+export { default as IrbAdminLayout } from './IrbAdminLayout';
+export { default as IrbAdminDashboardTab } from './IrbAdminDashboardTab';
+export { default as IrbAdminMembersTab } from './IrbAdminMembersTab';
+export { default as IrbAdminBoardsTab } from './IrbAdminBoardsTab';
+export { default as IrbAdminQuestionsTab } from './IrbAdminQuestionsTab';
+export { default as IrbAdminReviewQuestionsTab } from './IrbAdminReviewQuestionsTab';
+export { default as IrbAdminAssignmentsTab } from './IrbAdminAssignmentsTab';
+export { default as IrbAdminReportsTab } from './IrbAdminReportsTab';
+export { default as IrbAdminAiSettingsTab } from './IrbAdminAiSettingsTab';

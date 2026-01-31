@@ -116,7 +116,7 @@ class IrbQuestionService:
     # ------------------------------------------------------------------
 
     def create_question(
-        self, board_id: UUID, data: IrbQuestionCreate, enterprise_id: UUID
+        self, board_id: UUID, enterprise_id: UUID, data: IrbQuestionCreate, question_context: Optional[str] = None
     ) -> IrbQuestion:
         """Create a new question for a board.
 
@@ -153,6 +153,8 @@ class IrbQuestionService:
 
         # Create the question (exclude conditions from model_dump)
         question_data = data.model_dump(exclude={"conditions"})
+        if question_context:
+            question_data["question_context"] = question_context
         question = IrbQuestion(
             board_id=board_id,
             enterprise_id=enterprise_id,
@@ -184,7 +186,7 @@ class IrbQuestionService:
             .first()
         )
 
-    def update_question(self, question_id: int, data: IrbQuestionUpdate) -> IrbQuestion:
+    def update_question(self, question_id: int, enterprise_id=None, data: IrbQuestionUpdate = None) -> IrbQuestion:
         """Update an existing question.
 
         Args:
@@ -240,7 +242,7 @@ class IrbQuestionService:
             .first()
         )
 
-    def delete_question(self, question_id: int) -> bool:
+    def delete_question(self, question_id: int, enterprise_id=None) -> bool:
         """Soft-delete a question by setting is_active to False.
 
         Args:
@@ -267,8 +269,10 @@ class IrbQuestionService:
     def list_questions(
         self,
         board_id: UUID,
+        enterprise_id=None,
         section_id: Optional[int] = None,
         submission_type: Optional[str] = None,
+        question_context: Optional[str] = None,
     ) -> list[IrbQuestion]:
         """List active questions for a board with optional filters.
 
@@ -301,6 +305,12 @@ class IrbQuestionService:
             query = query.filter(
                 IrbQuestion.submission_type.in_([submission_type, "both"])
             )
+
+        if question_context:
+            query = query.filter(IrbQuestion.question_context == question_context)
+        else:
+            # Default: only show submission questions (backward compatible)
+            query = query.filter(IrbQuestion.question_context == "submission")
 
         return (
             query.order_by(

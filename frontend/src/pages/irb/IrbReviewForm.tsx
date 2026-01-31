@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useIrbSubmission, useCreateIrbReview } from '../../hooks/useIrb';
+import { useReviewQuestions } from '../../hooks/useIrbAdmin';
 import SubmissionTimeline from '../../components/irb/SubmissionTimeline';
 import toast from 'react-hot-toast';
 import { ArrowLeft, FileText, MessageSquare, Scale } from 'lucide-react';
@@ -31,6 +32,9 @@ export default function IrbReviewForm() {
   const { data: submission, isLoading, error } = useIrbSubmission(submissionId || '');
   const createReviewMutation = useCreateIrbReview();
 
+  const { data: reviewQuestions } = useReviewQuestions(submission?.board_id || '');
+  const [reviewAnswers, setReviewAnswers] = useState<Record<number, string>>({});
+
   const [form, setForm] = useState({
     recommendation: 'accept' as Recommendation,
     comments: '',
@@ -48,12 +52,17 @@ export default function IrbReviewForm() {
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const review_responses = Object.entries(reviewAnswers)
+        .filter(([, answer]) => answer.trim())
+        .map(([questionId, answer]) => ({ question_id: Number(questionId), answer }));
+
       await createReviewMutation.mutateAsync({
         submissionId: submission.id,
         data: {
           recommendation: form.recommendation,
           comments: form.comments || undefined,
           feedback_to_submitter: form.feedback_to_submitter || undefined,
+          review_responses: review_responses.length > 0 ? review_responses : undefined,
         },
       });
       toast.success('Review submitted successfully');
@@ -191,6 +200,52 @@ export default function IrbReviewForm() {
           <p className="text-sm text-gray-400">No files uploaded.</p>
         )}
       </div>
+
+      {/* Board Review Questions */}
+      {reviewQuestions && reviewQuestions.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Review Questions</h2>
+          <div className="space-y-4">
+            {reviewQuestions.map((q) => (
+              <div key={q.id}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {q.text}
+                  {q.required && <span className="text-red-500 ml-1">*</span>}
+                </label>
+                {q.question_type === 'textarea' ? (
+                  <textarea
+                    value={reviewAnswers[q.id] || ''}
+                    onChange={(e) => setReviewAnswers({ ...reviewAnswers, [q.id]: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                  />
+                ) : q.question_type === 'number' ? (
+                  <input
+                    type="number"
+                    value={reviewAnswers[q.id] || ''}
+                    onChange={(e) => setReviewAnswers({ ...reviewAnswers, [q.id]: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : q.question_type === 'checkbox' ? (
+                  <input
+                    type="checkbox"
+                    checked={reviewAnswers[q.id] === 'true'}
+                    onChange={(e) => setReviewAnswers({ ...reviewAnswers, [q.id]: e.target.checked ? 'true' : 'false' })}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={reviewAnswers[q.id] || ''}
+                    onChange={(e) => setReviewAnswers({ ...reviewAnswers, [q.id]: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Review Form */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">

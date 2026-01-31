@@ -83,6 +83,7 @@ class UserResponse(BaseModel):
     bio: Optional[str] = None
     is_active: bool
     is_superuser: bool
+    irb_role: Optional[str] = None
     is_approved: bool = True
     approved_at: Optional[datetime] = None
     auth_provider: AuthProvider = "local"

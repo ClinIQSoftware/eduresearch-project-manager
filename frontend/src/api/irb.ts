@@ -139,6 +139,7 @@ export interface CreateReviewData {
   recommendation: Recommendation;
   comments?: string;
   feedback_to_submitter?: string;
+  review_responses?: { question_id: number; answer: string }[];
 }
 
 export interface CreateDecisionData {

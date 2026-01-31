@@ -14,9 +14,6 @@ const adminTabs = [
   { to: '/admin/email-templates', label: 'Email Templates', requiredPlan: 'starter' },
   { to: '/admin/invite-codes', label: 'Invite Codes' },
   { to: '/admin/import', label: 'Import', requiredPlan: 'team' },
-  { to: '/admin/irb-boards', label: 'IRB Boards', requiredPlan: 'team' },
-  { to: '/admin/irb-questions', label: 'IRB Questions', requiredPlan: 'team' },
-  { to: '/admin/irb-ai', label: 'IRB AI Settings', requiredPlan: 'institution' },
 ];
 
 function UsageBar({ current, max, label }: { current: number; max: number | null; label: string }) {

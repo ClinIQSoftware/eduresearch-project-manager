@@ -287,6 +287,10 @@ class IrbQuestion(Base):
     order: Mapped[int] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     submission_type: Mapped[str] = mapped_column(String(50), default="both")
+    # 'submission' = questions for submitters, 'review' = questions for reviewers
+    question_context: Mapped[str] = mapped_column(
+        String(20), default="submission", server_default="submission"
+    )
     created_at: Mapped[datetime] = mapped_column(
         default=func.now(), server_default=func.now()
     )
@@ -429,10 +433,52 @@ class IrbReview(Base):
         "IrbSubmission", back_populates="reviews"
     )
     reviewer: Mapped["User"] = relationship("User")
+    review_responses: Mapped[List["IrbReviewResponse"]] = relationship(
+        "IrbReviewResponse", back_populates="review", cascade="all, delete-orphan"
+    )
 
 
 # ---------------------------------------------------------------------------
-# 10. IrbDecision
+# 10. IrbReviewResponse
+# ---------------------------------------------------------------------------
+
+class IrbReviewResponse(Base):
+    """Represents an answer to a review question by an IRB reviewer."""
+
+    __tablename__ = "irb_review_responses"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    review_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("irb_reviews.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    question_id: Mapped[int] = mapped_column(
+        ForeignKey("irb_questions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    enterprise_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("enterprises.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    answer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    review: Mapped["IrbReview"] = relationship(
+        "IrbReview", back_populates="review_responses"
+    )
+    question: Mapped["IrbQuestion"] = relationship("IrbQuestion")
+
+
+# ---------------------------------------------------------------------------
+# 11. IrbDecision (was 10)
 # ---------------------------------------------------------------------------
 
 class IrbDecision(Base):

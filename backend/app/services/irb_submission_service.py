@@ -16,6 +16,7 @@ from app.models.irb import (
     IrbBoardMember,
     IrbDecision,
     IrbReview,
+    IrbReviewResponse,
     IrbSubmission,
     IrbSubmissionFile,
     IrbSubmissionHistory,
@@ -577,6 +578,17 @@ class IrbSubmissionService:
         review.feedback_to_submitter = data.feedback_to_submitter
         review.completed_at = datetime.utcnow()
 
+        # Save review responses (answers to review questions) if provided
+        if data.review_responses:
+            for rr in data.review_responses:
+                review_response = IrbReviewResponse(
+                    review_id=review.id,
+                    question_id=rr.question_id,
+                    enterprise_id=review.enterprise_id,
+                    answer=rr.answer,
+                )
+                self.db.add(review_response)
+
         self.db.commit()
         self.db.refresh(review)
         return review
@@ -839,4 +851,63 @@ class IrbSubmissionService:
             "my_submissions": my_submissions,
             "my_pending_reviews": my_pending_reviews,
             "board_queue": board_queue,
+        }
+
+    def get_my_reviews(self, user_id: int, enterprise_id: UUID) -> dict:
+        """Get reviews dashboard for an IRB member.
+
+        Returns pending and completed reviews with counts.
+
+        Args:
+            user_id: The current user's ID.
+            enterprise_id: The enterprise/tenant ID.
+
+        Returns:
+            Dict with pending_reviews, completed_reviews, total_pending, total_completed.
+        """
+        # Pending reviews (not yet completed)
+        pending = (
+            self.db.query(IrbReview)
+            .filter(
+                IrbReview.reviewer_id == user_id,
+                IrbReview.enterprise_id == enterprise_id,
+                IrbReview.completed_at.is_(None),
+            )
+            .all()
+        )
+        pending_ids = [r.submission_id for r in pending]
+        pending_submissions: list[IrbSubmission] = []
+        if pending_ids:
+            pending_submissions = (
+                self.db.query(IrbSubmission)
+                .filter(IrbSubmission.id.in_(pending_ids))
+                .order_by(IrbSubmission.created_at.desc())
+                .all()
+            )
+
+        # Completed reviews
+        completed = (
+            self.db.query(IrbReview)
+            .filter(
+                IrbReview.reviewer_id == user_id,
+                IrbReview.enterprise_id == enterprise_id,
+                IrbReview.completed_at.isnot(None),
+            )
+            .all()
+        )
+        completed_ids = [r.submission_id for r in completed]
+        completed_submissions: list[IrbSubmission] = []
+        if completed_ids:
+            completed_submissions = (
+                self.db.query(IrbSubmission)
+                .filter(IrbSubmission.id.in_(completed_ids))
+                .order_by(IrbSubmission.created_at.desc())
+                .all()
+            )
+
+        return {
+            "pending_reviews": pending_submissions,
+            "completed_reviews": completed_submissions,
+            "total_pending": len(pending),
+            "total_completed": len(completed),
         }
