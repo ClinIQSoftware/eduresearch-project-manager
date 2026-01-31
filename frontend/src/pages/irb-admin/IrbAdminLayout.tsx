@@ -17,15 +17,15 @@ export default function IrbAdminLayout() {
       <h1 className="text-xl sm:text-2xl font-bold text-gray-800">IRB Administration</h1>
 
       {/* Tab navigation */}
-      <div className="border-b border-gray-200 overflow-x-auto">
-        <nav className="-mb-px flex space-x-4 sm:space-x-6 min-w-max px-1" aria-label="IRB Admin Tabs">
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-1" aria-label="IRB Admin Tabs">
           {tabs.map((tab) => (
             <NavLink
               key={tab.to}
               to={tab.to}
               end={tab.end}
               className={({ isActive }) =>
-                `whitespace-nowrap border-b-2 py-3 px-1 text-sm font-medium transition-colors ${
+                `whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium transition-colors ${
                   isActive
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
