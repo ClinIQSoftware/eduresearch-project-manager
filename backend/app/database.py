@@ -30,7 +30,7 @@ def get_tenant_session(request: Request):
     try:
         if hasattr(request.state, "enterprise_id") and request.state.enterprise_id:
             db.execute(
-                text("SELECT set_config('app.current_enterprise_id', :val, true)"),
+                text("SELECT set_config('app.current_enterprise_id', :val, false)"),
                 {"val": str(request.state.enterprise_id)}
             )
         yield db
