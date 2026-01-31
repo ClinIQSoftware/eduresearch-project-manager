@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { branding } = useTenant();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -73,7 +75,12 @@ export default function MobileNav() {
             <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-lg font-display font-bold">EduResearch</h1>
+            <div>
+              <h1 className="text-lg font-display font-bold">EduResearch</h1>
+              {branding?.enterpriseName && (
+                <p className="text-xs text-gray-400 truncate max-w-[180px]">{branding.enterpriseName}</p>
+              )}
+            </div>
           </div>
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -108,7 +115,9 @@ export default function MobileNav() {
               </div>
               <div>
                 <h1 className="text-lg font-display font-bold">EduResearch</h1>
-                <p className="text-xs text-gray-400">Project Manager</p>
+                <p className="text-xs text-gray-400 truncate">
+                  {branding?.enterpriseName || 'Project Manager'}
+                </p>
               </div>
             </div>
             <button

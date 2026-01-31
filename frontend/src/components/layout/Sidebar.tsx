@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTenant } from '../../contexts/TenantContext';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -34,6 +35,7 @@ const navItems: NavItem[] = [
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const { branding } = useTenant();
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -51,7 +53,9 @@ export default function Sidebar() {
           </div>
           <div>
             <h1 className="text-lg font-display font-bold">EduResearch</h1>
-            <p className="text-xs text-gray-400">Project Manager</p>
+            <p className="text-xs text-gray-400 truncate">
+              {branding?.enterpriseName || 'Project Manager'}
+            </p>
           </div>
         </div>
       </div>
