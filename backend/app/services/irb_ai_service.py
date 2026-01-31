@@ -14,6 +14,7 @@ from uuid import UUID
 import httpx
 from sqlalchemy.orm import Session
 
+from app.core.encryption import encrypt_value, decrypt_value
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.irb import (
     IrbAiConfig,
@@ -168,8 +169,11 @@ Return ONLY valid JSON, no additional text."""
 
     def _get_provider(self, config: IrbAiConfig) -> LlmProvider:
         """Instantiate the correct LLM provider from config."""
-        # Decrypt API key (for now, stored as-is; encryption can be added later)
-        api_key = config.api_key_encrypted
+        # Decrypt the API key
+        try:
+            api_key = decrypt_value(config.api_key_encrypted)
+        except ValueError:
+            raise BadRequestException("Failed to decrypt API key. The encryption key may have changed.")
 
         if config.provider == "anthropic":
             return AnthropicProvider(api_key=api_key, model_name=config.model_name)
@@ -385,7 +389,7 @@ Return ONLY valid JSON, no additional text."""
 
         if existing:
             existing.provider = data.provider
-            existing.api_key_encrypted = data.api_key  # TODO: encrypt
+            existing.api_key_encrypted = encrypt_value(data.api_key)
             existing.model_name = data.model_name
             existing.custom_endpoint = data.custom_endpoint
             existing.max_tokens = data.max_tokens
@@ -396,7 +400,7 @@ Return ONLY valid JSON, no additional text."""
             config = IrbAiConfig(
                 enterprise_id=enterprise_id,
                 provider=data.provider,
-                api_key_encrypted=data.api_key,  # TODO: encrypt
+                api_key_encrypted=encrypt_value(data.api_key),
                 model_name=data.model_name,
                 custom_endpoint=data.custom_endpoint,
                 max_tokens=data.max_tokens,
@@ -412,7 +416,7 @@ Return ONLY valid JSON, no additional text."""
         update_data = data.model_dump(exclude_unset=True)
 
         if "api_key" in update_data:
-            config.api_key_encrypted = update_data.pop("api_key")  # TODO: encrypt
+            config.api_key_encrypted = encrypt_value(update_data.pop("api_key"))
 
         for key, value in update_data.items():
             setattr(config, key, value)

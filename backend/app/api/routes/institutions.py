@@ -13,7 +13,8 @@ from app.api.deps import (
     get_current_enterprise_id,
     get_current_user,
     get_current_superuser,
-    get_db,
+    get_tenant_db,
+    get_unscoped_db,
     is_institution_admin,
 )
 from app.models.user import User
@@ -31,7 +32,7 @@ router = APIRouter()
 
 @router.get("", response_model=List[InstitutionResponse])
 def get_institutions(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_tenant_db)
 ):
     """Get institutions the user has access to.
 
@@ -52,7 +53,7 @@ def get_institutions(
 
 
 @router.get("/public", response_model=List[InstitutionResponse])
-def get_institutions_public(db: Session = Depends(get_db)):
+def get_institutions_public(db: Session = Depends(get_unscoped_db)):
     """Get all institutions (public endpoint for registration)."""
     institution_service = InstitutionService(db)
     return institution_service.get_all_institutions()
@@ -62,7 +63,7 @@ def get_institutions_public(db: Session = Depends(get_db)):
 def create_institution(
     inst_data: InstitutionCreate,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
     enterprise_id: UUID = Depends(get_current_enterprise_id),
 ):
     """Create a new institution (superuser only)."""
@@ -80,7 +81,7 @@ def create_institution(
 def get_institution(
     institution_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get institution details."""
     institution_service = InstitutionService(db)
@@ -105,7 +106,7 @@ def update_institution(
     institution_id: int,
     inst_data: InstitutionUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Update institution (superuser or institution admin)."""
     # Check admin access
@@ -130,7 +131,7 @@ def update_institution(
 def delete_institution(
     institution_id: int,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Delete an institution (superuser only).
 
@@ -171,7 +172,7 @@ def delete_institution(
 def get_institution_admins(
     institution_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get institution admins."""
     institution_service = InstitutionService(db)
@@ -202,7 +203,7 @@ def add_institution_admin(
     institution_id: int,
     user_id: int,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Add a user as an admin of an institution (superuser only)."""
     institution_service = InstitutionService(db)
@@ -220,7 +221,7 @@ def remove_institution_admin(
     institution_id: int,
     user_id: int,
     current_user: User = Depends(get_current_superuser),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Remove a user as an admin of an institution (superuser only)."""
     institution_service = InstitutionService(db)
@@ -238,7 +239,7 @@ def remove_institution_admin(
 def get_institution_members(
     institution_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ):
     """Get institution members."""
     institution_service = InstitutionService(db)

@@ -3,7 +3,6 @@
 Handles user login, registration, profile management, and OAuth flows.
 """
 
-import asyncio
 from uuid import UUID
 
 from authlib.integrations.starlette_client import OAuth
@@ -15,9 +14,7 @@ from starlette.requests import Request
 from app.api.deps import get_current_enterprise_id, get_current_user, get_unscoped_db, get_tenant_db
 from app.config import settings
 from app.models.user import User, AuthProvider
-from app.models.institution import Institution
 from app.models.organization import organization_admins
-from app.models.department import Department
 from app.schemas import (
     LoginRequest,
     OnboardingRequest,
@@ -95,58 +92,17 @@ def get_institution_admins(db: Session, institution_id: int):
 def send_approval_emails(background_tasks: BackgroundTasks, db: Session, user: User):
     """Send approval request emails to institution admins."""
     admins = get_institution_admins(db, user.institution_id)
-
-    # Get institution and department names
-    institution_name = None
-    department_name = None
-    if user.institution_id:
-        inst = (
-            db.query(Institution).filter(Institution.id == user.institution_id).first()
-        )
-        institution_name = inst.name if inst else None
-    if user.department_id:
-        dept = db.query(Department).filter(Department.id == user.department_id).first()
-        department_name = dept.name if dept else None
-
-    user_name = f"{user.first_name} {user.last_name}".strip()
-
-    email_service = EmailService(db)
-    for admin in admins:
-        background_tasks.add_task(
-            email_service.send_user_approval_request,
-            admin.email,
-            user_name,
-            user.email,
-            institution_name,
-            department_name,
-        )
+    if admins:
+        email_service = EmailService(db)
+        background_tasks.add_task(email_service.send_approval_request, user, admins)
 
 
 async def send_approval_emails_async(db: Session, user: User):
     """Send approval request emails asynchronously (for OAuth callbacks)."""
     admins = get_institution_admins(db, user.institution_id)
-
-    # Get institution and department names
-    institution_name = None
-    department_name = None
-    if user.institution_id:
-        inst = (
-            db.query(Institution).filter(Institution.id == user.institution_id).first()
-        )
-        institution_name = inst.name if inst else None
-    if user.department_id:
-        dept = db.query(Department).filter(Department.id == user.department_id).first()
-        department_name = dept.name if dept else None
-
-    user_name = f"{user.first_name} {user.last_name}".strip()
-
-    email_service = EmailService(db)
-    for admin in admins:
-        asyncio.create_task(
-            email_service.send_user_approval_request(
-                admin.email, user_name, user.email, institution_name, department_name
-            )
-        )
+    if admins:
+        email_service = EmailService(db)
+        email_service.send_approval_request(user, admins)
 
 
 @router.post("/login", response_model=Token)

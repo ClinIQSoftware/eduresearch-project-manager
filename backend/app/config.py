@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings
 from pydantic import field_validator
 from typing import Optional
 import os
-import warnings
 
 
 class Settings(BaseSettings):
@@ -63,10 +62,21 @@ class Settings(BaseSettings):
         if v == "your-secret-key-change-in-production":
             env = os.getenv("ENVIRONMENT", "development")
             if env not in ("development", "test"):
-                warnings.warn(
-                    "WARNING: Using default secret key in production is insecure! "
-                    "Set SECRET_KEY environment variable.",
-                    UserWarning,
+                raise ValueError(
+                    "Default secret key cannot be used in production. "
+                    "Set the SECRET_KEY environment variable."
+                )
+        return v
+
+    @field_validator("platform_admin_password")
+    @classmethod
+    def validate_platform_admin_password(cls, v: str) -> str:
+        if v == "PlatformAdmin123!":
+            env = os.getenv("ENVIRONMENT", "development")
+            if env not in ("development", "test"):
+                raise ValueError(
+                    "Default platform admin password cannot be used in production. "
+                    "Set the PLATFORM_ADMIN_PASSWORD environment variable."
                 )
         return v
 

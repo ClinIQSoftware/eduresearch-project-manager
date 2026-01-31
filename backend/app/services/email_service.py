@@ -500,6 +500,172 @@ class EmailService:
             institution_id=institution_id,
         )
 
+    def is_configured(self, institution_id: Optional[int] = None, enterprise_id: Optional[UUID] = None) -> bool:
+        """Check if email settings are configured and active.
+
+        Args:
+            institution_id: Optional institution ID.
+            enterprise_id: Optional enterprise UUID.
+
+        Returns:
+            True if email settings exist and are configured.
+        """
+        email_settings = self._get_email_settings(institution_id, enterprise_id)
+        if not email_settings:
+            return False
+        return bool(email_settings.smtp_user and email_settings.smtp_password)
+
+    def send_meeting_reminder(
+        self,
+        to_emails: List[str],
+        project_title: str,
+        meeting_date: str,
+        days_until: int,
+        project_id: int,
+    ) -> bool:
+        """Send meeting reminder emails to project members.
+
+        Args:
+            to_emails: List of recipient email addresses.
+            project_title: The project title.
+            meeting_date: Formatted meeting date string.
+            days_until: Days until the meeting.
+            project_id: The project ID.
+
+        Returns:
+            True if at least one email was sent.
+        """
+        context = {
+            "project_title": project_title,
+            "meeting_date": meeting_date,
+            "days_until": days_until,
+            "project_link": f"{settings.frontend_url}/projects/{project_id}",
+            "subject": f"Meeting Reminder: {project_title}",
+        }
+
+        html_content = self._render_template("meeting_reminder.html", context)
+        if not html_content or "Template" in html_content:
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2>Meeting Reminder</h2>
+                <p>This is a reminder that the project <strong>{project_title}</strong>
+                   has a meeting scheduled for <strong>{meeting_date}</strong>
+                   ({days_until} day{"s" if days_until != 1 else ""} from now).</p>
+                <p><a href="{settings.frontend_url}/projects/{project_id}">View Project</a></p>
+                <hr>
+                <p style="color: #666; font-size: 12px;">EduResearch Project Manager</p>
+            </body>
+            </html>
+            """
+
+        sent_any = False
+        for email in to_emails:
+            if self.send_email(
+                to=email,
+                subject=f"Meeting Reminder: {project_title}",
+                html_content=html_content,
+            ):
+                sent_any = True
+
+        return sent_any
+
+    def send_deadline_reminder(
+        self,
+        to_emails: List[str],
+        project_title: str,
+        deadline_date: str,
+        days_until: int,
+        project_id: int,
+    ) -> bool:
+        """Send deadline reminder emails to project members.
+
+        Args:
+            to_emails: List of recipient email addresses.
+            project_title: The project title.
+            deadline_date: Formatted deadline date string.
+            days_until: Days until the deadline.
+            project_id: The project ID.
+
+        Returns:
+            True if at least one email was sent.
+        """
+        context = {
+            "project_title": project_title,
+            "deadline_date": deadline_date,
+            "days_until": days_until,
+            "project_link": f"{settings.frontend_url}/projects/{project_id}",
+            "subject": f"Deadline Reminder: {project_title}",
+        }
+
+        html_content = self._render_template("deadline_reminder.html", context)
+        if not html_content or "Template" in html_content:
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2>Deadline Reminder</h2>
+                <p>This is a reminder that the project <strong>{project_title}</strong>
+                   has a deadline on <strong>{deadline_date}</strong>
+                   ({days_until} day{"s" if days_until != 1 else ""} from now).</p>
+                <p><a href="{settings.frontend_url}/projects/{project_id}">View Project</a></p>
+                <hr>
+                <p style="color: #666; font-size: 12px;">EduResearch Project Manager</p>
+            </body>
+            </html>
+            """
+
+        sent_any = False
+        for email in to_emails:
+            if self.send_email(
+                to=email,
+                subject=f"Deadline Reminder: {project_title}",
+                html_content=html_content,
+            ):
+                sent_any = True
+
+        return sent_any
+
+    def send_project_update_notification(
+        self,
+        to_emails: List[str],
+        project_title: str,
+        update_summary: str,
+        updated_by: str,
+    ) -> bool:
+        """Send project update notification to members.
+
+        Args:
+            to_emails: List of recipient email addresses.
+            project_title: The project title.
+            update_summary: Summary of what changed.
+            updated_by: Name of the person who made the update.
+
+        Returns:
+            True if at least one email was sent.
+        """
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>Project Updated: {project_title}</h2>
+            <p><strong>{updated_by}</strong> made changes to the project:</p>
+            <p>{update_summary}</p>
+            <hr>
+            <p style="color: #666; font-size: 12px;">EduResearch Project Manager</p>
+        </body>
+        </html>
+        """
+
+        sent_any = False
+        for email in to_emails:
+            if self.send_email(
+                to=email,
+                subject=f"Project Updated: {project_title}",
+                html_content=html_content,
+            ):
+                sent_any = True
+
+        return sent_any
+
     def test_email_settings(
         self, to: str, institution_id: Optional[int] = None
     ) -> bool:

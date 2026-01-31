@@ -156,10 +156,9 @@ async def create_user_admin(
     db.refresh(user)
 
     # Send welcome email with temporary password in background
-    full_name = f"{user_data.first_name} {user_data.last_name}".strip()
     email_service = EmailService(db)
     background_tasks.add_task(
-        email_service.send_welcome_email, user_data.email, full_name, temp_password
+        email_service.send_welcome_email, user, temp_password
     )
 
     return user
@@ -911,7 +910,7 @@ def update_email_template(
 
 
 @router.post("/email-templates/test", dependencies=[Depends(require_plan("starter"))])
-async def send_test_email(
+def send_test_email(
     request: TestEmailRequest,
     institution_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
@@ -920,11 +919,11 @@ async def send_test_email(
     """Send a test email using a specific template."""
     require_admin_access(institution_id, current_user, db)
 
-    # Get email service configured with database settings
-    email_svc = EmailService(db, institution_id)
+    email_svc = EmailService(db)
 
     # Check if email is actually configured
-    if not email_svc.is_configured():
+    email_settings = email_svc._get_email_settings(institution_id=institution_id)
+    if not email_settings:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email settings not configured. Please configure SMTP settings first.",
@@ -971,10 +970,24 @@ async def send_test_email(
         "task_link": "https://example.com/tasks/1",
     }
 
-    # Send email directly (not in background) so we can report errors
+    # Render template body with test context
     try:
-        success = await email_svc.send_templated_email(
-            request.recipient_email, template.subject, template.body, test_context
+        rendered_body = email_svc._render_template(template.body, test_context)
+    except Exception:
+        # If template rendering fails, use the raw body
+        rendered_body = template.body
+
+    # Render subject with test context
+    rendered_subject = template.subject
+    for key, value in test_context.items():
+        rendered_subject = rendered_subject.replace("{{" + key + "}}", str(value))
+
+    try:
+        success = email_svc.send_email(
+            to=request.recipient_email,
+            subject=rendered_subject,
+            html_content=rendered_body,
+            institution_id=institution_id,
         )
 
         if success:
@@ -986,6 +999,8 @@ async def send_test_email(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to send test email. Check SMTP settings and server logs.",
             )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

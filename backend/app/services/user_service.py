@@ -196,7 +196,7 @@ class UserService:
             "auth_provider": "local",
         }
 
-        user = self.user_repo.create(user_data)
+        user = self.user_repo.create(**user_data)
 
         # Store temp password on user object for email service to use
         user._temp_password = temp_password

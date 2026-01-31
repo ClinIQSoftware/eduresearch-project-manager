@@ -441,7 +441,7 @@ class SendRemindersRequest(BaseModel):
 
 
 @router.post("/send-reminders")
-async def send_project_reminders(
+def send_project_reminders(
     data: SendRemindersRequest, db: Session = Depends(get_unscoped_db)
 ):
     """Cron-triggered endpoint to send project meeting and deadline reminders."""
@@ -496,7 +496,7 @@ async def send_project_reminders(
             if not member_emails:
                 continue
 
-            await email_service.send_meeting_reminder(
+            email_service.send_meeting_reminder(
                 to_emails=member_emails,
                 project_title=project.title,
                 meeting_date=project.next_meeting_date.strftime("%A, %B %d, %Y"),
@@ -542,7 +542,7 @@ async def send_project_reminders(
             if not member_emails:
                 continue
 
-            await email_service.send_deadline_reminder(
+            email_service.send_deadline_reminder(
                 to_emails=member_emails,
                 project_title=project.title,
                 deadline_date=project.end_date.strftime("%A, %B %d, %Y"),
